@@ -518,6 +518,19 @@ impl Session {
         self.enqueue(Action::Remove { path: path.into() }, None)?;
         self.flush()
     }
+    pub fn rmdir(&mut self, path: &str) -> Result<()> {
+        let a = self.attr(path)?;
+        if !a.is_dir || a.mode & 0xf000 != 0x4000 {
+            return Err(fail_errno(libc::ENOTDIR));
+        }
+        if !self.list(path)?.is_empty() {
+            return Err(fail_errno(libc::ENOTEMPTY));
+        }
+        self.parent(path)?;
+        self.flush()?;
+        self.enqueue(Action::Rmdir { path: path.into() }, None)?;
+        self.flush()
+    }
     pub fn rename(&mut self, path: &str, destination: &str, replace: bool) -> Result<()> {
         if path == destination {
             return Ok(());

@@ -39,6 +39,9 @@ pub enum Action {
     Remove {
         path: String,
     },
+    Rmdir {
+        path: String,
+    },
     Rename {
         path: String,
         name: String,
@@ -251,6 +254,7 @@ fn stage_overlay<D: Device>(
             | Action::Append { path, .. }
             | Action::Mkdir { path }
             | Action::Remove { path }
+            | Action::Rmdir { path }
             | Action::Rename { path, .. } => path,
         };
         let (parent_path, name) = path_parts(path)?;
@@ -274,10 +278,15 @@ fn stage_overlay<D: Device>(
         let existing = view.getattr(path)?;
         if let Some(a) = existing {
             ensure!(a.bsd_flags & 0x00060006 == 0, "Immutable/append-only entry");
-            ensure!(
-                view.plain_unshared_file(path)?,
-                "Only plain unshared regular files with supported metadata may be changed"
-            );
+            if matches!(action, Action::Rmdir { .. }) {
+                ensure!(a.is_dir && a.mode & 0xf000 == 0x4000, "Rmdir requires a directory");
+                ensure!(view.read_dir(path)?.is_empty(), "Directory not empty");
+            } else {
+                ensure!(
+                    view.plain_unshared_file(path)?,
+                    "Only plain unshared regular files with supported metadata may be changed"
+                );
+            }
         }
         let mut content = None;
         match action {
@@ -355,6 +364,10 @@ fn stage_overlay<D: Device>(
                 let a = existing.context("Entry missing")?;
                 ensure!(!a.is_dir, "Directory removal not enabled");
             }
+            Action::Rmdir { .. } => {
+                let a = existing.context("Entry missing")?;
+                ensure!(a.is_dir, "Rmdir requires a directory");
+            }
             Action::Rename { name: new_name, .. } => {
                 ensure!(existing.is_some(), "Entry missing");
                 check_name(new_name)?;
@@ -424,7 +437,9 @@ fn stage_overlay<D: Device>(
             Action::Mkdir { .. } => {
                 file::mkdir(&mut txn, &vsb, &omap, parent.inode, &name)?;
             }
-            Action::Remove { .. } => file::unlink(&mut txn, &vsb, &omap, parent.inode, &name)?,
+            Action::Remove { .. } | Action::Rmdir { .. } => {
+                file::unlink(&mut txn, &vsb, &omap, parent.inode, &name)?
+            }
             Action::Rename { name: new_name, .. } => {
                 file::rename(&mut txn, &vsb, &omap, parent.inode, &name, new_name, false)?
             }

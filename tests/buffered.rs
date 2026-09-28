@@ -78,6 +78,11 @@ fn buffered_range_queue_roundtrip() {
     s.create("/delete.txt").unwrap();
     s.unlink("/delete.txt").unwrap();
     s.mkdir("/rw-dir").unwrap();
+    s.mkdir("/rw-dir/nested").unwrap();
+    assert!(s.rmdir("/rw-dir").is_err());
+    s.rmdir("/rw-dir/nested").unwrap();
+    s.rmdir("/rw-dir").unwrap();
+    assert!(s.attr("/rw-dir").is_err());
     assert!(s
         .write("/buffered.bin", expected.len() as u64 + 100, b"hole")
         .is_err());

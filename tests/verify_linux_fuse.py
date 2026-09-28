@@ -58,6 +58,13 @@ try:
  expected['old.txt']={'bytes':23,'sha256':hashlib.sha256(b'new atomically replaced').hexdigest()}
  (mp/'remove.txt').write_bytes(b'delete');(mp/'remove.txt').unlink();assert not (mp/'remove.txt').exists()
  checks+=['mkdir_unicode','truncate_and_unaligned_append','atomic_replace','unlink']
+ (mp/'temporary-empty').mkdir()
+ (mp/'temporary-empty/nested').mkdir()
+ expect_error(lambda:os.rmdir(mp/'temporary-empty'),[errno.ENOTEMPTY])
+ os.rmdir(mp/'temporary-empty/nested')
+ os.rmdir(mp/'temporary-empty')
+ assert not (mp/'temporary-empty').exists()
+ checks+=['rmdir_nonempty_guard','rmdir_nested_empty']
  copydata=b'ordinary cp command'*10000;(r/'copy-input.bin').write_bytes(copydata)
  subprocess.run(['cp',str(r/'copy-input.bin'),str(mp/'copy-command.bin')],check=True)
  assert (mp/'copy-command.bin').read_bytes()==copydata

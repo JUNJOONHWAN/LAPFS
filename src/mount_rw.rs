@@ -369,6 +369,25 @@ impl Filesystem for Host {
             Err(e) => reply.error(errno("unlink", e)),
         }
     }
+    fn rmdir(&mut self, _: &Request<'_>, parent: u64, name: &OsStr, reply: ReplyEmpty) {
+        let r = (|| {
+            let p = self.child(parent, name)?;
+            let a = self.attr(&p)?;
+            if a.kind != FileType::Directory {
+                return Err(std::io::Error::from_raw_os_error(libc::ENOTDIR).into());
+            }
+            if self.busy(a.ino) {
+                return Err(std::io::Error::from_raw_os_error(libc::EBUSY).into());
+            }
+            self.session.rmdir(&p)?;
+            self.paths.remove(&a.ino);
+            Ok(())
+        })();
+        match r {
+            Ok(()) => reply.ok(),
+            Err(e) => reply.error(errno("rmdir", e)),
+        }
+    }
     fn rename(
         &mut self,
         _: &Request<'_>,

@@ -1,7 +1,7 @@
 <p align="center"><img src="docs/assets/lapfs-banner.svg" alt="LAPFS — buffered APFS access for Linux ARM64" width="100%"></p>
 
 <p align="center">
-  <a href="https://github.com/JUNJOONHWAN/LAPFS/releases"><img alt="Beta" src="https://img.shields.io/badge/release-0.3.0--beta.3-f5b84b"></a>
+  <a href="https://github.com/JUNJOONHWAN/LAPFS/releases"><img alt="Beta" src="https://img.shields.io/badge/release-0.3.0--beta.4-f5b84b"></a>
   <img alt="Platform" src="https://img.shields.io/badge/target-DGX%20Spark%20%2F%20Linux%20ARM64-72d6c9">
   <a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/license-GPL--3.0--only-829bff"></a>
 </p>
@@ -15,7 +15,7 @@ Designed for DGX Spark / GB10: readable APFS volumes, bounded durable write buff
 > [!WARNING]
 > **공개 실험 베타입니다. 중요한 데이터의 유일한 사본에 사용하지 마세요.**
 > 이미지·가상 블록 장치와 선택한 외장 APFS 장치의 단일 쓰기·해제·재마운트 검증을 통과했습니다. **케이블 분리·전원 차단 내구성, 장시간 USB 쓰기 성능은 미검증**입니다. 일부 APFS/POSIX 기능은 의도적으로 거부합니다. 상용 드라이버 또는 Apple/NVIDIA 공식 제품이 아닙니다.
-> **beta.3 검증 상태:** beta.2에서 실패했던 약 1 TB 볼륨에 8 MiB 시험 파일을 쓰고 fsync·정상 해제·원시 읽기·재마운트·삭제까지 확인했습니다. 이 한 장치의 시험을 전원 차단 안전성이나 범용 APFS 호환성으로 확대 해석하지 마세요.
+> **beta.4 검증 상태:** beta.3의 선택 장치 쓰기 시험에 더해, beta.4의 빈 폴더 삭제는 합성 이미지의 Linux FUSE·Mac fsck/SHA로 확인했습니다. 실제 Corsair 장치에 beta.4를 재마운트한 뒤 mkdir·cd·rmdir와 비어 있지 않은 폴더의 삭제 거부를 확인했습니다. beta.2에서 실패했던 약 1 TB 볼륨에 8 MiB 시험 파일을 쓰고 fsync·정상 해제·원시 읽기·재마운트·삭제까지 확인했습니다. 이 한 장치의 시험을 전원 차단 안전성이나 범용 APFS 호환성으로 확대 해석하지 마세요.
 
 [시작하기](#빠른-시작) · [구조](#구조) · [목표와-현재-사양](#목표와-현재-사양) · [시험 결과](docs/VALIDATION.md) · [지원 제한](docs/LIMITATIONS.md) · [복구](docs/RECOVERY.md) · [English overview](docs/OVERVIEW.md)
 
@@ -49,11 +49,11 @@ flowchart LR
 
 ## 목표와 현재 사양
 
-| 항목 | 현재 beta.3 | 목표 / 남은 검증 |
+| 항목 | 현재 beta.4 | 목표 / 남은 검증 |
 |---|---|---|
 | 기준 실행 환경 | DGX Spark / GB10, Linux ARM64, FUSE3 | 다른 배포판·USB 브리지 조합 검증 |
 | 읽기 | 일반 파일, 디렉터리, 링크 조회, 큰 파일 범위 읽기 | 암호화·압축 스트리밍 확대 |
-| 쓰기 | 생성·복사·범위 수정·append·파일 삭제·mkdir·같은 폴더 파일 rename/replace | 더 넓은 POSIX/APFS 기능 |
+| 쓰기 | 생성·복사·범위 수정·append·파일 삭제·mkdir·빈 폴더 삭제(rmdir)·같은 폴더 파일 rename/replace | 더 넓은 POSIX/APFS 기능 |
 | 쓰기 큐 | 기본 데이터 상한 **4 MiB** | 처리량·동시 작업 성능 측정 |
 | 배치 복구 데이터 | undo + redo **32 MiB** 상한 | 대형 catalog에서 지원 범위 검증 |
 | 내부 저장공간 | **1 GiB 여유 + 96 MiB 작업 여유 검사** | 최저공간·장기 반복 부하 실측 |
