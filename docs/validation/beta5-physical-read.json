@@ -1,0 +1,33 @@
+{
+  "version": "0.3.0-beta.5",
+  "scope": "five named research roots on the selected mounted Corsair volume",
+  "method": "same name-only recursive scan as the prior beta.4 audit; every prior EIO path also replayed with lstat",
+  "previous_beta4": {
+    "directories_enumerated": 4414,
+    "files_enumerated": 160646,
+    "symlinks_enumerated": 57,
+    "eio_paths": 795,
+    "note": "earlier traversal stopped at inaccessible subtrees; counts are not a fixed universe"
+  },
+  "beta5": {
+    "directories_enumerated": 17368,
+    "files_enumerated": 397593,
+    "symlinks_enumerated": 388,
+    "scan_errors": 0,
+    "scan_elapsed_seconds": 430.401,
+    "prior_eio_paths_tested": 795,
+    "prior_eio_paths_ok": 795,
+    "prior_eio_paths_missing": 0,
+    "prior_eio_paths_eio": 0,
+    "prior_eio_paths_other_error": 0,
+    "prior_path_set_sha256": "e0207a76046141504faefe9e4129cc89500ac9d5740527887346c5407ab07679"
+  },
+  "extra_every_entry_lstat": {
+    "scope": "partial additional stress test, stopped to run directly comparable scan",
+    "directories": 7485,
+    "files": 52263,
+    "symlinks": 252,
+    "errors": 0
+  },
+  "physical_rsync_receipt": "beta5-physical-rsync.json"
+}

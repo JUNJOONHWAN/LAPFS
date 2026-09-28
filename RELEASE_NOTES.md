@@ -1,11 +1,11 @@
-# LAPFS v0.3.0-beta.5 — compatibility candidate
+# LAPFS v0.3.0-beta.5 — public experimental beta
 
 - Remove the FUSE mount-lifetime 100,000 inode-path and 4,096 handle counters. FUSE `forget` and handle release now reclaim bookkeeping; allocation failures return ENOMEM rather than a synthetic EIO.
 - Add chmod, atime/mtime and symlink create/remove to the supported writable subset. Fix APFS symlink counters, filesystem-owned xattr and NUL-terminated target for macOS readback.
 - Make ordinary `rsync -a` work for same-user regular files, directories and symlinks. A disposable image passed initial copy, unchanged repeat, atomic replacement, symlink-target replacement and `--delete` of a file/link/directory; all 104 original fixture files, new hashes, symlink target, mode and nanosecond mtime passed independent macOS readback and warning-free `fsck_apfs -n`.
 - Keep existing durability caps and unsupported APFS layouts. This release does not qualify device nodes, differing uid/gid, xattrs/ACLs, unplug/power loss or broad hardware compatibility.
 
-The live approximately 1 TB Corsair beta.5 remount and full EIO regression are tracked separately in `docs/VALIDATION.md`. A synthetic pass is not evidence that the physical mount has been upgraded.
+The selected approximately 1 TB Corsair volume was normally transitioned to beta.5, and a separate five-stage `rsync -a` canary passed with the original root names unchanged; see `docs/VALIDATION.md`. The same-condition full five-root name traversal counted 17,368 directories, 397,593 files and 388 links with 0 errors; all 795 prior EIO paths passed individual `lstat`. The stricter every-entry `lstat` run was partial and is labeled as such in the validation ledger. No unplug or power-loss qualification is claimed.
 
 ---
 

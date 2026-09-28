@@ -15,7 +15,7 @@ Designed for DGX Spark / GB10: readable APFS volumes, bounded durable write buff
 > [!WARNING]
 > **공개 실험 베타입니다. 중요한 데이터의 유일한 사본에 사용하지 마세요.**
 > 이미지·가상 블록 장치와 선택한 외장 APFS 장치의 단일 쓰기·해제·재마운트 검증을 통과했습니다. **케이블 분리·전원 차단 내구성, 장시간 USB 쓰기 성능은 미검증**입니다. 일부 APFS/POSIX 기능은 의도적으로 거부합니다. 상용 드라이버 또는 Apple/NVIDIA 공식 제품이 아닙니다.
-> **beta.5 검증 상태:** 합성 APFS 이미지에서 일반 `rsync -a`의 첫 복사·반복·파일/링크 교체·`--delete`와 디렉터리·심볼릭 링크·mode·mtime을 시험했습니다. macOS 독립 검사와 실제 Corsair 재마운트 결과는 [검증 문서](docs/VALIDATION.md)의 범위를 따릅니다. 기존 beta.4 물리 장치 쓰기 시험은 아래에 별도로 표시합니다.
+> **beta.5 검증 상태:** 합성 APFS 이미지에서 일반 `rsync -a`의 첫 복사·반복·파일/링크 교체·`--delete`와 디렉터리·심볼릭 링크·mode·mtime을 시험했습니다. macOS 독립 검사와 실제 Corsair의 beta.5 정상 재마운트·`rsync -a` 시험을 통과했습니다. 다섯 연구 루트의 같은 조건 전체 이름 순회에서 17,368개 디렉터리·397,593개 파일·388개 링크를 오류 없이 열거했고, 이전 EIO 795개 경로를 모두 다시 읽었습니다. [검증 범위](docs/VALIDATION.md)를 확인하세요. 기존 beta.4 물리 장치 쓰기 시험은 아래에 별도로 표시합니다.
 >
 > **beta.4 검증 상태:** beta.3의 선택 장치 쓰기 시험에 더해, beta.4의 빈 폴더 삭제는 합성 이미지의 Linux FUSE·Mac fsck/SHA로 확인했습니다. 실제 Corsair 장치에 beta.4를 재마운트한 뒤 mkdir·cd·rmdir와 비어 있지 않은 폴더의 삭제 거부를 확인했습니다. beta.2에서 실패했던 약 1 TB 볼륨에 8 MiB 시험 파일을 쓰고 fsync·정상 해제·원시 읽기·재마운트·삭제까지 확인했습니다. 이 한 장치의 시험을 전원 차단 안전성이나 범용 APFS 호환성으로 확대 해석하지 마세요.
 
@@ -109,6 +109,7 @@ PY
 
 | 상태 | 범위 |
 |---|---|
+| ✅ | 실제 Corsair: 다섯 연구 루트 이름 순회 오류 0건, 이전 EIO 795개 경로 `lstat` 전부 통과; 별도 `rsync -a` 5단계 쓰기 시험 통과 |
 | ✅ | 합성 APFS: `rsync -a` 첫 복사·반복·파일/링크 교체·`--delete`, 링크·mode·mtime; Apple `fsck_apfs` 결과는 검증 문서 참조 |
 | ✅ | DGX 실제 FUSE: 큰 순차 복사, 범위 수정, 두 핸들 읽기 일관성, fsync/close, 기본 파일 작업 |
 | ✅ | 실제 FUSE 프로세스 SIGKILL 후 승인된 데이터 복구, Apple fsck 및 파일 SHA 확인 |

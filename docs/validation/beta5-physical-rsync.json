@@ -1,0 +1,50 @@
+{
+  "version": "0.3.0-beta.5",
+  "mount_transition": {
+    "normal_unmount_attempts": 1,
+    "root_names_before": 23,
+    "same_root_names_after_qa": true,
+    "mount": "rw",
+    "binary_sha256": "a6c8a7e492f19c1918f1634191aaca83bb2aa9f8115406ae7e3c4fcea010330a"
+  },
+  "physical_rsync": {
+    "status": "passed-and-canary-removed",
+    "runs": [
+      {
+        "stage": "initial",
+        "rc": 0,
+        "stderr": ""
+      },
+      {
+        "stage": "repeat",
+        "rc": 0,
+        "stderr": ""
+      },
+      {
+        "stage": "replace-file",
+        "rc": 0,
+        "stderr": ""
+      },
+      {
+        "stage": "replace-link",
+        "rc": 0,
+        "stderr": ""
+      },
+      {
+        "stage": "delete",
+        "rc": 0,
+        "stderr": ""
+      }
+    ],
+    "verified": {
+      "large_bytes": 12550013,
+      "large_sha256": "eb342089af193d0d9912b0435466f010628e7edd99e5831e1663c435f9ee2665",
+      "payload_sha256": "8b55807373bc9919add2dabd32cf2f2615f46186914f8071166348315be47599",
+      "link": "nested/other.bin",
+      "payload_mtime_ns": 946684800987654321,
+      "payload_mode": "0o640"
+    },
+    "existing_files_modified": 0,
+    "qa_removed": true
+  }
+}
