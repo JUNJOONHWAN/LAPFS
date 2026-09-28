@@ -13,3 +13,5 @@ LAPFS is an experimental Linux APFS reader and buffered writable FUSE host for D
 The DGX source repository is canonical. Linux ARM64 release assets are built and tested there. macOS is used for independent Apple fsck and file-hash checks; this release does not offer a macOS FUSE driver. See [validation](VALIDATION.md), [limitations](LIMITATIONS.md), [recovery](RECOVERY.md) and [license notices](../THIRD_PARTY_NOTICES.md).
 
 Sequential I/O grouping, ARM SHA-256 acceleration and bounded RAM input are documented in [beta.9 throughput](SEQUENTIAL_IO.md). Local image results are not USB throughput guarantees.
+
+Beta.10 adds a bounded 8MiB committed-read window, invalidated by writes, flushes and recovery. Pending data overlays each reply. See [read performance](READ_AHEAD.md).

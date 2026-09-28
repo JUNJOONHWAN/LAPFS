@@ -417,3 +417,31 @@ fn stream_torn_tail_and_corruption() {
         s.close().unwrap();
     }
 }
+
+#[test]
+#[ignore = "requires explicit disposable APFS fixture"]
+fn read_ahead_invalidation_and_boundaries() {
+    let (source, offset, out) = fixture();
+    let work = tempfile::tempdir_in(out).unwrap();
+    let image = work.path().join("native.dmg"); std::fs::copy(source, &image).unwrap();
+    let mut s = Session::start_with_policy(&image, offset, &work.path().join("session"), GROUP_BYTES, 0, WritePolicy::Grouped).unwrap();
+    s.create("/cache-test").unwrap();
+    let mut bytes = vec![41u8; 9*1024*1024+17];
+    s.write("/cache-test",0,&bytes).unwrap(); s.flush().unwrap();
+    assert_eq!(s.read("/cache-test",0,37).unwrap(),bytes[..37]);
+    let boundary = 8*1024*1024-11;
+    assert_eq!(s.read("/cache-test",boundary as u64,47).unwrap(),bytes[boundary..boundary+47]);
+    s.write("/cache-test",17,b"changed").unwrap(); bytes[17..24].copy_from_slice(b"changed");
+    assert_eq!(s.read("/cache-test",0,40).unwrap(),bytes[..40]);
+    s.flush().unwrap(); assert_eq!(s.read("/cache-test",0,40).unwrap(),bytes[..40]);
+    s.write("/cache-test",bytes.len() as u64,b"tail").unwrap();
+    assert_eq!(s.read("/cache-test",bytes.len() as u64,20).unwrap(),b"tail");
+    s.truncate("/cache-test",31).unwrap(); assert_eq!(s.read("/cache-test",0,100).unwrap(),bytes[..31]);
+    s.rename("/cache-test","/renamed-cache",false).unwrap();
+    assert!(s.read("/cache-test",0,10).is_err());
+    assert_eq!(s.read("/renamed-cache",0,100).unwrap(),bytes[..31]);
+    s.unlink("/renamed-cache").unwrap(); s.create("/renamed-cache").unwrap();
+    s.write("/renamed-cache",0,b"replacement").unwrap();
+    assert_eq!(s.read("/renamed-cache",0,100).unwrap(),b"replacement");
+    s.close().unwrap();
+}

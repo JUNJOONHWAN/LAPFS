@@ -1,3 +1,11 @@
+# 0.3.0-beta.10
+
+- 8MiB 읽기 캐시·선행 읽기 · write/flush/복구 시 무효화.
+- Rust 301 · FUSE/rsync/정상 분리 · Mac 최종 이미지 2개 통과.
+- 로컬 40MiB APFS 이미지 1MiB 읽기: beta.9 464–530 → beta.10 818–912MiB/s. USB 수치 아님.
+- APFS 쓰기 형식·CoW·복구 저널 변경 없음.
+- [성능·변경 전후·제한](docs/READ_AHEAD.md).
+
 # 0.3.0-beta.9
 
 - RAM 입력 묶음 32MiB · 1MiB 연속 journal I/O · ARM SHA-256 가속.

@@ -62,6 +62,10 @@ struct Record {
     garbage: Vec<String>,
     closed: bool,
 }
+// Committed bytes only, under the exclusive mount FD. Every write/flush and
+// recovery invalidates this one-window cache; pending writes overlay each reply.
+const READ_AHEAD_BYTES: usize = 8 * 1024 * 1024;
+struct ReadCache { path: String, offset: u64, attr: Attr, bytes: Vec<u8> }
 pub struct Session {
     image: Image,
     dir: PathBuf,
@@ -69,6 +73,7 @@ pub struct Session {
     record: Record,
     poisoned: bool,
     lookup_cache: apfs::LookupCache,
+    read_cache: Option<ReadCache>,
     // Valid only while our exclusive session has made no APFS mutation.
     write_cache: Option<(String, Attr)>,
     stream_buffer: Vec<u8>,
@@ -207,6 +212,7 @@ impl Session {
             record,
             poisoned: false,
             lookup_cache: Default::default(),
+            read_cache: None,
             write_cache: None,
             stream_buffer: Vec::new(),
             verified_stream: None,
@@ -261,6 +267,7 @@ impl Session {
             record,
             poisoned: false,
             lookup_cache: Default::default(),
+            read_cache: None,
             write_cache: None,
             stream_buffer: Vec::new(),
             verified_stream: None,
@@ -332,13 +339,28 @@ impl Session {
     }
     pub fn read(&mut self, path: &str, offset: u64, size: usize) -> Result<Vec<u8>> {
         ensure!(size <= 8 * 1024 * 1024, "Read request exceeds bound");
-        let a = self.attr(path)?;
-        if offset >= a.size {
-            return Ok(vec![]);
-        }
+        self.ready()?;
+        crate::reader::validate_path(path)?;
+        let a = if let Some(c) = self.read_cache.as_ref().filter(|c| c.path == path) { c.attr } else { self.attr(path)? };
+        if offset >= a.size || size == 0 { return Ok(vec![]); }
         let n = (a.size - offset).min(size as u64) as usize;
-        let mut bytes = self.view()?.read_range(path, offset, n)?;
-        bytes.resize(n, 0);
+        let hit = self.read_cache.as_ref().is_some_and(|c| c.path == path && offset >= c.offset && offset + n as u64 <= c.offset + c.bytes.len() as u64);
+        if !hit {
+            let count = (a.size - offset).min(READ_AHEAD_BYTES as u64) as usize;
+            let loaded = self.view()?.read_range(path, offset, count);
+            // Speculative bytes beyond the request must not turn a readable
+            // requested range into an error (e.g. an unsupported later extent).
+            let (mut bytes, count) = match loaded {
+                Ok(bytes) => (bytes, count),
+                Err(_) if count > n => (self.view()?.read_range(path, offset, n)?, n),
+                Err(error) => return Err(error.into()),
+            };
+            bytes.resize(count, 0);
+            self.read_cache = Some(ReadCache { path: path.into(), offset, attr: a, bytes });
+        }
+        let cache = self.read_cache.as_ref().unwrap();
+        let start = (offset - cache.offset) as usize;
+        let mut bytes = cache.bytes[start..start+n].to_vec();
         for q in &self.record.queue {
             if let Action::WriteAt {
                 path: p, offset: o, ..
@@ -670,6 +692,7 @@ impl Session {
     }
     pub fn write(&mut self, path: &str, offset: u64, data: &[u8]) -> Result<()> {
         self.ready()?;
+        self.read_cache = None;
         self.writable(path)?;
         if offset > self.attr(path)?.size {
             return Err(fail_errno(libc::EOPNOTSUPP));
@@ -957,6 +980,7 @@ impl Session {
         result
     }
     fn flush_inner(&mut self) -> Result<()> {
+        self.read_cache = None;
         let _profile = journal::Phase::new("buffer_flush");
         self.write_cache = None;
         self.freeze_stream()?;
@@ -982,6 +1006,7 @@ impl Session {
         Ok(())
     }
     fn settle_active(&mut self) -> Result<()> {
+        if self.record.active.is_some() { self.read_cache = None; }
         let _profile = journal::Phase::new("settle_total");
         let Some(name) = self.record.active.clone() else {
             return Ok(());
