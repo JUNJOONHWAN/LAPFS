@@ -41,7 +41,7 @@ Linux FUSE output is retained for native Mac validation. `tests/verify_linux_app
 
 ## Not established
 
-Physical USB writes/unplug/power loss; TB-scale real-volume writer throughput; full APFS/POSIX support; long-term hardware endurance; independent security/commercial certification. See [limitations and qualification plan](LIMITATIONS.md).
+USB unplug/power loss; TB-scale real-volume writer throughput; full APFS/POSIX support; long-term hardware endurance; independent security/commercial certification. See [limitations and qualification plan](LIMITATIONS.md).
 
 ## Historical beta.2 real-volume preflight: failed, original unchanged
 
@@ -49,8 +49,14 @@ After the image tests, a real approximately 1 TB APFS volume was positively iden
 
 ## beta.3 candidate
 
-The original 32 MiB limit is retained. Incremental metadata updates now pass the previously failing real-volume prepare simulation. Physical write qualification remains pending; see [current report](REAL_VOLUME_AFTER.md). Previous evidence above retains its original build identity.
+The original 32 MiB limit is retained. Incremental metadata updates now pass the previously failing real-volume prepare simulation. A selected physical-volume canary later passed; see [current report](REAL_VOLUME_AFTER.md). Previous evidence above retains its original build identity.
 
 ## beta.3 final candidate, 2026-09-28
 
-See [before-impact](REAL_VOLUME_BEFORE.md) and [after-impact](REAL_VOLUME_AFTER.md) for source changes, exact candidate SHA, all current receipts and pending physical acceptance. The 5,000-original fixture is reproducible on macOS with `python3 tests/make_catalog_fixture_macos.py NEW_OUTPUT_DIRECTORY`. Transfer its image and expected.json to Linux, then run `tests/verify_catalog_cow.py --image large.dmg --expected expected.json --output evidence`. Transfer the resulting large.dmg/result.json back to macOS and run `python3 tests/verify_catalog_apple.py OUTPUT_DIRECTORY EXPECTED_JSON`. This covers all files, not a sample.
+See [before-impact](REAL_VOLUME_BEFORE.md) and [after-impact](REAL_VOLUME_AFTER.md) for source changes, exact candidate SHA, all current receipts and completed selected-device canary acceptance. The 5,000-original fixture is reproducible on macOS with `python3 tests/make_catalog_fixture_macos.py NEW_OUTPUT_DIRECTORY`. Transfer its image and expected.json to Linux, then run `tests/verify_catalog_cow.py --image large.dmg --expected expected.json --output evidence`. Transfer the resulting large.dmg/result.json back to macOS and run `python3 tests/verify_catalog_apple.py OUTPUT_DIRECTORY EXPECTED_JSON`. This covers all files, not a sample.
+
+## beta.3 selected physical volume acceptance
+
+[Redacted canary receipt](validation/beta3-physical-rw-canary.json): 8,388,617 bytes written/fsynced on the selected USB APFS partition; normal unmount, raw APFS SHA, fresh RW mount/read/delete, and original 24 root entry names verified. [EBUSY transition incident](PHYSICAL_CANARY_INCIDENT.md) records the first interrupted unmount and exact-session continuation. The live physical volume has not been checked by Apple's native fsck and unplug/power-loss have not been simulated.
+
+The exact user-run root loop image also passed [independent Apple fsck and SHA](validation/beta3-kernel-loop-apple.json); it is a synthetic loop image, not the physical USB volume.

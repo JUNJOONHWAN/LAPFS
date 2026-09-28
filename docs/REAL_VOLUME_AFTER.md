@@ -1,6 +1,6 @@
-# Real-volume correction: after-impact report (qualification in progress)
+# Real-volume correction: after-impact report
 
-Canonical source/runtime: DGX. Branch: `fix/real-volume-journal-budget`. Candidate: 0.3.0-beta.3. No public beta.3 release has been published.
+Canonical source/runtime: DGX. Branch: `fix/real-volume-journal-budget`. Candidate: 0.3.0-beta.3. The selected physical-volume acceptance passed; public beta.3 release status is tracked separately.
 
 ## Changes and direct impact
 
@@ -13,7 +13,7 @@ Canonical source/runtime: DGX. Branch: `fix/real-volume-journal-budget`. Candida
 
 ## Measured physical-volume simulation
 
-The source is an approximately 1 TB APFS partition. All probes open it read-only; physical target writes = 0. Previous read-only mount was restored after each probe.
+The source is an approximately 1 TB APFS partition. This table covers earlier O_RDONLY overlay probes only; their physical target writes were zero. Later actual-device write acceptance is documented below.
 
 | Case | Journal bytes (undo + redo) | Staging time | Outcome |
 |---|---:|---:|---|
@@ -34,13 +34,19 @@ These timings measure staging through a read-only overlay, not actual USB write 
 - Probe success and cap refusal preserve the complete image SHA, release source ownership and remove temporary scratch.
 - Large-volume synthetic workload: all 5,000 originals, 600 creates, 200 renames, 300 deletes and 40 interleaved overlapping writes passed in 121.88 seconds with the final binary. Apple fsck is clean; all 5,000 originals and 300 surviving new files match SHA, and removed names are absent. Earlier matching workload took 1,286.45 seconds before lookup fixes; these are local image observations with different concurrent host load, not a controlled USB benchmark.
 
+## Actual selected-device acceptance
+
+The operator ran the SHA-pinned final binary on the selected roughly 1 TB APFS USB partition. A disposable kernel block test passed first; its retained image independently passed Apple fsck and all 104 original, imported and RW-mount file hashes. [Kernel-loop Apple receipt](validation/beta3-kernel-loop-apple.json). The physical canary was 8,388,617 bytes, with two unaligned overwrites; `fsync` returned and mounted SHA matched. An initial normal unmount reported `EBUSY`; the continuation verified the same canary/session, then a normal unmount succeeded. The independent raw APFS digest matched, a new RW FUSE session mounted, the canary read matched and it was deleted. All 24 original root entry names remained. The verified RW mount is active. [Redacted device receipt](validation/beta3-physical-rw-canary.json) and [transition incident](PHYSICAL_CANARY_INCIDENT.md).
+
+This is one real USB bridge, one canary, and one clean unmount/remount cycle. It does not test unplug, power loss, controller flush misreporting, prolonged load, arbitrary APFS layouts, or independent macOS fsck on this physical disk. The external recovery journal must remain available before the disk is moved to macOS.
+
 ## Remaining gates
 
-Root kernel-loop acceptance, actual selected-device canary with fsync/unmount/remount/readback/deletion, and publication. The remote session cannot obtain root (`sudo -n` requires authentication), so the prebuilt, SHA-pinned transition script must run once in the operator terminal. No physical USB write success, unplug/power-cut qualification, or commercial certification is claimed.
+Long USB workload and fault-injected physical unplug/power recovery, additional APFS layout/bridge qualification, and independent macOS fsck on the physical volume remain open. Full POSIX support and commercial certification are not claimed.
 
 ## Exact candidate and receipts
 
-Final Linux ARM64 binary SHA256: `27382b42285a850c9df95b51a66501dbe3cd2785f8e5aa6854d43ab09ee29e3c`. Cargo package and CLI both report 0.3.0-beta.3. The binary is staged on DGX but the selected device remains read-only.
+Final Linux ARM64 binary SHA256: `27382b42285a850c9df95b51a66501dbe3cd2785f8e5aa6854d43ab09ee29e3c`. Cargo package and CLI both report 0.3.0-beta.3. The same binary passed actual selected-device canary acceptance and remains mounted RW on DGX.
 
 - [Final FUSE + Apple validation](validation/beta3-fuse-native.json): 12,550,013-byte copy, 21 committed batches, 104 originals and all changed files; 0.958 s copy observation on a cached synthetic image.
 - [Large catalog + Apple validation](validation/beta3-catalog-native.json): complete 5,000-file verification.

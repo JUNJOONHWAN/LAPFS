@@ -18,7 +18,7 @@ New truncate size is limited to 8 MiB. Large file copy/append/range-write does n
 
 | Area | Required evidence before a stronger claim |
 |---|---|
-| Actual USB writes | Expendable physical media, verified original/new hashes and independent Apple fsck |
+| Broader actual USB qualification | Selected device single-canary test passed; further long loads, other media and independent Apple fsck required |
 | USB unplug / power loss | Repeatable failure injection across payload/queue/apply/flush/commit/recovery on multiple bridges |
 | Flush reliability | Hardware that reports success before durable storage must be characterized |
 | Real TB-scale catalogs | Long copies, random updates, full/fragmented storage, allocator/layout diversity |
@@ -39,4 +39,4 @@ A prepare-only canary on a roughly 1 TB volume exceeded the 32 MiB journal cap. 
 
 ## beta.3 candidate
 
-The original 32 MiB limit is retained. Incremental metadata updates now pass the previously failing real-volume prepare simulation. Physical write qualification remains pending; see [current report](REAL_VOLUME_AFTER.md). Previous evidence above retains its original build identity.
+The original 32 MiB limit is retained. Incremental metadata updates now pass the previously failing real-volume prepare simulation. A selected physical-volume canary later passed; see [current report](REAL_VOLUME_AFTER.md). Previous evidence above retains its original build identity.

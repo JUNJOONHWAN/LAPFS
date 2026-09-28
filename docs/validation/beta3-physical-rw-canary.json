@@ -1,0 +1,18 @@
+{
+  "status": "mounted-rw-verified",
+  "existing_files_modified": 0,
+  "kernel_loop_qa": "passed",
+  "write_test": {
+    "bytes": 8388617,
+    "sha256": "391e3866d3a21d1a6a0f22a2bb9b0eb9d5e8e29076672134dc4653b61927f452"
+  },
+  "normal_unmount_attempts": 1,
+  "unmounted_readback": "passed",
+  "remount_read_delete": "passed",
+  "original_root_entries_verified": 24,
+  "selected_source": "one approximately 1 TB APFS Linux block partition",
+  "current_mount": "buffered read-write FUSE",
+  "physical_canary": "created, fsynced, unmounted, raw-read, remounted, read and deleted",
+  "usb_unplug_tested": false,
+  "power_loss_tested": false
+}
