@@ -16,7 +16,7 @@ runtime=dist/f'lapfs-{version}-linux-arm64-gnu.tar.gz'
 with tarfile.open(runtime,'w:gz') as t:
  t.add(binary,arcname='lapfs/bin/lapfs')
  for n in files:
-  if n in ['README.md','LICENSE','THIRD_PARTY_NOTICES.md','UPSTREAM.md','RELEASE_NOTES.md','scripts/verify-block-device.py','scripts/block_qa_support.py'] or n.startswith(('docs/','licenses/','fixtures/')):
+  if n in ['README.md','LICENSE','THIRD_PARTY_NOTICES.md','UPSTREAM.md','RELEASE_NOTES.md','scripts/verify-block-device.py','scripts/block_qa_support.py','scripts/safe-eject.py'] or n.startswith(('docs/','licenses/','fixtures/')):
    t.add(root/n,arcname='lapfs/'+n,recursive=False)
  # Preserve all dependency license files with the binary distribution too.
  for n in files:

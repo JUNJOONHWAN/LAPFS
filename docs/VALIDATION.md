@@ -1,5 +1,10 @@
 # Validation ledger
 
+## beta.6 handoff, 2026-09-28
+
+Normal and SIGKILL FUSE handoff on disposable APFS images passed the new positive receipt and independent Mac fsck/104 original hashes. Mac-native write -> Linux write -> Mac native read/fsck passed with the same handoff implementation. Exact beta.6 release-binary FUSE and rsync regressions also passed Mac fsck/hash. See [after-impact](HANDOFF_AFTER.md) and [sanitized receipt](validation/handoff-beta6.json). Actual power pull and Mac-first access to an interrupted in-place transaction remain untested and unsafe to claim.
+
+
 ## beta.5 compatibility candidate, 2026-09-28
 
 The canonical DGX ARM64 source added FUSE inode lookup/forget eviction, metadata updates and symlink writes. The reproducible `tests/verify_rsync_archive.py` disposable image `rsync -a` matrix passed initial copy, identical repeat, changed-file atomic replacement, symlink-target replacement, and `--delete` of an orphan file, link and nonempty directory. The matrix verified nested files, permissions `0640`, nanosecond mtime, the full symlink target and SHA values. On macOS, `fsck_apfs -n` reported no warnings and all 104 original fixture files plus the new files and link passed independent readback. [Matrix](validation/beta5-rsync-matrix.json) · [Apple fsck](validation/beta5-apple-fsck.log).

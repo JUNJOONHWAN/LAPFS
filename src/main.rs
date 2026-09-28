@@ -31,7 +31,7 @@ fn run() -> Result<()> {
     };
     match a.get(1).map(String::as_str).unwrap_or("help") {
         "help" | "--help" | "-h" => println!(
-            r#"LAPFS 0.3.0-beta.3 — APFS 읽기 및 영구 버퍼 기반 쓰기 마운트
+            r#"LAPFS 0.3.0-beta.6 — APFS 읽기 및 영구 버퍼 기반 쓰기 마운트
 
 읽기: TARGET은 이미지 또는 Linux APFS 파티션(/dev/sda2 등)
 probe TARGET OFFSET_BYTES BATCH_JSON SCRATCH_PARENT CAP_MIB
@@ -43,6 +43,7 @@ export TARGET OFFSET_BYTES APFS_PATH LOCAL_DESTINATION [VOLUME_INDEX]
 mount-ro TARGET OFFSET_BYTES EMPTY_MOUNTPOINT [VOLUME_INDEX]
 mount-rw TARGET OFFSET_BYTES EMPTY_MOUNTPOINT SESSION_DIR
 mount-recover SESSION_DIR
+handoff-ready TARGET OFFSET_BYTES SESSION_DIR
 
 배치 쓰기: TARGET은 분리된 이미지 또는 명시적으로 등록한 장치 설명 파일
 prepare TARGET OFFSET_BYTES BATCH_JSON NEW_JOURNAL_DIR [CAP_MIB=128] [RESERVE_MIB=1024]
@@ -118,6 +119,14 @@ PREPARED는 반영 완료가 아님. COMMITTED 이후에만 해당 배치 반영
         "mount-recover" => println!(
             "{}",
             spark_apfs_safe::buffered::recover(Path::new(arg(2)?))?
+        ),
+        "handoff-ready" => println!(
+            "{}",
+            spark_apfs_safe::buffered::handoff_ready(
+                Path::new(arg(4)?),
+                Path::new(arg(2)?),
+                arg(3)?.parse()?,
+            )?
         ),
         "mount-rw" => {
             #[cfg(target_os = "linux")]

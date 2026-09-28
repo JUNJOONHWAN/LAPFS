@@ -1,3 +1,12 @@
+# LAPFS v0.3.0-beta.6 — Mac/Linux handoff guard
+
+- Add final device sync before a session is marked closed and a fail-closed `handoff-ready` check.
+- Package `scripts/safe-eject.py` for normal FUSE unmount, dead-daemon stale mount cleanup, exact-session recovery and a positive disconnect receipt.
+- Disposable-image normal exit and SIGKILL recovery passed native Apple fsck and all 104 original hashes. Mac-native write -> DGX write -> Mac fsck/hash roundtrip passed using the same handoff implementation.
+- This does **not** certify unplug during an APFS transaction, USB bridge flush reliability, or direct Mac-first recovery without the DGX journal. The selected Corsair live mount was not moved or modified for this test. See `docs/HANDOFF_AFTER.md`.
+
+---
+
 # LAPFS v0.3.0-beta.5 — public experimental beta
 
 - Remove the FUSE mount-lifetime 100,000 inode-path and 4,096 handle counters. FUSE `forget` and handle release now reclaim bookkeeping; allocation failures return ENOMEM rather than a synthetic EIO.

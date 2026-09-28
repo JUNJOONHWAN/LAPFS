@@ -1,3 +1,4 @@
+use spark_apfs_safe::buffered::handoff_ready;
 use spark_apfs_safe::{
     buffered::{Session, GROUP_BYTES},
     journal::hash,
@@ -11,6 +12,53 @@ fn fixture() -> (PathBuf, u64, PathBuf) {
         .unwrap();
     let out = PathBuf::from(std::env::var("SPARK_APFS_TEST_OUTPUT").unwrap());
     (source, offset, out)
+}
+#[test]
+#[ignore = "requires explicit disposable APFS fixture"]
+fn handoff_refuses_live_writer_then_recovers_and_reopens() {
+    let (source, offset, out) = fixture();
+    let work = tempfile::Builder::new()
+        .prefix("handoff-")
+        .tempdir_in(out)
+        .unwrap()
+        .keep();
+    let image = work.join("native.dmg");
+    let other = work.join("wrong.dmg");
+    std::fs::copy(&source, &image).unwrap();
+    std::fs::copy(&source, &other).unwrap();
+    let dir = work.join("session");
+    let mut session = Session::start(&image, offset, &dir, GROUP_BYTES, 0).unwrap();
+    session.create("/handoff-test.txt").unwrap();
+    session
+        .write("/handoff-test.txt", 0, b"cross-os-handoff")
+        .unwrap();
+    assert!(handoff_ready(&dir, &image, offset).is_err());
+    drop(session);
+    assert!(handoff_ready(&dir, &other, offset).is_err());
+    let receipt = handoff_ready(&dir, &image, offset).unwrap();
+    assert_eq!(receipt["status"], "ready_to_disconnect");
+    assert_eq!(receipt["session"]["pending_bytes"], 0);
+    assert_eq!(receipt["session"]["closed"], true);
+    assert_eq!(receipt["external_owner"], "absent");
+    let mut bytes = Vec::new();
+    let (_, digest) = spark_apfs_safe::reader::copy(
+        &mut spark_apfs_safe::reader::open(&image, offset, None).unwrap(),
+        "/handoff-test.txt",
+        &mut bytes,
+    )
+    .unwrap();
+    assert_eq!(bytes, b"cross-os-handoff");
+    assert_eq!(digest, hash(b"cross-os-handoff"));
+    assert_eq!(
+        handoff_ready(&dir, &image, offset).unwrap()["status"],
+        "ready_to_disconnect"
+    );
+    std::fs::write(
+        work.join("receipt.json"),
+        serde_json::to_vec_pretty(&receipt).unwrap(),
+    )
+    .unwrap();
+    println!("HANDOFF_NATIVE_EVIDENCE={}", work.display());
 }
 #[test]
 #[ignore = "requires explicit disposable APFS fixture"]

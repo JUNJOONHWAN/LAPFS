@@ -1,7 +1,7 @@
 <p align="center"><img src="docs/assets/lapfs-banner.svg" alt="LAPFS — buffered APFS access for Linux ARM64" width="100%"></p>
 
 <p align="center">
-  <a href="https://github.com/JUNJOONHWAN/LAPFS/releases"><img alt="Beta" src="https://img.shields.io/badge/release-0.3.0--beta.5-f5b84b"></a>
+  <a href="https://github.com/JUNJOONHWAN/LAPFS/releases"><img alt="Beta" src="https://img.shields.io/badge/release-0.3.0--beta.6-f5b84b"></a>
   <img alt="Platform" src="https://img.shields.io/badge/target-DGX%20Spark%20%2F%20Linux%20ARM64-72d6c9">
   <a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/license-GPL--3.0--only-829bff"></a>
 </p>
@@ -18,6 +18,8 @@ Designed for DGX Spark / GB10: readable APFS volumes, bounded durable write buff
 > **beta.5 검증 상태:** 합성 APFS 이미지에서 일반 `rsync -a`의 첫 복사·반복·파일/링크 교체·`--delete`와 디렉터리·심볼릭 링크·mode·mtime을 시험했습니다. macOS 독립 검사와 실제 Corsair의 beta.5 정상 재마운트·`rsync -a` 시험을 통과했습니다. 다섯 연구 루트의 같은 조건 전체 이름 순회에서 17,368개 디렉터리·397,593개 파일·388개 링크를 오류 없이 열거했고, 이전 EIO 795개 경로를 모두 다시 읽었습니다. [검증 범위](docs/VALIDATION.md)를 확인하세요. 기존 beta.4 물리 장치 쓰기 시험은 아래에 별도로 표시합니다.
 >
 > **beta.4 검증 상태:** beta.3의 선택 장치 쓰기 시험에 더해, beta.4의 빈 폴더 삭제는 합성 이미지의 Linux FUSE·Mac fsck/SHA로 확인했습니다. 실제 Corsair 장치에 beta.4를 재마운트한 뒤 mkdir·cd·rmdir와 비어 있지 않은 폴더의 삭제 거부를 확인했습니다. beta.2에서 실패했던 약 1 TB 볼륨에 8 MiB 시험 파일을 쓰고 fsync·정상 해제·원시 읽기·재마운트·삭제까지 확인했습니다. 이 한 장치의 시험을 전원 차단 안전성이나 범용 APFS 호환성으로 확대 해석하지 마세요.
+
+> **beta.6 이동 절차:** DGX에서 Mac으로 옮기기 전 `scripts/safe-eject.py`의 성공 영수증을 확인하세요. 정상 해제·잔여 작업 복구·최종 장치 flush·APFS 재검사를 묶었습니다. 갑작스러운 USB 분리 중 쓰기까지 무손상이라고 보증하지 않습니다. [정확한 절차](docs/RECOVERY.md) · [검증](docs/HANDOFF_AFTER.md)
 
 [시작하기](#빠른-시작) · [구조](#구조) · [목표와-현재-사양](#목표와-현재-사양) · [시험 결과](docs/VALIDATION.md) · [지원 제한](docs/LIMITATIONS.md) · [복구](docs/RECOVERY.md) · [English overview](docs/OVERVIEW.md)
 

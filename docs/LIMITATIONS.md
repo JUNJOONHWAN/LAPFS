@@ -44,3 +44,7 @@ The original 32 MiB limit is retained. Incremental metadata updates now pass the
 ## beta.5 compatibility gate
 
 The disposable APFS test covers ordinary `rsync -a` initial transfer, identical repeat, changed-file atomic replacement, and `--delete` of a regular orphan. It checks nested directories, symlink target, permissions, nanosecond mtime, SHA and macOS readback. Linux success alone is not a release gate: Apple `fsck_apfs -n` must have no warning and original fixture files must retain their hashes. The physical Corsair beta.5 EIO and rsync gate is tracked separately in `docs/VALIDATION.md`.
+
+## Mac/Linux handoff limit (beta.6)
+
+A positive `handoff-ready` receipt proves a normal DGX unmount/recovery/flush and exclusive read-only APFS parse at that moment. It does not prove that a USB bridge persisted a flush it falsely acknowledged. If the cable is pulled during an APFS transaction, the DGX-only external journal is required for recovery; Mac cannot apply it. The user must return the drive to the same DGX before a Mac writer touches it. Unqualified no-eject Mac-first use is not guaranteed safe.

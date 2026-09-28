@@ -1,0 +1,14 @@
+{
+  "version": "0.3.0-beta.6",
+  "binary_sha256": "9c192adef6f4a8e5a73a0fe02e5f8305c513efe7a355da731ef8e78aaf61283c",
+  "source_target": "DGX canonical source; disposable APFS images only",
+  "cases": {
+    "normal_fuse_unmount_handoff": {"status": "passed", "apple_fsck": "clean", "original_file_hashes": 104, "new_file_hash": "match", "image_sha256": "4fcfda77ed41197113186f09bbd4a18ab8e846c6319c786b2fdc4a709fc4e110"},
+    "fuse_sigkill_stale_mount_recovery_handoff": {"status": "passed", "apple_fsck": "clean", "original_file_hashes": 104, "new_file_hash": "match", "image_sha256": "b9c335fd1a591f8acb505e43420b1043f4b88a7a3c42b75ac4672d876c2fbfec"},
+    "mac_native_write_linux_write_mac_verify": {"status": "passed", "apple_fsck": "clean", "original_file_hashes": 104, "mac_file_hash": "match", "linux_file_hash": "match", "image_sha256": "009a3579ec00c329e4a2a7dae9a6aa877f62287a0d5c97b878ba8a22949a20c9", "note": "Same handoff implementation before the beta.6 version-string rebuild"},
+    "beta6_existing_fuse_and_rsync_regressions": {"status": "passed", "apple_fsck": "clean", "original_file_hashes": 104, "rsync_new_hashes_mode_mtime_link": "match"}
+  },
+  "physical_usb_unplug_tested": false,
+  "live_corsair_unmounted_or_modified": false,
+  "power_cut_mac_first_safe": false
+}

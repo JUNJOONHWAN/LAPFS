@@ -3,9 +3,9 @@
 //! data is in immutable fsynced payloads plus a checksummed durable manifest.
 use crate::{
     apfs_batch::{self, Action, Adapter},
-    journal::{self, Identity, Image, Journal, State},
+    journal::{self, Device, Identity, Image, Journal, State},
 };
-use anyhow::{Context, Result, ensure};
+use anyhow::{ensure, Context, Result};
 use apfs::{Attr, FsView};
 use serde::{Deserialize, Serialize};
 use std::{
@@ -855,6 +855,9 @@ impl Session {
     }
     pub fn close(&mut self) -> Result<()> {
         self.flush()?;
+        // A clean handoff needs a final device flush even when the last
+        // transaction already drained the queue before unmount.
+        self.image.flush()?;
         self.record.closed = true;
         self.save()?;
         journal::fault_point("mount-closed");
@@ -895,4 +898,41 @@ pub fn recover(dir: &Path) -> Result<serde_json::Value> {
         s.close()?;
     }
     Ok(s.status())
+}
+
+/// Complete a stopped mount session and verify that the APFS source is safe to
+/// hand to another OS. An active FUSE mount retains the session/device locks
+/// and is refused; the caller must first perform a normal unmount.
+pub fn handoff_ready(dir: &Path, target: &Path, offset: u64) -> Result<serde_json::Value> {
+    let mut session = Session::resume_target(dir, target, offset)?;
+    if !session.is_closed() {
+        session.close()?;
+    }
+    ensure!(
+        session.record.queue.is_empty()
+            && session.record.active.is_none()
+            && session.record.garbage.is_empty()
+            && session.pending_bytes() == 0,
+        "Handoff refused: queue or recovery journal remains"
+    );
+    session.image.flush()?;
+    session.image.ensure_no_pending()?;
+    let status = session.status();
+    drop(session);
+    #[cfg(target_os = "linux")]
+    let source = if crate::physical::is_descriptor(target) {
+        crate::physical::source_path(target)?
+    } else {
+        target.to_path_buf()
+    };
+    #[cfg(not(target_os = "linux"))]
+    let source = target.to_path_buf();
+    let identity = crate::reader::inspect(&source, offset)?;
+    Ok(serde_json::json!({
+        "status": "ready_to_disconnect",
+        "session": status,
+        "source_identity": identity,
+        "device_sync": "completed",
+        "external_owner": "absent"
+    }))
 }

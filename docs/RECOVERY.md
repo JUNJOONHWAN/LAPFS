@@ -55,3 +55,19 @@ sudo tail -n 30 /var/log/lapfs/errors.jsonl
 ```
 
 Diagnostic rotation never deletes recovery journals.
+
+## Mac/Linux physical handoff (beta.6)
+
+On DGX, finish application I/O and close files, then run the packaged helper with the **exact current** target, mountpoint and session. It performs only a normal FUSE unmount, waits for the writer to exit, completes any recoverable queue, requires an empty queue and absent ownership marker, issues a final device flush, and reopens/parses the APFS source read-only. Only a JSON `status: ready_to_disconnect` receipt permits normal physical removal. It does not power off a separate whole-disk device or certify a USB bridge cache.
+
+```bash
+sudo python3 scripts/safe-eject.py --binary /absolute/path/to/bin/lapfs \
+  /var/lib/lapfs/devices/UUID/target.lapfs-device.json 0 \
+  /absolute/path/to/mountpoint /var/lib/lapfs/devices/UUID/EXACT-SESSION
+```
+
+If the FUSE process already died, its stale mount entry is removed with the same normal unmount. The helper then attempts recovery using the specified session. If it refuses or emits no positive receipt, **leave the device on DGX** with all recovery files intact. Never force/lazy unmount or delete the session to bypass the refusal. A manual check after normal unmount is `sudo lapfs handoff-ready TARGET 0 SESSION_DIR`.
+
+On Mac, use Finder Eject or a normal `diskutil unmountDisk` before removing the drive. On return to DGX, the next mount uses a new session; LAPFS verifies the current APFS/device identity. If the drive was unplugged unexpectedly while DGX had a writer, reconnect it to the **same DGX with the same local recovery directory** and run recovery/handoff there before allowing Mac to write. Do not claim that Mac can recover DGX-only journals.
+
+Abrupt physical removal during a transaction can leave in-place APFS data/metadata updates incomplete. The present external journal protects recovery **when the device returns to DGX**; it cannot guarantee a mountable, unchanged volume if the device goes directly to Mac. True Mac-first recovery after any cut requires a separate native APFS CoW/commit redesign and hardware power-cut testing. See [handoff impact and results](HANDOFF_AFTER.md).

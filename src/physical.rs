@@ -73,6 +73,9 @@ fn load(path: &Path) -> Result<Enrollment> {
     );
     Ok(e)
 }
+pub fn source_path(path: &Path) -> Result<PathBuf> {
+    Ok(load(path)?.device)
+}
 fn size(file: &File) -> Result<u64> {
     let mut n = 0u64;
     if unsafe { libc::ioctl(file.as_raw_fd(), 0x80081272u64 as _, &mut n) } != 0 {

@@ -1,0 +1,11 @@
+# Mac/Linux handoff: before-impact report (2026-09-28)
+
+Authority: DGX Spark source `ed1753336c82e89d3be00b7934c2802a2a0c69f8` was clean before this work. The selected Corsair APFS partition remains mounted RW by the existing beta.5 process. This work does not unmount it or modify its APFS contents.
+
+Requested path: Mac <-> DGX physical handoff, with a clean eject and best available resistance to abrupt removal. A successful `fusermount3 -u` alone is not a positive handoff receipt: the FUSE process must complete `Session::close`, the durable queue and journal must be drained, the owner record removed, and the raw APFS partition must reopen exclusively and parse. The current `mount-recover` command can complete a leftover session, but there is no single operator-facing handoff check. `Session::close` currently calls `flush` and publishes CLOSED; it does not issue a final target `sync_all` when the queue is already empty.
+
+Directly affected source/callers: `src/buffered.rs` session close/recover, `src/main.rs` CLI, `src/physical.rs` enrolled descriptor source resolution, `src/mount_rw.rs` normal FUSE destroy, `src/reader.rs` raw inspect, `docs/RECOVERY.md`, and new disposable-image handoff tests. Existing `mount-rw`, `mount-recover`, import, offline journals, physical enrollment, active mount process, research files and schedules must retain their behavior. No public release or active runtime swap is implied by source changes.
+
+Expected changes: explicit final target flush and a fail-closed `handoff-ready` command that refuses an active mount, validates exact target/session, completes recovery if needed, requires empty queue/no owner, then reopens and parses APFS read-only. A normal-unmount helper can combine this check with `fusermount3 -u` and require a positive receipt before removal. Abrupt unplug before an in-place APFS transaction finishes remains a structural limitation: the external DGX journal cannot be read by macOS. No claim of power-loss immunity will be made without on-disk CoW/recovery redesign and physical fault testing.
+
+Verification: test with disposable APFS images, including mount still active rejection, clean unmount, interrupted process recovery and wrong-target rejection; independently verify final image with native macOS `fsck_apfs` and hashes. Do not pull power from or move the live Corsair during this work.
