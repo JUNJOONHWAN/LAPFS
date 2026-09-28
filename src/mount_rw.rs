@@ -430,8 +430,14 @@ impl Filesystem for Host {
                 (id, FileType::Directory, ".".into()),
                 (parent_id, FileType::Directory, "..".into()),
             ];
-            for (name, a) in self.session.list(&p)? {
-                rows.push((ino(&a), kind(&a), name));
+            for entry in self.session.list(&p)? {
+                let id = if entry.file_id == 2 { 1 } else { entry.file_id };
+                let kind = match entry.flags & 0xf {
+                    4 => FileType::Directory,
+                    10 => FileType::Symlink,
+                    _ => FileType::RegularFile,
+                };
+                rows.push((id, kind, entry.name));
             }
             Ok(rows)
         })();

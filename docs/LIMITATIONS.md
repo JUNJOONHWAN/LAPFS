@@ -33,6 +33,10 @@ There is no sustained USB 3.2 MB/s claim or recovery-time SLA. Small cached-imag
 
 Some existing APFS data blocks are modified in place under an **external** undo/redo journal. Correctness depends on the journal remaining available, flush behavior, device identity validation, and exclusive ownership. Never delete a pending owner/queue/journal or switch the volume to a native Mac writer before completing recovery. Diagnostic logs are not the recovery journal.
 
-## Observed real-volume blocker
+## Historical beta.2 real-volume blocker
 
-A prepare-only canary on a roughly 1 TB volume exceeded the 32 MiB journal cap. Original APFS blocks were unchanged; RW activation did not proceed. Catalog-wide metadata work can exceed the budget even for a tiny new file. The current beta is therefore unsuitable for that volume. Larger caps or incremental catalog updates require new qualification before treating this failure as resolved.
+A prepare-only canary on a roughly 1 TB volume exceeded the 32 MiB journal cap. Original APFS blocks were unchanged; RW activation did not proceed. Catalog-wide metadata work can exceed the budget even for a tiny new file. That beta.2 build was unsuitable for the tested volume. The beta.3 correction and remaining physical-device qualification are documented below.
+
+## beta.3 candidate
+
+The original 32 MiB limit is retained. Incremental metadata updates now pass the previously failing real-volume prepare simulation. Physical write qualification remains pending; see [current report](REAL_VOLUME_AFTER.md). Previous evidence above retains its original build identity.

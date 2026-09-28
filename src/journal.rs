@@ -696,6 +696,9 @@ impl<D: Device> Overlay<D> {
         );
         Ok(())
     }
+    pub fn statistics(&self) -> serde_json::Value {
+        serde_json::json!({"undo_bytes":self.manifest.undo_len,"redo_bytes":self.manifest.redo_len,"journal_bytes":self.manifest.undo_len+self.manifest.redo_len,"operations":self.manifest.ops.len(),"unique_blocks":self.manifest.undo.len()})
+    }
     pub fn finish(self) -> Result<(D, PathBuf)> {
         ensure!(!self.manifest.undo.is_empty(), "Empty transaction");
         durable_sync(&self.undo)?;

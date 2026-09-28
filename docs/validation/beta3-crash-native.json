@@ -1,0 +1,66 @@
+[
+  {
+    "bytes": 8197,
+    "image": "mount-wal-published.dmg",
+    "point": "mount-wal-published",
+    "sha256": "b2cab53dd5b50284acc297494bded9b33c0474d52ac34740d99857c7ab20508d",
+    "apple_fsck": "clean",
+    "native_hash": "matched"
+  },
+  {
+    "bytes": 8197,
+    "image": "prepare-dir-created.dmg",
+    "point": "prepare-dir-created",
+    "sha256": "b2cab53dd5b50284acc297494bded9b33c0474d52ac34740d99857c7ab20508d",
+    "apple_fsck": "clean",
+    "native_hash": "matched"
+  },
+  {
+    "bytes": 8197,
+    "image": "state-Applying.dmg",
+    "point": "state-Applying",
+    "sha256": "b2cab53dd5b50284acc297494bded9b33c0474d52ac34740d99857c7ab20508d",
+    "apple_fsck": "clean",
+    "native_hash": "matched"
+  },
+  {
+    "bytes": 8197,
+    "image": "apply-write.dmg",
+    "point": "apply-write",
+    "sha256": "b2cab53dd5b50284acc297494bded9b33c0474d52ac34740d99857c7ab20508d",
+    "apple_fsck": "clean",
+    "native_hash": "matched"
+  },
+  {
+    "bytes": 8197,
+    "image": "state-Committed.dmg",
+    "point": "state-Committed",
+    "sha256": "b2cab53dd5b50284acc297494bded9b33c0474d52ac34740d99857c7ab20508d",
+    "apple_fsck": "clean",
+    "native_hash": "matched"
+  },
+  {
+    "bytes": 8197,
+    "image": "mount-queue-retired.dmg",
+    "point": "mount-queue-retired",
+    "sha256": "b2cab53dd5b50284acc297494bded9b33c0474d52ac34740d99857c7ab20508d",
+    "apple_fsck": "clean",
+    "native_hash": "matched"
+  },
+  {
+    "bytes": 8197,
+    "image": "mount-gc-entry.dmg",
+    "point": "mount-gc-entry",
+    "sha256": "b2cab53dd5b50284acc297494bded9b33c0474d52ac34740d99857c7ab20508d",
+    "apple_fsck": "clean",
+    "native_hash": "matched"
+  },
+  {
+    "bytes": 8197,
+    "image": "mount-closed.dmg",
+    "point": "mount-closed",
+    "sha256": "b2cab53dd5b50284acc297494bded9b33c0474d52ac34740d99857c7ab20508d",
+    "apple_fsck": "clean",
+    "native_hash": "matched"
+  }
+]

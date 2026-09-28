@@ -138,12 +138,24 @@ impl Catalog {
         &self, dev: &mut D, node: &BtreeNode, depth: u8, object: u64,
         f: &mut dyn FnMut(&[u8], &[u8]) -> Result<(), ContainerError>,
     ) -> Result<(), ContainerError> {
+        self.for_object_type(dev, node, depth, object, None, f)
+    }
+
+    #[allow(clippy::type_complexity)]
+    fn for_object_type<D: BlockDevice>(
+        &self, dev: &mut D, node: &BtreeNode, depth: u8, object: u64,
+        record_type: Option<u8>,
+        f: &mut dyn FnMut(&[u8], &[u8]) -> Result<(), ContainerError>,
+    ) -> Result<(), ContainerError> {
+        let lower = (object, record_type.unwrap_or(0));
+        let upper = (object, record_type.unwrap_or(15));
         if depth > 32 { return Err(oor()); }
         if node.is_leaf() {
             if node.level != 0 { return Err(oor()); }
             for i in 0..node.nkeys {
                 let (k,v)=node.var_kv(i)?;
-                if JKey::parse(k)?.obj_id == object { f(k,v)?; }
+                let key = JKey::parse(k)?;
+                if key.obj_id == object && record_type.is_none_or(|ty| ty == key.obj_type) { f(k,v)?; }
             }
             return Ok(());
         }
@@ -151,14 +163,15 @@ impl Catalog {
         let mut separators=Vec::with_capacity(node.nkeys.min(512) as usize);
         for i in 0..node.nkeys {
             let (k,_)=node.var_kv(i)?;
-            let id=JKey::parse(k)?.obj_id;
+            let key=JKey::parse(k)?;
+            let id=(key.obj_id,key.obj_type);
             if separators.last().is_some_and(|previous| *previous > id) {return Err(oor());}
             separators.push(id);
         }
         for i in 0..node.nkeys {
             let low=separators[i as usize];
-            if low>object {break;}
-            if separators.get(i as usize+1).is_some_and(|next| *next<object) {continue;}
+            if low>upper {break;}
+            if separators.get(i as usize+1).is_some_and(|next| *next<lower) {continue;}
             let (_,v)=node.var_kv(i)?;
             let oid=crate::endian::u64_le(v,0)?;
             let paddr=self.omap.resolve(dev,oid,self.xid,self.block_size)?.ok_or_else(oor)?;
@@ -166,7 +179,7 @@ impl Catalog {
             dev.read_at(paddr.checked_mul(self.block_size as u64).ok_or_else(oor)?,&mut raw)?;
             let child=BtreeNode::parse(&raw)?;
             if child.level.checked_add(1)!=Some(node.level) {return Err(oor());}
-            self.for_object(dev,&child,depth+1,object,f)?;
+            self.for_object_type(dev,&child,depth+1,object,record_type,f)?;
         }
         Ok(())
     }
@@ -181,7 +194,7 @@ impl Catalog {
         names_hashed: bool,
     ) -> Result<Vec<DirEntry>, ContainerError> {
         let mut out: Vec<DirEntry> = Vec::new();
-        self.for_object(dev, &self.root, 0, dir_inode, &mut |k, v| {
+        self.for_object_type(dev, &self.root, 0, dir_inode, Some(crate::jkey::APFS_TYPE_DIR_REC), &mut |k, v| {
             let jk = JKey::parse(k)?;
             if jk.obj_type != APFS_TYPE_DIR_REC || jk.obj_id != dir_inode {
                 return Ok(());
@@ -252,7 +265,7 @@ impl Catalog {
         use crate::jkey::APFS_TYPE_FILE_EXTENT;
 
         let mut extents: Vec<(u64, u64, u64)> = Vec::new(); // (logical, len, paddr)
-        self.for_object(dev, &self.root, 0, stream_oid, &mut |k, v| {
+        self.for_object_type(dev, &self.root, 0, stream_oid, Some(crate::jkey::APFS_TYPE_FILE_EXTENT), &mut |k, v| {
             let jk = JKey::parse(k)?;
             if jk.obj_type == APFS_TYPE_FILE_EXTENT && jk.obj_id == stream_oid {
                 let logical = u64::from_le_bytes(
@@ -311,7 +324,7 @@ impl Catalog {
         use crate::jkey::APFS_TYPE_INODE;
 
         let mut inode_val: Option<Vec<u8>> = None;
-        self.for_object(dev, &self.root, 0, inode_num, &mut |k, v| {
+        self.for_object_type(dev, &self.root, 0, inode_num, Some(crate::jkey::APFS_TYPE_INODE), &mut |k, v| {
             if inode_val.is_none() {
                 let jk = JKey::parse(k)?;
                 if jk.obj_type == APFS_TYPE_INODE && jk.obj_id == inode_num {
@@ -331,7 +344,7 @@ impl Catalog {
         use crate::jkey::{APFS_TYPE_INODE, APFS_TYPE_FILE_EXTENT};
         use crate::endian::u64_le;
         let mut raw = None;
-        self.for_object(dev, &self.root, 0, ino, &mut |k, v| {
+        self.for_object_type(dev, &self.root, 0, ino, Some(APFS_TYPE_INODE), &mut |k, v| {
             let key = JKey::parse(k)?;
             if key.obj_id == ino && key.obj_type == APFS_TYPE_INODE { raw = Some(v.to_vec()); }
             Ok(())
@@ -342,7 +355,7 @@ impl Catalog {
         let want = (size - offset).min(len as u64) as usize;
         let end = offset.checked_add(want as u64).ok_or_else(oor)?;
         let mut extents = Vec::new();
-        self.for_object(dev, &self.root, 0, inode.private_id, &mut |k, v| {
+        self.for_object_type(dev, &self.root, 0, inode.private_id, Some(APFS_TYPE_FILE_EXTENT), &mut |k, v| {
             let key = JKey::parse(k)?;
             if key.obj_id == inode.private_id && key.obj_type == APFS_TYPE_FILE_EXTENT {
                 let logical = u64_le(k, 8)?; let length_flags = u64_le(v, 0)?;
@@ -379,7 +392,7 @@ impl Catalog {
         use crate::jkey::APFS_TYPE_INODE;
 
         let mut inode_val: Option<Vec<u8>> = None;
-        self.for_object(dev, &self.root, 0, inode_num, &mut |k, v| {
+        self.for_object_type(dev, &self.root, 0, inode_num, Some(crate::jkey::APFS_TYPE_INODE), &mut |k, v| {
             if inode_val.is_none() {
                 let jk = JKey::parse(k)?;
                 if jk.obj_type == APFS_TYPE_INODE && jk.obj_id == inode_num {
@@ -474,7 +487,7 @@ impl Catalog {
         use crate::xattr::{xattr_key_name, xattr_val, XattrEntry};
 
         let mut out: Vec<XattrEntry> = Vec::new();
-        self.for_object(dev, &self.root, 0, inode_num, &mut |k, v| {
+        self.for_object_type(dev, &self.root, 0, inode_num, Some(crate::jkey::APFS_TYPE_XATTR), &mut |k, v| {
             let jk = JKey::parse(k)?;
             if jk.obj_type == APFS_TYPE_XATTR && jk.obj_id == inode_num {
                 let name = xattr_key_name(k)?;
@@ -501,7 +514,7 @@ impl Catalog {
         use crate::xattr::{xattr_key_name, xattr_val, XattrDstream, XATTR_DATA_STREAM};
 
         let mut hit: Option<(u16, Vec<u8>)> = None;
-        self.for_object(dev, &self.root, 0, inode_num, &mut |k, v| {
+        self.for_object_type(dev, &self.root, 0, inode_num, Some(crate::jkey::APFS_TYPE_XATTR), &mut |k, v| {
             if hit.is_none() {
                 let jk = JKey::parse(k)?;
                 if jk.obj_type == APFS_TYPE_XATTR
@@ -704,6 +717,30 @@ mod tests {
             let expected=all.iter().filter(|(k,_)|JKey::parse(k).unwrap().obj_id==id).cloned().collect::<Vec<_>>();assert_eq!(got,expected,"object {id}");
         }
     }
+    #[test]
+    fn typed_query_matches_full_walk_and_prunes_other_types() {
+        let (mut cat,mut dev)=query_fixture();
+        let groups=[vec![3,3,4],vec![4,4,8],vec![8,8],vec![8,9,9],vec![9,9]];
+        let key=|ty:u8|(42u64|((ty as u64)<<60)).to_le_bytes().to_vec();
+        let mut root=Vec::new();
+        for (i,types) in groups.iter().enumerate() {
+            root.push((key(types[0]),(100+i as u64).to_le_bytes().to_vec()));
+            let rows=types.iter().enumerate().map(|(j,ty)|(key(*ty),vec![i as u8,j as u8])).collect::<Vec<_>>();
+            dev.blocks.insert((10+i as u64)*4096,query_node(0,&rows));
+        }
+        cat.root=BtreeNode::parse(&query_node(1,&root)).unwrap();
+        let mut all=Vec::new();cat.for_each_leaf(&mut dev,&cat.root,0,&mut |k,v|{all.push((k.to_vec(),v.to_vec()));Ok(())}).unwrap();
+        for id in 41..=43 { for ty in 0..=15 {
+            let mut got=Vec::new();cat.for_object_type(&mut dev,&cat.root,0,id,Some(ty),&mut |k,v|{got.push((k.to_vec(),v.to_vec()));Ok(())}).unwrap();
+            let want=all.iter().filter(|(k,_)|{let j=JKey::parse(k).unwrap();j.obj_id==id&&j.obj_type==ty}).cloned().collect::<Vec<_>>();
+            assert_eq!(got,want,"{id} {ty}");
+        }}
+        // A directory-entry leaf must not be read to stat the same object's inode.
+        dev.blocks.get_mut(&(14*4096)).unwrap()[100]^=1;
+        let mut count=0;cat.for_object_type(&mut dev,&cat.root,0,42,Some(3),&mut |_,_|{count+=1;Ok(())}).unwrap();assert_eq!(count,2);
+        assert!(cat.for_object_type(&mut dev,&cat.root,0,42,Some(9),&mut |_,_|Ok(())).is_err());
+    }
+
     #[test]
     fn object_query_prunes_unrelated_corruption_and_rejects_target_corruption() {
         let (cat,mut dev)=query_fixture();dev.blocks.get_mut(&(10*4096)).unwrap()[100]^=1;

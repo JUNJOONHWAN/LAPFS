@@ -183,16 +183,30 @@ pub(crate) fn prepare_held(
     cap: u64,
     reserve: u64,
 ) -> Result<PathBuf> {
+    let identity = target.identity.clone();
+    let overlay = stage_overlay(target, identity, dir, offset, actions, cap, reserve)?;
+    let (_, dir) = overlay.finish()?;
+    Ok(dir)
+}
+
+fn stage_overlay<D: Device>(
+    mut target: D,
+    identity: crate::journal::Identity,
+    dir: &Path,
+    offset: u64,
+    actions: &[Action],
+    cap: u64,
+    reserve: u64,
+) -> Result<Overlay<D>> {
     ensure!(
         !actions.is_empty() && actions.len() <= 64,
         "Batch requires 1..64 operations"
     );
     ensure!(
-        target.identity.generation.is_none() || offset == 0,
-        "Enrolled APFS partition requires offset 0"
+        identity.generation.is_none() || offset == 0,
+        "Enrolled partition requires offset 0"
     );
-    let len = container_range(target, offset)?;
-    let identity = target.identity.clone();
+    let len = container_range(&mut target, offset)?;
     let overlay = Overlay::new(
         target,
         identity,
@@ -437,8 +451,72 @@ pub(crate) fn prepare_held(
             dev = check.into_dev();
         }
     }
-    let (_, dir) = dev.inner.finish()?;
-    Ok(dir)
+    Ok(dev.inner)
+}
+
+/// Stage mutations over an O_RDONLY Reader, report their real journal budget,
+/// and discard the scratch. Never produces a PREPARED/applicable transaction.
+pub fn probe(
+    source: &Path,
+    offset: u64,
+    actions: &[Action],
+    parent: &Path,
+    cap: u64,
+) -> Result<serde_json::Value> {
+    use std::os::unix::fs::MetadataExt;
+    let reader = crate::reader::Reader::open(source)?;
+    let path = std::fs::canonicalize(source)?;
+    let m = std::fs::metadata(&path)?;
+    let identity = crate::journal::Identity {
+        path,
+        size: reader.len(),
+        dev: m.dev(),
+        ino: m.ino(),
+        mtime: m.mtime(),
+        mtime_ns: m.mtime_nsec(),
+        ctime: m.ctime(),
+        ctime_ns: m.ctime_nsec(),
+        generation: None,
+    };
+    let scratch = tempfile::Builder::new()
+        .prefix("lapfs-readonly-probe-")
+        .tempdir_in(parent)?;
+    let dir = scratch.path().join("staging");
+    let started = std::time::Instant::now();
+    let mut report = match stage_overlay(
+        reader,
+        identity,
+        &dir,
+        offset,
+        actions,
+        cap,
+        crate::journal::DEFAULT_RESERVE,
+    ) {
+        Ok(overlay) => {
+            let stats = overlay.statistics();
+            drop(overlay);
+            serde_json::json!({"status":"passed","statistics":stats})
+        }
+        Err(e) => {
+            serde_json::json!({"status":"refused","error":format!("{e:#}"),"partial_undo_bytes":dir.join("undo.bin").metadata().map(|m|m.len()).unwrap_or(0),"partial_redo_bytes":dir.join("redo.bin").metadata().map(|m|m.len()).unwrap_or(0)})
+        }
+    };
+    let mut histogram = std::collections::BTreeMap::<String, u64>::new();
+    if let Ok(mut f) = std::fs::File::open(dir.join("redo.bin")) {
+        let mut page = [0u8; 4096];
+        while f.read_exact(&mut page).is_ok() {
+            let kind = u32::from_le_bytes(page[24..28].try_into().unwrap()) & 0xffff;
+            let subtype = u32::from_le_bytes(page[28..32].try_into().unwrap()) & 0xffff;
+            *histogram.entry(format!("{kind}/{subtype}")).or_default() += 1;
+        }
+    }
+    report["redo_header_histogram"] = serde_json::json!(histogram);
+    report["elapsed_seconds"] = serde_json::json!(started.elapsed().as_secs_f64());
+    report["target_writes"] = serde_json::json!(0);
+    report["access"] = serde_json::json!("O_RDONLY; temporary overlay only; no applicable journal");
+    report["cap_bytes"] = serde_json::json!(cap);
+    scratch.close()?;
+    Ok(report)
 }
 
 pub fn read_file(image: &Path, offset: u64, path: &str) -> Result<Vec<u8>> {

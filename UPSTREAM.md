@@ -51,3 +51,12 @@ Additional local implementation and protections:
 
 - file.rs write_range_plain is a local bounded plain-file range writer derived from the existing append orchestration. It preserves untouched extents, allocates only additional tail blocks, and updates existing data blocks through the external undo/redo overlay. It requires conservative caller eligibility (no snapshots/shared/compressed/encrypted streams); it is not independently crash-safe native CoW. Native Apple fsck/SHA and 26 write/flush fault boundaries are recorded in docs/VALIDATION.md.
 - src/buffered.rs and src/mount_rw.rs are local code implementing a durable bounded input queue, exactly-once retirement of committed batches, recovery/replay, and FUSE callbacks. Kernel writeback cache remains disabled; direct I/O ensures userspace pending-state visibility. File attributes not implemented are explicitly rejected; full POSIX support is not claimed.
+
+
+## Large-volume writer correction, beta.3 candidate
+
+- file.rs: independently implemented path-copy catalog and extent-reference editor. Preserves untouched catalog mappings, updates pivots/root counts, handles splits and empty extent roots, avoids collisions with retained catalog OIDs, and carries an explicit superseded-page set into reclamation.
+- file.rs: bounded catalog key-range reads for supported file mutations and duplicate-name checks. Object-map page-count deltas are included in volume allocation accounting.
+- txn.rs: per-operation catalog reclaim set, consumed by the shared metadata cleanup.
+- apfs/lib.rs: per-view canonical name index and generation-bound transferable lookup caches. The existing Unicode fold semantics are retained.
+- Source reference: [Apple File System Reference](https://developer.apple.com/support/downloads/Apple-File-System-Reference.pdf), B-Trees and Object Maps. Native Apple fsck remains the independent validator; external journal recovery is still required for in-place writes.

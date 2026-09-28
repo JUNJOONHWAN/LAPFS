@@ -40,6 +40,8 @@ struct Record {
     sequence: u64,
     queue: Vec<Pending>,
     active: Option<String>,
+    #[serde(default)]
+    active_count: Option<usize>,
     garbage: Vec<String>,
     closed: bool,
 }
@@ -49,6 +51,27 @@ pub struct Session {
     _lock: File,
     record: Record,
     poisoned: bool,
+    lookup_cache: apfs::LookupCache,
+}
+struct CachedView<'a> {
+    view: FsView<Adapter<&'a mut Image>>,
+    cache: &'a mut apfs::LookupCache,
+}
+impl<'a> std::ops::Deref for CachedView<'a> {
+    type Target = FsView<Adapter<&'a mut Image>>;
+    fn deref(&self) -> &Self::Target {
+        &self.view
+    }
+}
+impl<'a> std::ops::DerefMut for CachedView<'a> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.view
+    }
+}
+impl Drop for CachedView<'_> {
+    fn drop(&mut self) {
+        self.view.exchange_lookup_cache(self.cache);
+    }
 }
 fn plain_name(s: &str) -> bool {
     !s.is_empty()
@@ -143,6 +166,7 @@ impl Session {
             sequence: 0,
             queue: vec![],
             active: None,
+            active_count: None,
             garbage: vec![],
             closed: false,
         };
@@ -154,6 +178,7 @@ impl Session {
             _lock: lock,
             record,
             poisoned: false,
+            lookup_cache: Default::default(),
         })
     }
     pub fn resume_target(dir: &Path, target: &Path, offset: u64) -> Result<Self> {
@@ -183,6 +208,12 @@ impl Session {
                 && record.queue.len() <= 64,
             "Invalid mount session budget"
         );
+        ensure!(
+            record
+                .active_count
+                .is_none_or(|n| record.active.is_some() && n > 0 && n <= record.queue.len()),
+            "Invalid active queue prefix"
+        );
         let image = Image::open(&record.identity.path, true)?;
         image.check_identity(&record.identity, false)?;
         if !record.closed {
@@ -198,6 +229,7 @@ impl Session {
             _lock: lock,
             record,
             poisoned: false,
+            lookup_cache: Default::default(),
         };
         s.validate_queue()?;
         s.settle_active()?;
@@ -219,14 +251,15 @@ impl Session {
         );
         Ok(())
     }
-    fn view(&mut self) -> Result<FsView<Adapter<&mut Image>>> {
+    fn view(&mut self) -> Result<CachedView<'_>> {
         self.ready()?;
         let len = apfs_batch::container_range(&mut self.image, self.record.offset)?;
-        Ok(FsView::open(Adapter::new(
-            &mut self.image,
-            self.record.offset,
-            len,
-        ))?)
+        let mut view = FsView::open(Adapter::new(&mut self.image, self.record.offset, len))?;
+        view.exchange_lookup_cache(&mut self.lookup_cache);
+        Ok(CachedView {
+            view,
+            cache: &mut self.lookup_cache,
+        })
     }
     pub fn attr(&mut self, path: &str) -> Result<Attr> {
         crate::reader::validate_path(path)?;
@@ -248,14 +281,10 @@ impl Session {
         }
         Ok(a)
     }
-    pub fn list(&mut self, path: &str) -> Result<Vec<(String, Attr)>> {
-        let mut v = self.view()?;
-        let mut out = vec![];
-        for e in v.read_dir(path)? {
-            let p = format!("{}/{}", path.trim_end_matches('/'), e.name);
-            out.push((e.name, v.getattr(&p)?.context("Missing catalog inode")?));
-        }
-        Ok(out)
+    pub fn list(&mut self, path: &str) -> Result<Vec<apfs_core::catalog::DirEntry>> {
+        // readdir already has inode and type in the directory record. Avoid
+        // statting every child again for every kernel directory page.
+        Ok(self.view()?.read_dir(path)?)
     }
     pub fn readlink(&mut self, path: &str) -> Result<Vec<u8>> {
         self.view()?
@@ -533,7 +562,7 @@ impl Session {
         )?;
         self.flush()
     }
-    fn actions(&self) -> Result<Vec<Action>> {
+    fn actions(&self) -> Result<(Vec<Action>, usize)> {
         self.validate_queue()?;
         // Coalesce adjacent sequential writes; APFS metadata is updated once
         // per collected range instead of once per small application write.
@@ -572,13 +601,15 @@ impl Session {
                     path: path.clone(),
                     offset: *offset,
                 });
-                i = j;
+                // A write group is its own bounded recovery transaction. Do
+                // not multiply whole-volume metadata cost by unrelated writes.
+                return Ok((actions, j));
             } else {
                 actions.push(q.action.clone());
                 i += 1;
             }
         }
-        Ok(actions)
+        Ok((actions, i))
     }
     pub fn flush(&mut self) -> Result<()> {
         self.ready()?;
@@ -590,22 +621,23 @@ impl Session {
     }
     fn flush_inner(&mut self) -> Result<()> {
         self.settle_active()?;
-        if self.record.queue.is_empty() {
-            return Ok(());
+        while !self.record.queue.is_empty() {
+            let (actions, count) = self.actions()?;
+            let name = format!("txn-{:016}", self.record.sequence);
+            self.record.active = Some(name.clone());
+            self.record.active_count = Some(count);
+            self.save()?;
+            apfs_batch::prepare_held(
+                &mut self.image,
+                &self.dir.join(&name),
+                self.record.offset,
+                &actions,
+                self.record.cap,
+                self.record.reserve,
+            )?;
+            self.settle_active()?;
         }
-        let actions = self.actions()?;
-        let name = format!("txn-{:016}", self.record.sequence);
-        self.record.active = Some(name.clone());
-        self.save()?;
-        apfs_batch::prepare_held(
-            &mut self.image,
-            &self.dir.join(&name),
-            self.record.offset,
-            &actions,
-            self.record.cap,
-            self.record.reserve,
-        )?;
-        self.settle_active()
+        Ok(())
     }
     fn settle_active(&mut self) -> Result<()> {
         let Some(name) = self.record.active.clone() else {
@@ -618,6 +650,7 @@ impl Session {
         let p = self.dir.join(&name);
         if !p.exists() {
             self.record.active = None;
+            self.record.active_count = None;
             self.save()?;
             return Ok(());
         }
@@ -631,6 +664,7 @@ impl Session {
             self.image.check_identity(&self.record.identity, true)?;
             journal::discard_building_owned(&p, true)?;
             self.record.active = None;
+            self.record.active_count = None;
             self.save()?;
             return Ok(());
         }
@@ -650,15 +684,26 @@ impl Session {
         self.record.identity = self.image.identity.clone();
         self.record.garbage.push(name);
         self.record.active = None;
+        // Legacy sessions omitted this field and committed the complete queue.
+        let count = self
+            .record
+            .active_count
+            .take()
+            .unwrap_or(self.record.queue.len());
+        ensure!(
+            count > 0 && count <= self.record.queue.len(),
+            "Invalid committed queue prefix"
+        );
         self.record.sequence += 1;
         if committed {
             self.record.garbage.extend(
                 self.record
                     .queue
                     .iter()
+                    .take(count)
                     .filter_map(|q| q.payload.as_ref().map(|p| p.name.clone())),
             );
-            self.record.queue.clear();
+            self.record.queue.drain(..count);
         }
         self.save()?;
         journal::fault_point("mount-queue-retired");

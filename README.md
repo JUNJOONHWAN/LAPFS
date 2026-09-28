@@ -1,7 +1,7 @@
 <p align="center"><img src="docs/assets/lapfs-banner.svg" alt="LAPFS — buffered APFS access for Linux ARM64" width="100%"></p>
 
 <p align="center">
-  <a href="https://github.com/JUNJOONHWAN/LAPFS/releases"><img alt="Beta" src="https://img.shields.io/badge/release-0.3.0--beta.2-f5b84b"></a>
+  <a href="https://github.com/JUNJOONHWAN/LAPFS/releases"><img alt="Beta" src="https://img.shields.io/badge/release-0.3.0--beta.3-f5b84b"></a>
   <img alt="Platform" src="https://img.shields.io/badge/target-DGX%20Spark%20%2F%20Linux%20ARM64-72d6c9">
   <a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/license-GPL--3.0--only-829bff"></a>
 </p>
@@ -15,7 +15,7 @@ Designed for DGX Spark / GB10: readable APFS volumes, bounded durable write buff
 > [!WARNING]
 > **공개 실험 베타입니다. 중요한 데이터의 유일한 사본에 사용하지 마세요.**
 > 이미지와 가상 블록 장치 검증을 통과했지만 **실제 USB 쓰기·케이블 분리·전원 차단 내구성, 대형 볼륨 쓰기 성능은 미검증**입니다. 일부 APFS/POSIX 기능은 의도적으로 거부합니다. 상용 드라이버 또는 Apple/NVIDIA 공식 제품이 아닙니다.
-> **확인된 실패:** 약1TB 실제 볼륨의 무반영 사전 검사가 32MiB 저널 상한에 걸렸습니다. 그 볼륨의 쓰기 마운트는 아직 사용할 수 없습니다.
+> **beta.3 검증 상태:** beta.2에서 실패했던 약1TB 볼륨의 무반영 쓰기 사전 검사가 통과했습니다. 실제 USB 쓰기 전환 검증은 아직 진행 중이며, 성공한 이미지 시험과 구분합니다.
 
 [시작하기](#빠른-시작) · [구조](#구조) · [목표와-현재-사양](#목표와-현재-사양) · [시험 결과](docs/VALIDATION.md) · [지원 제한](docs/LIMITATIONS.md) · [복구](docs/RECOVERY.md) · [English overview](docs/OVERVIEW.md)
 
@@ -31,7 +31,8 @@ flowchart LR
     FUSE --> Queue["DGX 내부 ext4/XFS\n영구 입력 큐 · 기본 4 MiB"]
     Queue --> Trigger["4 MiB / fsync / close\n메타데이터 변경 / 정상 해제"]
     Trigger --> Journal["외부 undo + redo\nflush · 블록 재검증"]
-    Journal --> APFS["지원 조건을 통과한 APFS"]
+    Journal --> COW["변경된 catalog·extent 노드만 CoW"]
+    COW --> APFS["지원 조건을 통과한 APFS"]
     Queue -. "중단 후 재개" .-> Recover["mount-recover"]
     Recover --> Journal
     FUSE -. "작업·errno" .-> Log["별도 JSONL 오류 로그\n회전 보관 약 8 MiB"]
@@ -48,7 +49,7 @@ flowchart LR
 
 ## 목표와 현재 사양
 
-| 항목 | 현재 beta.2 | 목표 / 남은 검증 |
+| 항목 | 현재 beta.3 | 목표 / 남은 검증 |
 |---|---|---|
 | 기준 실행 환경 | DGX Spark / GB10, Linux ARM64, FUSE3 | 다른 배포판·USB 브리지 조합 검증 |
 | 읽기 | 일반 파일, 디렉터리, 링크 조회, 큰 파일 범위 읽기 | 암호화·압축 스트리밍 확대 |
@@ -58,7 +59,7 @@ flowchart LR
 | 내부 저장공간 | **1 GiB 여유 + 96 MiB 작업 여유 검사** | 최저공간·장기 반복 부하 실측 |
 | 메모리 | 전체 파일/드라이브 staging 없음 | catalog·프로세스 총 RAM 상한은 미인증 |
 | 오류 로그 | 2 MiB × 현재1 + 보관3, 약 **8 MiB** | 현장 장애 분류 확장 |
-| 성능 | 작은 이미지 기능 시험만 측정 | USB 3.2 지속 처리량 수치 **미제시** |
+| 성능 | 합성 이미지: 5,000개 원본 보존 + 생성/변경/삭제 121.9초 | USB 3.2 지속 처리량 수치 **미제시** |
 | macOS | 독립 `fsck_apfs` / 파일 SHA 검증 | macOS FUSE 제품 제공 안 함 |
 
 공간 숫자는 각 계층의 제한이며 전체 작업 공간의 고정 사용량이나 파일시스템 전체 용량 보장은 아닙니다. 실패한 세션/복구 기록은 자동 삭제하지 않습니다.
@@ -108,7 +109,8 @@ PY
 | ✅ | DGX 실제 FUSE: 큰 순차 복사, 범위 수정, 두 핸들 읽기 일관성, fsync/close, 기본 파일 작업 |
 | ✅ | 실제 FUSE 프로세스 SIGKILL 후 승인된 데이터 복구, Apple fsck 및 파일 SHA 확인 |
 | ✅ | 별도 관리자 loop 블록 장치 8/8 검사 — beta.1 결과 |
-| ✅ | core 강제 종료 8지점, 기존25 + 범위쓰기26 I/O 실패 경계 — 이전 core 증거 |
+| ✅ | beta.3 큐 강제 종료 8지점 + 부분 반영 7지점; 모든 결과 Apple fsck/SHA 확인 |
+| ✅ | beta.3 원본 5,000개 + 새 파일 600개 생성/200개 rename/300개 삭제, Mac 전수 해시 검증 |
 | ✅ | beta.2 별도 오류로그/회전/동시 기록/정상 lookup 제외 |
 | ⬜ | 실제 USB 쓰기·뽑힘·전원 차단·브리지 flush 거짓 성공 대응 |
 | ⬜ | TB급 실제 볼륨 writer 처리량, 장기간 반복쓰기, 전체 APFS/POSIX 호환 |

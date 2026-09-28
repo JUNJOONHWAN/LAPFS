@@ -387,6 +387,7 @@ pub struct Transaction<D: WritableBlockDevice> {
     /// Derived from linux-apfs-rw: the kernel finalises all block writes before
     /// running the allocator's reclaim pass.
     pending_frees: HashSet<u64>,
+    pub(crate) catalog_reclaim: Option<HashSet<u64>>,
 }
 
 impl<D: WritableBlockDevice> Transaction<D> {
@@ -441,6 +442,7 @@ impl<D: WritableBlockDevice> Transaction<D> {
                 reclaim_bitmap_paddrs: HashSet::new(),
                 reclaim_cib_paddrs: HashSet::new(),
                 pending_frees: HashSet::new(),
+                catalog_reclaim: None,
             }),
             Err(e) => Err((dev, e)),
         }

@@ -43,6 +43,14 @@ Linux FUSE output is retained for native Mac validation. `tests/verify_linux_app
 
 Physical USB writes/unplug/power loss; TB-scale real-volume writer throughput; full APFS/POSIX support; long-term hardware endurance; independent security/commercial certification. See [limitations and qualification plan](LIMITATIONS.md).
 
-## Real-volume preflight: failed, original unchanged
+## Historical beta.2 real-volume preflight: failed, original unchanged
 
 After the image tests, a real approximately 1 TB APFS volume was positively identified and an offline **prepare-only** canary transaction was attempted. It exceeded the 32 MiB journal cap before apply. No physical APFS writes were issued. Writable mounting of that volume was not achieved. The underlying writer has catalog-wide metadata work; a tiny payload does not imply a tiny transaction. Increasing a limit alone has not been qualified as a fix. This is a known beta blocker, not an accepted physical-device test.
+
+## beta.3 candidate
+
+The original 32 MiB limit is retained. Incremental metadata updates now pass the previously failing real-volume prepare simulation. Physical write qualification remains pending; see [current report](REAL_VOLUME_AFTER.md). Previous evidence above retains its original build identity.
+
+## beta.3 final candidate, 2026-09-28
+
+See [before-impact](REAL_VOLUME_BEFORE.md) and [after-impact](REAL_VOLUME_AFTER.md) for source changes, exact candidate SHA, all current receipts and pending physical acceptance. The 5,000-original fixture is reproducible on macOS with `python3 tests/make_catalog_fixture_macos.py NEW_OUTPUT_DIRECTORY`. Transfer its image and expected.json to Linux, then run `tests/verify_catalog_cow.py --image large.dmg --expected expected.json --output evidence`. Transfer the resulting large.dmg/result.json back to macOS and run `python3 tests/verify_catalog_apple.py OUTPUT_DIRECTORY EXPECTED_JSON`. This covers all files, not a sample.

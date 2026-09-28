@@ -1,0 +1,59 @@
+warning: method `for_each_leaf` is never used
+  --> vendor/apfs-core/src/catalog.rs:98:8
+   |
+58 | impl Catalog {
+   | ------------ method in this implementation
+...
+98 |     fn for_each_leaf<D: BlockDevice>(
+   |        ^^^^^^^^^^^^^
+   |
+   = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: struct `cuse_init_in` is never constructed
+   --> vendor/fuser/src/ll/fuse_abi.rs:810:12
+    |
+810 | pub struct cuse_init_in {
+    |            ^^^^^^^^^^^^
+    |
+    = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: struct `cuse_init_out` is never constructed
+   --> vendor/fuser/src/ll/fuse_abi.rs:819:12
+    |
+819 | pub struct cuse_init_out {
+    |            ^^^^^^^^^^^^^
+
+warning: struct `fuse_ioctl_iovec` is never constructed
+   --> vendor/fuser/src/ll/fuse_abi.rs:864:12
+    |
+864 | pub struct fuse_ioctl_iovec {
+    |            ^^^^^^^^^^^^^^^^
+
+warning: struct `fuse_notify_retrieve_out` is never constructed
+   --> vendor/fuser/src/ll/fuse_abi.rs:992:12
+    |
+992 | pub struct fuse_notify_retrieve_out {
+    |            ^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: struct `fuse_notify_retrieve_in` is never constructed
+    --> vendor/fuser/src/ll/fuse_abi.rs:1002:12
+     |
+1002 | pub struct fuse_notify_retrieve_in {
+     |            ^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: `apfs-core` (lib) generated 1 warning
+warning: `fuser` (lib) generated 5 warnings
+   Compiling spark-apfs-safe v0.3.0-beta.3 (<source>)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.82s
+     Running tests/apfs_recovery.rs (target/debug/deps/apfs_recovery-40c562da2084bb35)
+
+running 2 tests
+test real_apfs_every_apply_boundary_restores_entire_image has been running for over 60 seconds
+test real_apfs_range_write_every_boundary_restores_entire_image has been running for over 60 seconds
+APFS fault sweep (range=true): 27 boundaries (24 writes), full-image SHA-256 restored for every case
+test real_apfs_range_write_every_boundary_restores_entire_image ... ok
+APFS fault sweep (range=false): 28 boundaries (25 writes), full-image SHA-256 restored for every case
+test real_apfs_every_apply_boundary_restores_entire_image ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 160.09s
+

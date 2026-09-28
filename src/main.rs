@@ -31,9 +31,10 @@ fn run() -> Result<()> {
     };
     match a.get(1).map(String::as_str).unwrap_or("help") {
         "help" | "--help" | "-h" => println!(
-            r#"LAPFS 0.3.0-beta.2 — APFS 읽기 및 영구 버퍼 기반 쓰기 마운트
+            r#"LAPFS 0.3.0-beta.3 — APFS 읽기 및 영구 버퍼 기반 쓰기 마운트
 
 읽기: TARGET은 이미지 또는 Linux APFS 파티션(/dev/sda2 등)
+probe TARGET OFFSET_BYTES BATCH_JSON SCRATCH_PARENT CAP_MIB
 inspect TARGET OFFSET_BYTES
 ls TARGET OFFSET_BYTES APFS_PATH [VOLUME_INDEX]
 read TARGET OFFSET_BYTES APFS_PATH [VOLUME_INDEX]
@@ -65,6 +66,27 @@ PREPARED는 반영 완료가 아님. COMMITTED 이후에만 해당 배치 반영
 "#
         ),
         "--version" | "version" => println!("LAPFS {}", env!("CARGO_PKG_VERSION")),
+        "probe" => {
+            let path = Path::new(arg(4)?);
+            anyhow::ensure!(path.metadata()?.len() <= 1024 * 1024, "Batch too large");
+            let actions: Vec<apfs_batch::Action> = serde_json::from_slice(&std::fs::read(path)?)?;
+            let cap = arg(6)?
+                .parse::<u64>()?
+                .checked_mul(1024 * 1024)
+                .context("Cap overflow")?;
+            let report = apfs_batch::probe(
+                Path::new(arg(2)?),
+                arg(3)?.parse()?,
+                &actions,
+                Path::new(arg(5)?),
+                cap,
+            )?;
+            println!("{}", report);
+            anyhow::ensure!(
+                report["status"] == "passed",
+                "Read-only probe refused; original unchanged"
+            );
+        }
         "device-enroll" => {
             #[cfg(target_os = "linux")]
             println!(

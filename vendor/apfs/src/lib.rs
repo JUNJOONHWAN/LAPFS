@@ -83,12 +83,21 @@ pub struct Attr {
 /// A read-only filesystem view of the first user volume of an APFS container.
 /// Owns the block device; memoizes path->inode and inode->listing (the volume
 /// is read-only, so caches never need invalidation).
+#[derive(Default)]
+pub struct LookupCache {
+    epoch: Option<(u64,u64)>,
+    paths: HashMap<String,u64>,
+    directories: HashMap<u64,Vec<DirEntry>>,
+    names: HashMap<u64,HashMap<String,u64>>,
+}
 pub struct FsView<D: BlockDevice> {
     dev: D,
     catalog: Catalog,
     names_hashed: bool,
+    lookup_epoch: (u64,u64),
     path_cache: HashMap<String, u64>,
     dir_cache: HashMap<u64, Vec<DirEntry>>,
+    name_cache: HashMap<u64, HashMap<String, u64>>,
     /// Volume superblock paddr - needed by the WinFsp write path to fetch
     /// vsb_raw bytes for apfs-write API calls (Transaction::begin + write_file
     /// + create_file + unlink + rename all take a `vsb_raw: &[u8]` argument).
@@ -109,6 +118,18 @@ fn components(path: &str) -> Vec<&str> {
 }
 
 impl<D: BlockDevice> FsView<D> {
+    /// Transfer lookup caches only within the same volume-superblock generation.
+    /// The mount holds one exclusive device FD; a commit or rollback that changes
+    /// the generation therefore invalidates every cached path and directory.
+    pub fn exchange_lookup_cache(&mut self, other: &mut LookupCache) {
+        if other.epoch != Some(self.lookup_epoch) {
+            *other=LookupCache {epoch:Some(self.lookup_epoch),..Default::default()};
+        }
+        std::mem::swap(&mut self.path_cache,&mut other.paths);
+        std::mem::swap(&mut self.dir_cache,&mut other.directories);
+        std::mem::swap(&mut self.name_cache,&mut other.names);
+    }
+
     /// Consume the FsView and return the underlying device, dropping all
     /// path/listing caches. The WinFsp write path uses this to lend the
     /// device to an apfs-write Transaction (which takes exclusive
@@ -286,8 +307,10 @@ impl<D: BlockDevice> FsView<D> {
             dev,
             catalog,
             names_hashed,
+            lookup_epoch: (vol_paddr, vol.obj.xid),
             path_cache: HashMap::with_capacity(64),
             dir_cache: HashMap::with_capacity(16),
+            name_cache: HashMap::with_capacity(16),
             vol_paddr,
             bsz,
             selector: sel,
@@ -324,6 +347,15 @@ impl<D: BlockDevice> FsView<D> {
             let v = self
                 .catalog
                 .list_dir(&mut self.dev, ino, self.names_hashed)?;
+            // Build once per immutable view. Repeated getattr while listing a
+            // large directory must not normalize and scan every name again.
+            let mut names = HashMap::with_capacity(v.len());
+            for entry in &v {
+                let key = if self.names_hashed { case_fold::apfs_case_fold(&entry.name) }
+                    else { entry.name.clone() };
+                names.entry(key).or_insert(entry.file_id);
+            }
+            self.name_cache.insert(ino, names);
             e.insert(v);
         }
         Ok(self.dir_cache.get(&ino).map(Vec::as_slice).unwrap_or(&[]))
@@ -360,17 +392,8 @@ impl<D: BlockDevice> FsView<D> {
             } else {
                 comp
             };
-            let next = self
-                .listing(ino)?
-                .iter()
-                .find(|e| {
-                    if names_hashed {
-                        case_fold::apfs_names_match(&e.name, needle)
-                    } else {
-                        e.name == needle
-                    }
-                })
-                .map(|e| e.file_id);
+            self.listing(ino)?;
+            let next = self.name_cache.get(&ino).and_then(|names| names.get(needle)).copied();
             match next {
                 Some(i) => ino = i,
                 None => return Ok(None),

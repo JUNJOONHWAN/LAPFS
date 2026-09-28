@@ -1,3 +1,16 @@
+# LAPFS v0.3.0-beta.3 — candidate qualification
+
+- Fix real-volume journal exhaustion by copying changed catalog/extent-reference tree paths, including splits, deletion and root statistics; retain unchanged catalog mappings and reclaim only superseded pages.
+- Resolve directory/file metadata with bounded key-range traversal; avoid quadratic Unicode name lookup and redundant readdir stats.
+- Preserve read lookup caches only within the same volume-superblock address/XID generation.
+- Flush one coalesced write group per journal; record and retire only its durable queue prefix. Atomic remove+rename batches remain together.
+- Add a structurally read-only `probe` command with measured journal bytes and explicit refusal status.
+- Keep 4 MiB input, 32 MiB undo+redo and 16,000 write-operation limits.
+
+The approximately 1 TB volume that failed beta.2 preflight now passes tiny-file and 4 MiB prepare simulation within the original cap. This measures staging, not USB write throughput. Actual physical write/remount acceptance is pending. See docs/REAL_VOLUME_AFTER.md for current evidence and exact limits.
+
+---
+
 # LAPFS v0.3.0-beta.2 — public experimental beta
 
 First public LAPFS prerelease, maintained and built from the DGX canonical source.

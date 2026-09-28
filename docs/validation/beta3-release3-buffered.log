@@ -1,0 +1,90 @@
+warning: method `for_each_leaf` is never used
+  --> vendor/apfs-core/src/catalog.rs:98:8
+   |
+58 | impl Catalog {
+   | ------------ method in this implementation
+...
+98 |     fn for_each_leaf<D: BlockDevice>(
+   |        ^^^^^^^^^^^^^
+   |
+   = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: struct `cuse_init_in` is never constructed
+   --> vendor/fuser/src/ll/fuse_abi.rs:810:12
+    |
+810 | pub struct cuse_init_in {
+    |            ^^^^^^^^^^^^
+    |
+    = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: struct `cuse_init_out` is never constructed
+   --> vendor/fuser/src/ll/fuse_abi.rs:819:12
+    |
+819 | pub struct cuse_init_out {
+    |            ^^^^^^^^^^^^^
+
+warning: struct `fuse_ioctl_iovec` is never constructed
+   --> vendor/fuser/src/ll/fuse_abi.rs:864:12
+    |
+864 | pub struct fuse_ioctl_iovec {
+    |            ^^^^^^^^^^^^^^^^
+
+warning: struct `fuse_notify_retrieve_out` is never constructed
+   --> vendor/fuser/src/ll/fuse_abi.rs:992:12
+    |
+992 | pub struct fuse_notify_retrieve_out {
+    |            ^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: struct `fuse_notify_retrieve_in` is never constructed
+    --> vendor/fuser/src/ll/fuse_abi.rs:1002:12
+     |
+1002 | pub struct fuse_notify_retrieve_in {
+     |            ^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: `apfs-core` (lib) generated 1 warning
+warning: `fuser` (lib) generated 5 warnings
+   Compiling spark-apfs-safe v0.3.0-beta.3 (<source>)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 1.51s
+     Running tests/buffered.rs (target/debug/deps/buffered-412255f424134874)
+
+running 4 tests
+
+running 1 test
+
+running 1 test
+
+running 1 test
+
+running 1 test
+
+running 1 test
+
+running 1 test
+
+running 1 test
+
+running 1 test
+
+running 1 test
+
+running 1 test
+
+running 1 test
+
+running 1 test
+
+running 1 test
+
+running 1 test
+BUFFERED_CRASH_EVIDENCE=<source>/evidence/real-volume-probe/buffered-crash-K1MGLy
+test buffered_crash_boundaries ... ok
+
+running 1 test
+PREFIX_CRASH_EVIDENCE=<source>/evidence/real-volume-probe/prefix-crash-2B64bl
+test buffered_prefix_retirement_crash_boundaries ... ok
+BUFFERED_NATIVE_EVIDENCE=<source>/evidence/real-volume-probe/buffered-roundtrip-oUVZu5
+test buffered_range_queue_roundtrip ... ok
+test buffered_guards_keep_target_unchanged ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 2 filtered out; finished in 15.99s
+

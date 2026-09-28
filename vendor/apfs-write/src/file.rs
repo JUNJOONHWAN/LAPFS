@@ -1349,7 +1349,7 @@ pub fn append_aligned<D: WritableBlockDevice>(
     let now = now_ns();
     let mut omap_node = vec![0; bsz];
     txn.read_block(rd_u64(omap_raw, 48), &mut omap_node)?;
-    let all = collect_fstree(txn, &omap_node, rd_u64(vsb_raw, VSBI_ROOT_TREE_OID), bsz)?;
+    let all = collect_named_records(txn, &omap_node, vsb_raw, parent_ino, &[name], bsz)?;
     let case_fold = rd_u64(vsb_raw, VSBI_INCOMPAT_FEATURES) & APFS_INCOMPAT_CASE_INSENSITIVE != 0;
     let key = build_drec_key(parent_ino, name, case_fold, true);
     let file_id = all.iter().find(|(k, _)| *k == key).map(|(_, v)| rd_u64(v, 0) & 0x0FFF_FFFF_FFFF_FFFF).ok_or_else(bad)?;
@@ -1470,7 +1470,7 @@ pub fn write_range_plain<D: WritableBlockDevice>(
     let now = now_ns();
     let mut omap_node = vec![0; bsz];
     txn.read_block(rd_u64(omap_raw, 48), &mut omap_node)?;
-    let all = collect_fstree(txn, &omap_node, rd_u64(vsb_raw, VSBI_ROOT_TREE_OID), bsz)?;
+    let all = collect_named_records(txn, &omap_node, vsb_raw, parent_ino, &[name], bsz)?;
     let case_fold = rd_u64(vsb_raw, VSBI_INCOMPAT_FEATURES) & APFS_INCOMPAT_CASE_INSENSITIVE != 0;
     let key = build_drec_key(parent_ino, name, case_fold, true);
     let file_id = all.iter().find(|(k, _)| *k == key).map(|(_, v)| rd_u64(v, 0) & 0x0FFF_FFFF_FFFF_FFFF).ok_or_else(bad)?;
@@ -1609,7 +1609,6 @@ pub fn unlink<D: WritableBlockDevice>(
     let bsz = txn.nx.block_size as usize;
     let new_xid = txn.xid;
     let now = now_ns();
-    let root_tree_oid = rd_u64(vsb_raw, VSBI_ROOT_TREE_OID);
     let incompat = rd_u64(vsb_raw, VSBI_INCOMPAT_FEATURES);
     let case_fold = incompat & APFS_INCOMPAT_CASE_INSENSITIVE != 0;
     // Apply NFD unconditionally: modern APFS hashes the normalized form
@@ -1623,7 +1622,7 @@ pub fn unlink<D: WritableBlockDevice>(
     let omap_tree_paddr = rd_u64(vol_omap_raw, 48);
     let mut omap_node = vec![0u8; bsz];
     txn.read_block(omap_tree_paddr, &mut omap_node)?;
-    let all = collect_fstree(txn, &omap_node, root_tree_oid, bsz)?;
+    let all = collect_named_records(txn, &omap_node, vsb_raw, parent_ino, &[name], bsz)?;
 
     let drec_key = build_drec_key(parent_ino, name, case_fold, normalize);
     let file_id = all
@@ -2119,7 +2118,6 @@ pub fn overwrite_existing_file<D: WritableBlockDevice>(
     let bsz = txn.nx.block_size as usize;
     let new_xid = txn.xid;
     let now = now_ns();
-    let root_tree_oid = rd_u64(vsb_raw, VSBI_ROOT_TREE_OID);
     let incompat = rd_u64(vsb_raw, VSBI_INCOMPAT_FEATURES);
     let case_fold = incompat & APFS_INCOMPAT_CASE_INSENSITIVE != 0;
     // Apply NFD unconditionally: modern APFS hashes the normalized form
@@ -2133,7 +2131,7 @@ pub fn overwrite_existing_file<D: WritableBlockDevice>(
     txn.read_block(omap_tree_paddr, &mut omap_node)?;
 
     // --- Step 3: Collect all fstree catalog records. ---
-    let all = collect_fstree(txn, &omap_node, root_tree_oid, bsz)?;
+    let all = collect_named_records(txn, &omap_node, vsb_raw, parent_ino, &[name], bsz)?;
 
     // --- Step 4: Locate DREC for (parent_ino, name). ---
     let drec_key = build_drec_key(parent_ino, name, case_fold, normalize);
@@ -2603,7 +2601,6 @@ pub fn rename<D: WritableBlockDevice>(
     let bsz = txn.nx.block_size as usize;
     let new_xid = txn.xid;
     let now = now_ns();
-    let root_tree_oid = rd_u64(vsb_raw, VSBI_ROOT_TREE_OID);
     let incompat = rd_u64(vsb_raw, VSBI_INCOMPAT_FEATURES);
     let case_fold = incompat & APFS_INCOMPAT_CASE_INSENSITIVE != 0;
     // Apply NFD unconditionally: modern APFS hashes the normalized form
@@ -2616,7 +2613,7 @@ pub fn rename<D: WritableBlockDevice>(
     let omap_tree_paddr = rd_u64(vol_omap_raw, 48);
     let mut omap_node = vec![0u8; bsz];
     txn.read_block(omap_tree_paddr, &mut omap_node)?;
-    let all = collect_fstree(txn, &omap_node, root_tree_oid, bsz)?;
+    let all = collect_named_records(txn, &omap_node, vsb_raw, parent_ino, &[old_name,new_name], bsz)?;
 
     // Locate the old DREC -> file_id + dirent type + date_added.
     let old_drec_key = build_drec_key(parent_ino, old_name, case_fold, normalize);
@@ -4095,6 +4092,7 @@ fn collect_extref_node<D: WritableBlockDevice>(
 /// multi-node (bottom-up build) otherwise - mirrors rewrite_fstree_impl.
 /// [#151 fix; cross-check: linux-apfs-rw btree.c apfs_node_split,
 ///  apfsprogs btree; template: rewrite_fstree_impl in this file]
+#[allow(dead_code)] // Retain the original full-rebuild reference implementation.
 fn build_extref_tree<D: WritableBlockDevice>(
     txn: &mut Transaction<D>,
     recs: Vec<CatRec>,
@@ -4194,8 +4192,9 @@ fn build_extref_tree<D: WritableBlockDevice>(
     Ok((new_root_paddr, node_delta))
 }
 
-/// Rewrite the extentref tree: collect all existing leaf records, apply
-/// inserts / removals / upserts, sort, and rebuild (single or multi-node).
+/// Path-copy the extent-reference tree along affected key ranges.
+/// Preserve untouched physical nodes, propagate pivots/splits, and retire only
+/// superseded nodes. Empty roots remain valid for deletion of the last extent.
 ///
 /// Parameters:
 ///   `old_root_paddr`  - current VSB.apfs_extentref_tree_oid
@@ -4221,35 +4220,39 @@ fn rewrite_extref_tree<D: WritableBlockDevice>(
     upsert_recs: &[(Vec<u8>, Vec<u8>)],
     bsz: usize,
 ) -> Result<(u64, Vec<u64>, i64), TxnError> {
-    // 1. Collect all existing leaf records + all old node padrs.
-    let (old_leaf_recs, old_padrs) = collect_extref_records(txn, old_root_paddr, bsz)?;
-    let old_node_count = old_padrs.len() as i64;
-
-    // 2. Start with existing records, apply mutations.
-    let mut recs: Vec<CatRec> = old_leaf_recs
-        .into_iter()
-        .filter(|(k, _)| !remove_keys.contains(k))
-        .collect();
-
-    // Apply upserts: replace value if key present, else append.
-    for (uk, uv) in upsert_recs {
-        match recs.iter_mut().find(|(k, _)| k == uk) {
-            Some(r) => r.1 = uv.clone(),
-            None => recs.push((uk.clone(), uv.clone())),
-        }
+    let mut raw = vec![0; bsz];
+    txn.read_block(old_root_paddr, &mut raw)?;
+    let bti = bsz - BTREE_INFO_SIZE;
+    let mut cow = CatalogCow {
+        physical: true,
+        mappings: Default::default(),
+        replaced: Default::default(),
+        visited: Default::default(),
+        xid: new_xid,
+        bsz,
+        node_delta: 0,
+        key_delta: 0,
+        longest_key: rd_u32(&raw, bti + 16),
+        longest_val: rd_u32(&raw, bti + 20),
+        original_keys: rd_u64(&raw, bti + 24),
+        original_nodes: rd_u64(&raw, bti + 32),
+    };
+    let mut edits = Vec::new();
+    for k in remove_keys {
+        edits.push(CatalogEdit::Remove(k.clone()));
     }
-
-    // Apply inserts (reject duplicate keys - same policy as insert_catalog_records).
-    for (ik, iv) in insert_recs {
-        recs.push((ik, iv));
+    for (k, v) in upsert_recs {
+        edits.push(CatalogEdit::Upsert(k.clone(), v.clone()));
     }
-
-    // 3. Sort by key (same comparator as catalog/fstree).
-    recs.sort_by(|a, b| cat_key_cmp(&a.0, &b.0));
-
-    // 4. Rebuild and return.
-    let (new_root_paddr, node_delta) = build_extref_tree(txn, recs, new_xid, old_node_count, bsz)?;
-    Ok((new_root_paddr, old_padrs, node_delta))
+    for (k, v) in insert_recs {
+        edits.push(CatalogEdit::Insert(k, v));
+    }
+    let root = cow.edit(txn, old_root_paddr, &edits, true, None, 0)?;
+    Ok((
+        rd_u64(&root[0].1, 0),
+        cow.replaced.into_iter().collect(),
+        cow.node_delta,
+    ))
 }
 
 /// Recursively collect every (key, value) leaf record of the FSTREE rooted at
@@ -4282,6 +4285,92 @@ fn collect_fstree<D: WritableBlockDevice>(
 /// the catalog. Used to reject duplicate-name creates/writes/renames BEFORE any
 /// block is allocated, so a rejected op leaves no trace (no leaked blocks) and
 /// never produces a duplicate DREC (which corrupts the fsroot tree).
+// Read only subtrees intersecting [low, high], inclusive. Omap resolution stays
+// version-aware; this is a lookup optimization and never changes tree contents.
+fn collect_catalog_range<D: WritableBlockDevice>(
+    txn: &mut Transaction<D>,
+    omap: &[u8],
+    oid: u64,
+    low: &[u8],
+    high: &[u8],
+    bsz: usize,
+    depth: usize,
+) -> Result<Vec<CatRec>, TxnError> {
+    if depth > 64 {
+        return Err(CatalogCow::error("catalog lookup depth"));
+    }
+    let p = omap_resolve(txn, omap, oid, u64::MAX, bsz)?
+        .ok_or_else(|| CatalogCow::error("catalog mapping missing"))?;
+    let mut raw = vec![0; bsz];
+    txn.read_block(p, &mut raw)?;
+    let recs = parse_cat_leaf(&raw).map_err(CatalogCow::error)?;
+    if rd_u16(&raw, 34) == 0 {
+        return Ok(recs
+            .into_iter()
+            .filter(|r| {
+                cat_key_cmp(&r.key, low) != core::cmp::Ordering::Less
+                    && cat_key_cmp(&r.key, high) != core::cmp::Ordering::Greater
+            })
+            .map(|r| (r.key, r.val))
+            .collect());
+    }
+    let mut result = Vec::new();
+    for (i, r) in recs.iter().enumerate() {
+        if cat_key_cmp(&r.key, high) == core::cmp::Ordering::Greater {
+            break;
+        }
+        if recs
+            .get(i + 1)
+            .is_some_and(|n| cat_key_cmp(&n.key, low) != core::cmp::Ordering::Greater)
+        {
+            continue;
+        }
+        if r.val.len() != 8 {
+            return Err(CatalogCow::error("catalog child value"));
+        }
+        result.extend(collect_catalog_range(
+            txn,
+            omap,
+            rd_u64(&r.val, 0),
+            low,
+            high,
+            bsz,
+            depth + 1,
+        )?);
+    }
+    Ok(result)
+}
+fn collect_named_records<D: WritableBlockDevice>(
+    txn: &mut Transaction<D>,
+    omap: &[u8],
+    vsb: &[u8],
+    parent: u64,
+    names: &[&str],
+    bsz: usize,
+) -> Result<Vec<CatRec>, TxnError> {
+    let root = rd_u64(vsb, VSBI_ROOT_TREE_OID);
+    let fold = rd_u64(vsb, VSBI_INCOMPAT_FEATURES) & APFS_INCOMPAT_CASE_INSENSITIVE != 0;
+    let mut all = Vec::new();
+    let mut ids = std::collections::BTreeSet::new();
+    for name in names {
+        let key = build_drec_key(parent, name, fold, true);
+        let recs = collect_catalog_range(txn, omap, root, &key, &key, bsz, 0)?;
+        for (_, v) in &recs {
+            if v.len() < 8 {
+                return Err(CatalogCow::error("short directory record"));
+            }
+            ids.insert(rd_u64(v, 0) & 0x0FFF_FFFF_FFFF_FFFF);
+        }
+        all.extend(recs);
+    }
+    for id in ids {
+        let low = id.to_le_bytes();
+        let high = (id | (15u64 << 60)).to_le_bytes();
+        all.extend(collect_catalog_range(txn, omap, root, &low, &high, bsz, 0)?);
+    }
+    Ok(all)
+}
+
 fn drec_exists<D: WritableBlockDevice>(
     txn: &mut Transaction<D>,
     omap_node: &[u8],
@@ -4289,7 +4378,7 @@ fn drec_exists<D: WritableBlockDevice>(
     drec_key: &[u8],
     bsz: usize,
 ) -> Result<bool, TxnError> {
-    let all = collect_fstree(txn, omap_node, root_tree_oid, bsz)?;
+    let all = collect_catalog_range(txn, omap_node, root_tree_oid, drec_key, drec_key, bsz, 0)?;
     Ok(all.iter().any(|(k, _)| k.as_slice() == drec_key))
 }
 
@@ -4415,7 +4504,9 @@ fn free_replaced_metadata<D: WritableBlockDevice>(
     // When the fast path ran, skip catalog reclaim entirely; the non-catalog
     // COW-pairs (omap header + omap b-tree + extentref) are still superseded and
     // are reclaimed above regardless.
-    let catalog_padrs: Vec<u64> = if skip_catalog_reclaim {
+    let catalog_padrs: Vec<u64> = if let Some(replaced) = txn.catalog_reclaim.take() {
+        replaced.into_iter().collect()
+    } else if skip_catalog_reclaim {
         Vec::new()
     } else {
         old_omap_triples
@@ -4867,6 +4958,367 @@ pub(crate) fn rebuild_omap_node_without(
 /// inode's nchildren + timestamps. The root keeps `root_tree_oid`; split leaves
 /// get fresh oids from nx_next_oid. [the APFS specification]
 #[allow(clippy::too_many_arguments)]
+// Snapshot-free catalog path copying. Unchanged virtual objects retain their
+// original {oid,xid,paddr}; only replaced pages are eligible for reclaim.
+// Apple File System Reference: B-Trees, Object Maps, btree_info_t.
+#[derive(Clone)]
+enum CatalogEdit {
+    Remove(Vec<u8>),
+    Insert(Vec<u8>, Vec<u8>),
+    Update(Vec<u8>, Vec<u8>),
+    Upsert(Vec<u8>, Vec<u8>),
+    Parent(Vec<u8>, i64, u64),
+}
+impl CatalogEdit {
+    fn key(&self) -> &[u8] {
+        match self {
+            Self::Remove(k)
+            | Self::Insert(k, _)
+            | Self::Update(k, _)
+            | Self::Upsert(k, _)
+            | Self::Parent(k, _, _) => k,
+        }
+    }
+}
+struct CatalogCow {
+    physical: bool,
+    mappings: std::collections::BTreeMap<u64, (u64, u64)>,
+    replaced: std::collections::HashSet<u64>,
+    visited: std::collections::HashSet<u64>,
+    xid: u64,
+    bsz: usize,
+    node_delta: i64,
+    key_delta: i64,
+    longest_key: u32,
+    longest_val: u32,
+    original_keys: u64,
+    original_nodes: u64,
+}
+impl CatalogCow {
+    fn error(s: &str) -> TxnError {
+        TxnError::SpacemanParse(s.into())
+    }
+    fn fresh_oid<D: WritableBlockDevice>(&self, txn: &mut Transaction<D>) -> u64 {
+        // Container next_oid is not guaranteed to exceed every existing volume
+        // catalog OID on a macOS-authored image. Full rebuild discarded old
+        // mappings; path copying must explicitly avoid colliding with them.
+        loop {
+            let oid = txn.alloc_oid();
+            if !self.mappings.contains_key(&oid) && !self.visited.contains(&oid) {
+                return oid;
+            }
+        }
+    }
+    fn stage<D: WritableBlockDevice>(
+        &mut self,
+        txn: &mut Transaction<D>,
+        oid: u64,
+        level: u16,
+        recs: &[CatRec],
+        root: bool,
+    ) -> Result<CatRec, TxnError> {
+        if (recs.is_empty() && !(self.physical && root && level == 0))
+            || packed_size(recs) > node_capacity(self.bsz, root)
+        {
+            return Err(Self::error("incremental catalog node size"));
+        }
+        for (k, v) in recs {
+            self.longest_key = self.longest_key.max(k.len() as u32);
+            self.longest_val = self.longest_val.max(v.len() as u32);
+        }
+        self.node_delta += 1;
+        let footer = if root {
+            let keys = self.original_keys as i128 + self.key_delta as i128;
+            let nodes = self.original_nodes as i128 + self.node_delta as i128;
+            if keys < 0
+                || (keys == 0 && !self.physical)
+                || nodes <= 0
+                || keys > u64::MAX as i128
+                || nodes > u64::MAX as i128
+            {
+                return Err(Self::error("incremental catalog footer overflow"));
+            }
+            Some(FstreeFooter {
+                longest_key: self.longest_key,
+                longest_val: self.longest_val,
+                key_count: keys as u64,
+                node_count: nodes as u64,
+            })
+        } else {
+            None
+        };
+        let p = txn.alloc_block()?;
+        if self.physical {
+            txn.stage_raw(
+                p,
+                build_extref_node(p, self.xid, root, level, recs, footer, self.bsz),
+            );
+        } else {
+            txn.stage_raw(
+                p,
+                build_fstree_node(oid, self.xid, root, level, recs, footer, self.bsz),
+            );
+            self.mappings.insert(oid, (self.xid, p));
+        }
+        Ok((
+            recs.first().map(|r| r.0.clone()).unwrap_or_default(),
+            (if self.physical { p } else { oid }).to_le_bytes().to_vec(),
+        ))
+    }
+    fn edit<D: WritableBlockDevice>(
+        &mut self,
+        txn: &mut Transaction<D>,
+        oid: u64,
+        edits: &[CatalogEdit],
+        root: bool,
+        expected_level: Option<u16>,
+        depth: usize,
+    ) -> Result<Vec<CatRec>, TxnError> {
+        if depth > 64 || !self.visited.insert(oid) {
+            return Err(Self::error("incremental catalog cycle/depth"));
+        }
+        let p = if self.physical {
+            oid
+        } else {
+            self.mappings
+                .get(&oid)
+                .ok_or_else(|| Self::error("catalog mapping missing"))?
+                .1
+        };
+        let mut raw = vec![0; self.bsz];
+        txn.read_block(p, &mut raw)?;
+        let mut level = rd_u16(&raw, 34);
+        if rd_u64(&raw, 8) != oid
+            || (rd_u16(&raw, 32) & BTNODE_ROOT != 0) != root
+            || expected_level.is_some_and(|l| l != level)
+        {
+            return Err(Self::error("catalog node identity/level mismatch"));
+        }
+        let old: Vec<CatRec> = parse_cat_leaf(&raw)
+            .map_err(Self::error)?
+            .into_iter()
+            .map(|r| (r.key, r.val))
+            .collect();
+        if (old.is_empty() && !(self.physical && root && level == 0))
+            || old
+                .windows(2)
+                .any(|w| cat_key_cmp(&w[0].0, &w[1].0) != core::cmp::Ordering::Less)
+        {
+            return Err(Self::error("catalog node empty/unsorted"));
+        }
+        let mut recs;
+        if level == 0 {
+            recs = old.clone();
+            for e in edits {
+                let pos = recs.iter().position(|(k, _)| k.as_slice() == e.key());
+                match e {
+                    CatalogEdit::Remove(_) => {
+                        if let Some(i) = pos {
+                            recs.remove(i);
+                        }
+                    }
+                    CatalogEdit::Insert(k, v) => {
+                        if pos.is_some() {
+                            return Err(TxnError::AlreadyExists("catalog key".into()));
+                        }
+                        recs.push((k.clone(), v.clone()));
+                    }
+                    CatalogEdit::Upsert(k, v) => {
+                        if let Some(i) = pos {
+                            recs[i].1 = v.clone();
+                        } else {
+                            recs.push((k.clone(), v.clone()));
+                        }
+                    }
+                    CatalogEdit::Update(_, v) => {
+                        let i = pos.ok_or_else(|| Self::error("catalog update key missing"))?;
+                        recs[i].1 = v.clone();
+                    }
+                    CatalogEdit::Parent(_, delta, now) => {
+                        let i = pos.ok_or_else(|| Self::error("parent inode missing"))?;
+                        let v = &mut recs[i].1;
+                        if v.len() < INODE_NCHILDREN + 4 {
+                            return Err(Self::error("short parent inode"));
+                        }
+                        let n = rd_u32(v, INODE_NCHILDREN) as i64 + delta;
+                        if n < 0 || n > u32::MAX as i64 {
+                            return Err(Self::error("parent child count overflow"));
+                        }
+                        wr_u32(v, INODE_NCHILDREN, n as u32);
+                        wr_u64(v, INODE_MOD_TIME, *now);
+                        wr_u64(v, INODE_CHANGE_TIME, *now);
+                    }
+                }
+            }
+            recs.sort_by(|a, b| cat_key_cmp(&a.0, &b.0));
+            self.key_delta += recs.len() as i64 - old.len() as i64;
+        } else {
+            let mut groups: Vec<Vec<CatalogEdit>> = vec![vec![]; old.len()];
+            for e in edits {
+                let i = old
+                    .partition_point(|(k, _)| {
+                        cat_key_cmp(k, e.key()) != core::cmp::Ordering::Greater
+                    })
+                    .saturating_sub(1);
+                groups[i].push(e.clone());
+            }
+            recs = Vec::new();
+            for (i, (k, v)) in old.iter().enumerate() {
+                if v.len() != 8 {
+                    return Err(Self::error("catalog child value size"));
+                }
+                if groups[i].is_empty() {
+                    recs.push((k.clone(), v.clone()));
+                } else {
+                    recs.extend(self.edit(
+                        txn,
+                        rd_u64(v, 0),
+                        &groups[i],
+                        false,
+                        Some(level - 1),
+                        depth + 1,
+                    )?);
+                }
+            }
+        }
+        if recs
+            .windows(2)
+            .any(|w| cat_key_cmp(&w[0].0, &w[1].0) != core::cmp::Ordering::Less)
+        {
+            return Err(Self::error("catalog edit ordering/duplicate"));
+        }
+        self.mappings.remove(&oid);
+        self.replaced.insert(p);
+        self.node_delta -= 1;
+        if recs.is_empty() {
+            if root {
+                if self.physical {
+                    return Ok(vec![self.stage(txn, oid, 0, &[], true)?]);
+                }
+                return Err(Self::error("catalog cannot become empty"));
+            }
+            return Ok(vec![]);
+        }
+        if recs
+            .iter()
+            .any(|r| packed_size(std::slice::from_ref(r)) > node_capacity(self.bsz, false))
+        {
+            return Err(Self::error("catalog record exceeds node size"));
+        }
+        if root {
+            while packed_size(&recs) > node_capacity(self.bsz, true) {
+                let mut next = Vec::new();
+                for chunk in partition_records(&recs, node_capacity(self.bsz, false)) {
+                    let child = if self.physical {
+                        0
+                    } else {
+                        self.fresh_oid(txn)
+                    };
+                    next.push(self.stage(txn, child, level, &chunk, false)?);
+                }
+                recs = next;
+                level += 1;
+                if level > 64 {
+                    return Err(Self::error("catalog root depth"));
+                }
+            }
+            return Ok(vec![self.stage(txn, oid, level, &recs, true)?]);
+        }
+        let mut result = Vec::new();
+        for (i, chunk) in partition_records(&recs, node_capacity(self.bsz, false))
+            .into_iter()
+            .enumerate()
+        {
+            let child = if self.physical {
+                0
+            } else if i == 0 {
+                oid
+            } else {
+                self.fresh_oid(txn)
+            };
+            result.push(self.stage(txn, child, level, &chunk, false)?);
+        }
+        Ok(result)
+    }
+}
+#[allow(clippy::too_many_arguments)]
+fn rewrite_catalog_cow<D: WritableBlockDevice>(
+    txn: &mut Transaction<D>,
+    vsb: &[u8],
+    omap: &[u8],
+    xid: u64,
+    new_records: &[CatRec],
+    remove_keys: &[Vec<u8>],
+    parent_patch: Option<(u64, i64)>,
+    updates: &[CatRec],
+    now: u64,
+    bsz: usize,
+) -> Result<(u64, i64), TxnError> {
+    let mut triples = Vec::new();
+    let mut omap_nodes = Vec::new();
+    walk_omap_tree(
+        txn,
+        omap,
+        rd_u64(omap, 8),
+        bsz,
+        &mut triples,
+        &mut omap_nodes,
+    )?;
+    let mut mappings = std::collections::BTreeMap::new();
+    for (oid, x, p) in triples {
+        if mappings.insert(oid, (x, p)).is_some() {
+            return Err(CatalogCow::error(
+                "multiple catalog versions require snapshot path",
+            ));
+        }
+    }
+    let root = rd_u64(vsb, VSBI_ROOT_TREE_OID);
+    let p = mappings
+        .get(&root)
+        .ok_or_else(|| CatalogCow::error("catalog root missing"))?
+        .1;
+    let mut raw = vec![0; bsz];
+    txn.read_block(p, &mut raw)?;
+    let bti = bsz - BTREE_INFO_SIZE;
+    let mut cow = CatalogCow {
+        physical: false,
+        mappings,
+        replaced: Default::default(),
+        visited: Default::default(),
+        xid,
+        bsz,
+        node_delta: 0,
+        key_delta: 0,
+        longest_key: rd_u32(&raw, bti + 16),
+        longest_val: rd_u32(&raw, bti + 20),
+        original_keys: rd_u64(&raw, bti + 24),
+        original_nodes: rd_u64(&raw, bti + 32),
+    };
+    let mut edits = Vec::new();
+    if let Some((p, d)) = parent_patch {
+        edits.push(CatalogEdit::Parent(build_inode_key(p), d, now));
+    }
+    for (k, v) in updates {
+        edits.push(CatalogEdit::Update(k.clone(), v.clone()));
+    }
+    for k in remove_keys {
+        edits.push(CatalogEdit::Remove(k.clone()));
+    }
+    for (k, v) in new_records {
+        edits.push(CatalogEdit::Insert(k.clone(), v.clone()));
+    }
+    cow.edit(txn, root, &edits, true, None, 0)?;
+    let entries: Vec<_> = cow.mappings.iter().map(|(&o, &(x, p))| (o, x, p)).collect();
+    let (new_omap, new_omap_count) = build_omap_tree(txn, omap, &entries, xid, bsz)?;
+    // Callers account for catalog and omap page growth together. Old omap
+    // pages are reclaimed by free_replaced_metadata, unchanged catalog is not.
+    txn.catalog_reclaim = Some(cow.replaced);
+    Ok((
+        new_omap,
+        cow.node_delta + new_omap_count as i64 - omap_nodes.len() as i64,
+    ))
+}
+
 fn rewrite_fstree<D: WritableBlockDevice>(
     txn: &mut Transaction<D>,
     vsb_raw: &[u8],
@@ -4909,6 +5361,10 @@ fn rewrite_fstree_impl<D: WritableBlockDevice>(
     now: u64,
     bsz: usize,
 ) -> Result<(u64, i64), TxnError> {
+    if rd_u64(vsb_raw, VSBI_NUM_SNAPSHOTS) == 0 {
+        return rewrite_catalog_cow(txn, vsb_raw, omap_node, new_xid, &new_records,
+            remove_keys, parent_patch, update_records, now, bsz);
+    }
     let root_tree_oid = rd_u64(vsb_raw, VSBI_ROOT_TREE_OID);
     let mut recs = collect_fstree(txn, omap_node, root_tree_oid, bsz)?;
 

@@ -205,3 +205,76 @@ fn buffered_guards_keep_target_unchanged() {
         b"durably queued"
     );
 }
+
+#[test]
+#[ignore = "process helper; requires supplied fixture"]
+fn buffered_prefix_crash_worker() {
+    let image = PathBuf::from(std::env::var("LAPFS_WORKER_IMAGE").unwrap());
+    let dir = PathBuf::from(std::env::var("LAPFS_WORKER_SESSION").unwrap());
+    let offset = std::env::var("SPARK_APFS_TEST_OFFSET")
+        .unwrap()
+        .parse()
+        .unwrap();
+    let mut s = Session::start(&image, offset, &dir, GROUP_BYTES, 0).unwrap();
+    s.write("/crash.txt", 13, b"FIRST-GROUP").unwrap();
+    s.write("/crash.txt", 2001, b"SECOND-GROUP").unwrap();
+    s.close().unwrap();
+}
+#[test]
+#[ignore = "requires fault-injection build and disposable fixture"]
+fn buffered_prefix_retirement_crash_boundaries() {
+    assert!(cfg!(feature = "fault-injection"));
+    let (source, offset, out) = fixture();
+    let work = tempfile::Builder::new()
+        .prefix("prefix-crash-")
+        .tempdir_in(out)
+        .unwrap()
+        .keep();
+    let base = work.join("base.dmg");
+    std::fs::copy(source, &base).unwrap();
+    let mut s = Session::start(&base, offset, &work.join("init"), GROUP_BYTES, 0).unwrap();
+    s.create("/crash.txt").unwrap();
+    s.write("/crash.txt", 0, &vec![7; 8197]).unwrap();
+    s.close().unwrap();
+    drop(s);
+    let mut results = vec![];
+    for point in [
+        "prepare-dir-created",
+        "state-Applying",
+        "apply-write",
+        "state-Committed",
+        "mount-queue-retired",
+        "mount-gc-entry",
+        "mount-closed",
+    ] {
+        let image = work.join(format!("{point}.dmg"));
+        std::fs::copy(&base, &image).unwrap();
+        let session = work.join(point);
+        let status = std::process::Command::new(std::env::current_exe().unwrap())
+            .args([
+                "--ignored",
+                "--exact",
+                "buffered_prefix_crash_worker",
+                "--nocapture",
+            ])
+            .env("LAPFS_WORKER_IMAGE", &image)
+            .env("LAPFS_WORKER_SESSION", &session)
+            .env("SPARK_APFS_KILL_AT", point)
+            .status()
+            .unwrap();
+        assert!(!status.success(), "fault point not reached: {point}");
+        spark_apfs_safe::buffered::recover(&session).unwrap();
+        let actual = spark_apfs_safe::apfs_batch::read_file(&image, offset, "/crash.txt").unwrap();
+        let mut expected = vec![7; 8197];
+        expected[13..24].copy_from_slice(b"FIRST-GROUP");
+        expected[2001..2013].copy_from_slice(b"SECOND-GROUP");
+        assert_eq!(actual, expected);
+        results.push(serde_json::json!({"point":point,"image":image,"sha256":hash(&actual),"bytes":actual.len()}));
+    }
+    std::fs::write(
+        work.join("results.json"),
+        serde_json::to_vec_pretty(&results).unwrap(),
+    )
+    .unwrap();
+    println!("PREFIX_CRASH_EVIDENCE={}", work.display());
+}

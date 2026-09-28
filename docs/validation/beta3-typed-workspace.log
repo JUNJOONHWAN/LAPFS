@@ -1,0 +1,383 @@
+   Compiling apfs-core v0.0.0 (<source>/vendor/apfs-core)
+warning: struct `cuse_init_in` is never constructed
+   --> vendor/fuser/src/ll/fuse_abi.rs:810:12
+    |
+810 | pub struct cuse_init_in {
+    |            ^^^^^^^^^^^^
+    |
+    = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: struct `cuse_init_out` is never constructed
+   --> vendor/fuser/src/ll/fuse_abi.rs:819:12
+    |
+819 | pub struct cuse_init_out {
+    |            ^^^^^^^^^^^^^
+
+warning: struct `fuse_ioctl_iovec` is never constructed
+   --> vendor/fuser/src/ll/fuse_abi.rs:864:12
+    |
+864 | pub struct fuse_ioctl_iovec {
+    |            ^^^^^^^^^^^^^^^^
+
+warning: struct `fuse_notify_retrieve_out` is never constructed
+   --> vendor/fuser/src/ll/fuse_abi.rs:992:12
+    |
+992 | pub struct fuse_notify_retrieve_out {
+    |            ^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: struct `fuse_notify_retrieve_in` is never constructed
+    --> vendor/fuser/src/ll/fuse_abi.rs:1002:12
+     |
+1002 | pub struct fuse_notify_retrieve_in {
+     |            ^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: `fuser` (lib) generated 5 warnings
+warning: unused import: `crate::nx::NX_MAGIC`
+   --> vendor/apfs-core/src/volume.rs:351:13
+    |
+351 |         use crate::nx::NX_MAGIC;
+    |             ^^^^^^^^^^^^^^^^^^^
+    |
+    = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused import: `ObjPhys`
+    --> vendor/apfs-core/src/catalog.rs:1785:26
+     |
+1785 |         use crate::obj::{ObjPhys, OBJECT_TYPE_OMAP};
+     |                          ^^^^^^^
+
+warning: method `for_each_leaf` is never used
+  --> vendor/apfs-core/src/catalog.rs:98:8
+   |
+58 | impl Catalog {
+   | ------------ method in this implementation
+...
+98 |     fn for_each_leaf<D: BlockDevice>(
+   |        ^^^^^^^^^^^^^
+   |
+   = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+   Compiling apfs v0.0.0 (<source>/vendor/apfs)
+   Compiling apfs-write v0.0.0 (<source>/vendor/apfs-write)
+warning: `apfs-core` (lib) generated 1 warning
+warning: constant `BTREE_INFO` is never used
+   --> vendor/apfs-core/src/container.rs:554:15
+    |
+554 |         const BTREE_INFO: usize = 40;
+    |               ^^^^^^^^^^
+    |
+    = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: struct `BoundedMemDev` is never constructed
+    --> vendor/apfs-core/src/catalog.rs:1319:12
+     |
+1319 |     struct BoundedMemDev {
+     |            ^^^^^^^^^^^^^
+
+warning: associated items `new` and `fill_block` are never used
+    --> vendor/apfs-core/src/catalog.rs:1324:12
+     |
+1323 |     impl BoundedMemDev {
+     |     ------------------ associated items in this implementation
+1324 |         fn new(block_size: usize) -> Self {
+     |            ^^^
+...
+1330 |         fn fill_block(&mut self, paddr: u64, byte: u8) {
+     |            ^^^^^^^^^^
+
+   Compiling spark-apfs-safe v0.3.0-beta.3 (<source>)
+warning: `apfs-core` (lib test) generated 5 warnings (run `cargo fix --lib -p apfs-core --tests` to apply 2 suggestions)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.81s
+     Running unittests src/lib.rs (target/debug/deps/apfs-47b8fbb5b78c7650)
+
+running 21 tests
+test case_fold::tests::ascii_basic ... ok
+test case_fold::tests::german_eszett_differs_from_ss ... ok
+test case_fold::tests::accented_latin_fold ... ok
+test case_fold::tests::german_eszett_same_name_matches ... ok
+test case_fold::tests::greek_sigma ... ok
+test case_fold::tests::german_eszett_fold_value ... ok
+test case_fold::tests::german_umlauts ... ok
+test case_fold::tests::nfc_nfd_umlaut_roundtrip ... ok
+test case_fold::tests::nfd_vs_nfc_input_match ... ok
+test case_fold::tests::turkish_dotless_i_not_confused ... ok
+test case_fold::tests::turkish_dotted_capital_i_fold_value ... ok
+test case_fold::tests::turkish_dotted_i_same_name_matches ... ok
+test tests::components_double_slash_collapsed ... ok
+test case_fold::tests::turkish_dotted_i_differs_from_plain_i ... ok
+test tests::components_empty_string_gives_no_parts ... ok
+test tests::components_deep_path ... ok
+test tests::components_multi_component ... ok
+test tests::components_preserves_extension_dots ... ok
+test tests::components_root_slash_gives_no_parts ... ok
+test tests::components_single_component ... ok
+test tests::components_trailing_slash_ignored ... ok
+
+test result: ok. 21 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/lib.rs (target/debug/deps/apfs_core-6e70aebc9917e7ec)
+
+running 138 tests
+test block_device::tests::offset_dev_size_reports_window ... ok
+test block_device::tests::offset_dev_read_oob_errors ... ok
+test block_device::tests::offset_dev_translates_reads ... ok
+test block_device::tests::offset_dev_translates_writes ... ok
+test block_device::tests::offset_dev_write_oob_errors ... ok
+test block_device::tests::read_past_end_errors ... ok
+test btree::tests::var_kv_reads_kvloc_entry ... ok
+test block_device::tests::reads_bytes_at_offset ... ok
+test btree::tests::rejects_bad_checksum ... ok
+test btree::tests::parses_and_reads_fixed_kv_entry ... ok
+test catalog::tests::decompresses_real_macos_lzvn_files ... ok
+test catalog::tests::for_each_leaf_empty_leaf_calls_closure_zero_times ... ok
+test catalog::tests::get_xattr_absent_returns_none ... ok
+test catalog::tests::get_xattr_wrong_name_same_inode_returns_none ... ok
+test catalog::tests::for_each_leaf_depth_guard_terminates ... ok
+test catalog::tests::list_xattrs_multiple_entries_same_inode ... ok
+test catalog::tests::lists_real_large_fixture_tree ... ok
+test catalog::tests::reads_real_file_content_4096_a ... ok
+test catalog::tests::resolve_path_navigates_real_fixture ... ok
+test catalog::tests::catalog_open_rejects_bad_root_object_type ... ok
+test catalog::tests::get_xattr_different_inode_returns_none ... ok
+test catalog::tests::get_xattr_embedded_returns_data ... ok
+test catalog::tests::read_stream_truncated_request_returns_only_size_bytes ... ok
+test catalog::tests::stat_real_fixture_size_and_isdir ... ok
+test catalog::tests::list_xattrs_synthetic_returns_entry ... ok
+test catalog::tests::reads_real_xattrs_embedded_and_stream ... ok
+test catalog::tests::stat_directory_inode_sets_is_dir ... ok
+test catalog::tests::stat_inode_not_found_returns_error ... ok
+test checkpoint::tests::non_contiguous_falls_back_to_bootstrap ... ok
+test catalog::tests::range_read_over_4gib_never_reads_or_allocates_entire_extent ... ok
+test catalog::tests::list_xattrs_wrong_inode_returns_empty ... ok
+test checksum::tests::verifies_real_apfs_block_zero ... ok
+test container::tests::list_volumes_returns_volume_info_fields ... ok
+test container::tests::lists_real_user_volumes ... ok
+test container::tests::container_uuid_is_non_zero ... ok
+test catalog::tests::read_stream_multiple_extents_assembled_in_order ... ok
+test catalog::tests::read_stream_no_matching_oid_returns_zeros ... ok
+test checkpoint::tests::skips_corrupt_higher_xid_keeps_valid ... ok
+test catalog::tests::stat_regular_file_inode_returns_correct_fields ... ok
+test catalog::tests::read_stream_size_zero_returns_empty ... ok
+test catalog::tests::sparse_hole_reads_as_zeros_not_nx_superblock ... ok
+test catalog::tests::object_query_prunes_unrelated_corruption_and_rejects_target_corruption ... ok
+test container::tests::open_rejects_short_block0 ... ok
+test container::tests::open_volume_by_index_returns_none_for_out_of_range ... ok
+test container::tests::open_rejects_all_zeros_block0 ... ok
+test container::tests::open_rejects_wrong_object_type_in_block0 ... ok
+test container::tests::open_volume_by_role_returns_none_for_absent_role ... ok
+test container::tests::open_rejects_bad_checksum_in_block0 ... ok
+test container::tests::open_rejects_bad_magic_in_block0 ... ok
+test container::tests::open_volume_by_uuid_returns_none_for_unknown_uuid ... ok
+test container::tests::open_volume_by_uuid_finds_existing_volume ... ok
+test container::tests::opens_real_container_via_blockdevice ... ok
+test container::tests::open_selects_valid_superblock_from_descriptor_ring ... ok
+test container::tests::open_ring_scan_picks_higher_xid_over_bootstrap ... ok
+test checkpoint::tests::picks_highest_valid_xid_from_ring ... ok
+test container::tests::volumes_by_role_returns_vec ... ok
+test decmpfs::tests::method1_size_mismatch_errors ... ok
+test decmpfs::tests::method7_ff_prefix_means_uncompressed_inline ... ok
+test decmpfs::tests::method7_ff_prefix_truncated_errors_not_panic ... ok
+test decmpfs::tests::bad_magic_and_unsupported_error_not_panic ... ok
+test decmpfs::tests::method8_missing_resource_fork_errors ... ok
+test decmpfs::tests::header_parse_too_short_errors ... ok
+test decmpfs::tests::method1_raw_roundtrip ... ok
+test decmpfs::tests::method8_missing_rsrc_errors ... ok
+test decmpfs::tests::method8_single_uncompressed_chunk_with_0x06_marker ... ok
+test decmpfs::tests::method9_uncompressed_inline_with_marker_prefix ... ok
+test endian::tests::reads_le_values ... ok
+test endian::tests::short_buffer_errors_not_panics ... ok
+test inode::tests::dstream_after_unaligned_first_field_uses_round_up_8 ... ok
+test inode::tests::jdstream_parse_all_fields_round_trip ... ok
+test inode::tests::no_xfields_means_no_dstream ... ok
+test inode::tests::parse_unknown_xfields_empty_when_no_xfields ... ok
+test inode::tests::parse_unknown_xfields_returns_unknown_types ... ok
+test catalog::tests::writable_range_preflight_rejects_immutable_sparse_preallocated_shared ... ok
+test inode::tests::parse_unknown_xfields_skips_recognized_name_and_dstream ... ok
+test container::tests::synthetic_list_volumes_returns_volume_info ... ok
+test inode::tests::parse_unknown_xfields_truncated_descriptor_array_errors ... ok
+test inode::tests::parse_unknown_xfields_xsize_exceeds_remaining_data_errors ... ok
+test container::tests::synthetic_open_volume_by_uuid_not_found ... ok
+test inode::tests::parses_mode_field_at_offset_80 ... ok
+test inode::tests::short_buffer_errors_not_panics ... ok
+test inode::tests::single_dstream_xfield ... ok
+test jkey::tests::short_buffer_errors_not_panics ... ok
+test lzvn::tests::copy_match_distance_exceeds_output_errors ... ok
+test jkey::tests::splits_obj_id_and_type ... ok
+test lzvn::tests::copy_match_overlap_splat_semantic ... ok
+test container::tests::synthetic_open_volume_by_index_found_and_not_found ... ok
+test container::tests::synthetic_container_uuid_is_accessible ... ok
+test lzvn::tests::large_literal_only_no_match ... ok
+test lzvn::tests::literal_then_eos ... ok
+test lzvn::tests::lrg_m_reuses_previous_distance_with_bias ... ok
+test lzvn::tests::med_d_opcode_roundtrip ... ok
+test lzvn::tests::nop_opcode_is_skipped_silently ... ok
+test lzvn::tests::pre_d_reuses_previous_distance ... ok
+test lzvn::tests::small_distance_backref ... ok
+test lzvn::tests::sml_m_reuses_previous_distance ... ok
+test lzvn::tests::truncated_src_errors_not_panics ... ok
+test nx::tests::parses_real_container_superblock ... ok
+test obj::tests::short_block_errors ... ok
+test container::tests::synthetic_list_user_volumes_returns_one_volume ... ok
+test container::tests::synthetic_open_volume_by_role ... ok
+test lzvn::tests::udef_opcode_returns_error ... ok
+test omap::resolve_tests::real_image_resolve_fs_oid_to_volume_superblock ... ok
+test container::tests::synthetic_open_volume_by_uuid_found ... ok
+test omap::parse_tests::omap_open_io_error_propagated ... ok
+test obj::tests::parses_header_and_masks_type ... ok
+test container::tests::synthetic_volumes_by_role_empty_for_absent_role ... ok
+test omap::parse_tests::omap_open_bad_root_type_rejected ... ok
+test omap::parse_tests::omap_phys_parse_bad_checksum_rejected ... ok
+test omap::parse_tests::omap_phys_parse_wrong_type_rejected ... ok
+test nx::tests::rejects_bad_magic ... ok
+test omap::parse_tests::resolve_no_match_returns_none ... ok
+test omap::parse_tests::resolve_omap_val_deleted_returns_none ... ok
+test volume::tests::parse_short_block_returns_err ... ok
+test volume::tests::parse_empty_block_returns_err ... ok
+test omap::tests::opens_real_container_omap_and_btree_root ... ok
+test omap::resolve_tests::resolve_picks_latest_xid_not_exceeding_query ... ok
+test volume::tests::volume_role_from_name ... ok
+test volume::tests::volume_role_from_name_all_variants ... ok
+test xattr::tests::parses_embedded_val ... ok
+test xattr::tests::parses_key_name_strips_trailing_nul ... ok
+test volume::tests::parses_apsb_fields ... ok
+test volume::tests::rejects_bad_magic_and_checksum ... ok
+test omap::resolve_tests::resolve_returns_none_when_only_key_has_higher_xid ... ok
+test volume::tests::rejects_wrong_object_type ... ok
+test volume::tests::is_system_covers_all_system_roles ... ok
+test volume::tests::volume_name_nul_terminated_strips_correctly ... ok
+test volume::tests::names_are_hashed_synthetic ... ok
+test volume::tests::volume_uuid_round_trips ... ok
+test xattr::tests::parses_inline_xattr_dstream_48_bytes ... ok
+test omap::resolve_tests::synthetic_two_level_descent ... ok
+test volume::tests::exposes_incompatible_features_and_hash_flag ... ok
+test volume::tests::volume_role_enum_decode ... ok
+test xattr::tests::short_buffers_error_not_panic ... ok
+test volume::tests::volume_name_no_nul_uses_full_area ... ok
+test omap::resolve_tests::resolve_depth_limit_returns_none_gracefully ... ok
+test catalog::tests::typed_query_matches_full_walk_and_prunes_other_types ... ok
+test catalog::tests::object_query_matches_full_walk_including_equal_separators_and_absent_ids ... ok
+
+test result: ok. 138 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running unittests src/lib.rs (target/debug/deps/apfs_write-4158b0e943956190)
+
+running 108 tests
+test file::tests::build_file_extent_val_length_and_fields ... ok
+test file::tests::build_dstream_id_val_is_4_byte_refcnt ... ok
+test file::tests::build_drec_val_length_and_fields ... ok
+test file::tests::build_dstream_id_key_type_and_id ... ok
+test file::tests::build_inode_key_is_8_bytes_correct_type ... ok
+test file::tests::build_phys_ext_key_type_and_id ... ok
+test file::tests::build_phys_ext_val_encodes_kind_and_count ... ok
+test file::tests::build_file_extent_key_length_and_fields ... ok
+test file::tests::build_xattr_key_length_name_nul_terminated ... ok
+test file::tests::build_xattr_val_embedded_flags_and_data ... ok
+test file::tests::build_xattr_val_stream_layout ... ok
+test file::tests::build_xattr_val_stream_parses_with_apfs_core ... ok
+test file::tests::drec_key_matches_kernel_hello_txt ... ok
+test file::tests::catalog_insert_roundtrip_sorted ... ok
+test file::tests::encode_jkey_type_in_top_4_bits_id_in_low_60 ... ok
+test file::tests::file_extent_matches_kernel_note_txt ... ok
+test file::tests::dstream_id_matches_kernel_note_txt ... ok
+test file::tests::inode_val_matches_kernel_empty_file ... ok
+test file::tests::inode_val_with_dstream_matches_kernel_content_file ... ok
+test file::tests::fstree_internal_root_node ... ok
+test file::tests::fstree_leaf_node_nonroot_roundtrip ... ok
+test file::tests::leaf_insert_record_round_trips_via_parse ... ok
+test file::tests::name_hash_matches_baseline_private_dir ... ok
+test file::tests::name_hash_matches_baseline_root ... ok
+test file::tests::name_hash_matches_kernel_hello_txt ... ok
+test file::tests::phys_ext_matches_kernel_note_txt ... ok
+test file::tests::leaf_remove_then_insert_preserves_sort_order ... ok
+test file::tests::xattr_key_round_trips_through_apfs_core ... ok
+test file::tests::xattr_val_embedded_round_trips_through_apfs_core ... ok
+test file::tests::leaf_remove_record_removes_existing_key ... ok
+test free_runs::tests::alloc_exact_zero_returns_none ... ok
+test free_runs::tests::alloc_exact_splits_remainder ... ok
+test free_runs::tests::alloc_exact_empty_pool_returns_none ... ok
+test free_runs::tests::alloc_largest_empty_pool_returns_none ... ok
+test file::tests::leaf_insert_returns_false_when_full ... ok
+test free_runs::tests::alloc_largest_zero_cap_returns_none ... ok
+test free_runs::tests::alloc_largest_partial ... ok
+test free_runs::tests::empty_bitmap_one_big_run ... ok
+test free_runs::tests::alloc_picks_first_fit_by_size ... ok
+test free_runs::tests::free_merges_both_neighbors ... ok
+test free_runs::tests::free_zero_len_is_noop ... ok
+test free_runs::tests::free_no_merge_isolated ... ok
+test free_runs::tests::full_bitmap_no_runs ... ok
+test scratch::tests::accepts_exact_minimum ... ok
+test file::tests::xattr_embedded_threshold_below_xattr_max_embedded_size ... ok
+test file::tests::symlink_constants_match_posix ... ok
+test file::tests::leaf_remove_record_returns_false_for_missing_key ... ok
+test free_runs::tests::alloc_largest_cap_smaller_than_run_splits_remainder ... ok
+test scratch::tests::block_count_matches_size ... ok
+test scratch::tests::block_size_is_4096 ... ok
+test scratch::tests::from_mib_64_geometry ... ok
+test scratch::tests::rejects_below_minimum ... ok
+test scratch::tests::rejects_zero ... ok
+test scratch::tests::roundup_below_minimum_still_rejected ... ok
+test scratch::tests::size_is_multiple_of_block_size ... ok
+test file::tests::rebuild_omap_node_without_removes_live_xid_entry ... ok
+test sm_fq::tests::fixture_decode_ghost_entries ... ok
+test sm_fq::tests::fixture_tree_insert_forces_leaf_split ... ok
+test sm_fq::tests::fixture_tree_insert_no_split ... ok
+test sm_fq::tests::drain_nothing_when_xid_below_oldest ... ok
+test sm_fq::tests::empty_round_trip ... ok
+test sm_fq::tests::insert_one_and_parse ... ok
+test sm_fq::tests::insert_is_idempotent ... ok
+test sm_fq::tests::insert_two_unsorted_keeps_sorted ... ok
+test sm_fq::tests::parse_ghost_entry_from_apple_encoding ... ok
+test sm_fq::tests::drain_upto_xid ... ok
+test snapshot::tests::apple_epoch_now_ns_is_reasonable ... ok
+test sm_fq::tests::multi_node_insert_is_idempotent ... ok
+test snapshot::tests::delete_snapshot_decrements_num_snapshots ... ok
+test snapshot::tests::encode_jkey_id_zero ... ok
+test snapshot::tests::encode_jkey_snap_metadata ... ok
+test snapshot::tests::encode_jkey_snap_metadata_and_name_differ ... ok
+test sm_fq::tests::insert_same_xid_sorts_by_paddr ... ok
+test sm_fq::tests::multi_node_insert_forces_leaf_split ... ok
+test snapshot::tests::empty_btree_root_fletcher_valid ... ok
+test sm_fq::tests::root_leaf_grow_with_2_oids ... ok
+test snapshot::tests::encode_jkey_snap_name ... ok
+test sm_fq::tests::multi_node_insert_into_existing_leaf_no_split ... ok
+test snapshot::tests::q4_snap_meta_ext_oid_not_written ... ok
+test snapshot::tests::q5_revert_fields_untouched ... ok
+test snapshot::tests::q3_snapshot_metadata_records_old_extentref_oid ... ok
+test sm_fq::tests::multi_node_insert_into_existing_leaf_left_child ... ok
+test snapshot::tests::snap_meta_node_uses_provided_bt_flags_in_footer ... ok
+test snapshot::tests::snap_name_key_includes_name_len_field_before_name_bytes ... ok
+test snapshot::tests::snap_meta_node_two_records_valid_checksum ... ok
+test snapshot::tests::snap_name_key_obj_id_is_all_ones ... ok
+test txn::tests::begin_recoverable_returns_device_on_error ... ok
+test txn::tests::alloc_blocks_run_returns_partial_when_chunk_smaller_than_request ... ok
+test txn::tests::fake_dev_write_records_order ... ok
+test txn::tests::alloc_run_cached_no_free_blocks_returns_error ... ok
+test txn::tests::nxview_parse_bad_checksum_errors ... ok
+test txn::tests::alloc_blocks_run_returns_contiguous_multi_block_run ... ok
+test txn::tests::nxview_parse_bad_block_size_errors ... ok
+test txn::tests::nxview_parse_short_block_errors ... ok
+test txn::tests::commit_writes_superblock_last ... ok
+test txn::tests::ring_index_math_wraps ... ok
+test txn::tests::ring_index_math_large ... ok
+test txn::tests::obj_phys_zero_body_fletcher ... ok
+test txn::tests::nxview_parse_valid_round_trips ... ok
+test txn::tests::obj_phys_fletcher_matches_apfs_core ... ok
+test txn::tests::block_alloc_bump_from_free_range ... ok
+test txn::tests::nxview_parse_bad_magic_errors ... ok
+test txn::tests::nxview_parse_fs_oids_stops_at_zero ... ok
+test txn::tests::verify_checkpoint_block_rejects_bad_checksum ... ok
+test txn::tests::verify_checkpoint_block_rejects_wrong_xid ... ok
+test txn::tests::update_checksum_in_place_produces_valid_block ... ok
+test txn::tests::verify_checkpoint_block_accepts_valid_and_matching_xid ... ok
+test sm_fq::tests::capacity_at_smfq_max_keys ... ok
+
+test result: ok. 108 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running unittests src/lib.rs (target/debug/deps/spark_apfs_safe-4ebcf2fd526c5510)
+
+running 2 tests
+test error_log::tests::rejects_links_and_preserves_error_classification ... ok
+test error_log::tests::rotation_and_concurrent_records ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.13s
+

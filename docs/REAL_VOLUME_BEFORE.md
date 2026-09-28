@@ -1,0 +1,27 @@
+# Real-volume journal failure: before-impact report
+
+Request: make the real APFS volume writable; resolve the 32 MiB cap failure.
+Scope: add a structurally read-only transaction probe, measure actual prepared metadata using Reader (O_RDONLY), then adjust only a verified bounded budget or the directly responsible metadata path. Do not bypass ownership, feature, low-space or recovery guards. Canonical source is DGX. Existing public beta tag is retained.
+
+The current failed prepare has16MiB undo and16MiB redo; original unchanged. Actual total requirement is unknown. First implement shared preparation via a generic Device (same algorithm) and a probe that never publishes an applicable PREPARED journal, never binds device ownership and removes its own temporary scratch after reporting. Shared prepare requires regression. Original device may be briefly unmounted for exclusive read-only probing, then RO restored. No real target apply before fixture regression and successful actual-volume preflight.
+
+Affected files initially src/apfs_batch.rs, src/journal.rs diagnostic statistics and src/main.rs probe CLI; tests/docs. No source allocator/format semantics changed merely to obtain diagnostics. No GPU/services/schedules/mail changes.
+
+Measured: 128 MiB read-only probe refused at 16,000 writes (62.5 MiB each undo and redo). Keep both production limits. The directly responsible full-catalog rebuild will be replaced for snapshot-free supported volumes with path-copy catalog edits (leaf splits/deletion, ancestor pivots, root footer, multi-level object map). Only superseded catalog pages may be reclaimed. Changes therefore also affect vendor/apfs-write/src/file.rs and txn.rs; all existing callers reach the shared rewrite helper. Tests must cover multi-level catalog/omap, split/delete/min-key changes, unchanged files, rollback and native Apple fsck before physical apply. Existing snapshot path remains guarded by the application. Reference: https://developer.apple.com/support/downloads/Apple-File-System-Reference.pdf (B-Trees and Object Maps).
+
+Further probe: empty-file create passes in 0.236 s with 8,806,400 journal bytes. Nonempty put still reaches the cap. The extent-reference tree full rebuild is therefore also replaced by the same bounded path-copy editor, using physical child pointers and explicit empty-root support. Existing object map rebuild remains; production journal and operation caps are unchanged.
+
+Performance follow-up in the same supported write callers: replace full-catalog directory/file lookup scans with bounded key-range traversal. Selection retains the exact drec plus all records for the referenced file IDs, including both rename names; shared/unsupported stream guards remain.
+
+Buffered queue impact: mixed random writes can multiply the remaining omap cost per flush. Commit one coalesced write group per bounded journal; persist its queue-prefix length and retire only that prefix after COMMITTED. Keep metadata batches (remove+rename atomic replacement) together. Legacy sessions without a prefix retain their existing whole-queue interpretation. Requires mixed-write and crash regression.
+
+Large-directory investigation: native fsck of the interrupted disposable image is clean. A debugger sampled repeated Unicode normalization in FsView lookup while listing; each stat linearly rescans names, creating quadratic directory enumeration. Add a per-view canonical name index, preserving the existing fold function and first-match semantics. Impacts vendor/apfs/src/lib.rs and shared RO/RW lookup; caches die with the view, so no cross-transaction stale entries. Also ensure new catalog OIDs cannot collide with mappings retained by path copying.
+
+FUSE readdir uses catalog directory-record inode/type directly instead of statting every child on every directory reply. This changes Session::list and its sole caller mount_rw::readdir; actual getattr/stat still reads inode metadata. Native directory listing and symlink tests cover the mapping.
+
+RW repeated lookup performance: retain per-view lookup caches within one Session while the VSB physical address and transaction ID remain identical. A new generation discards all cached names/paths. CachedView lends the existing exclusive Image FD and returns only read lookup caches on drop. No data/payload cache, acknowledgement, or flush ordering changes. Existing create/rename/delete/overwrite plus new interleaved/crash tests exercise invalidation.
+
+## Typed catalog query follow-up
+The 5,000-original-file FUSE workload passed, but stat on a directory still read all of that directory's directory-entry leaves when it needed only its inode or xattrs. Extend catalog branch pruning to (object ID, record type), keeping inclusive equal separators. Callers are list/stat/read/xattr APIs; multi-type write eligibility scans retain their whole-object query. Verify against full traversal, mixed record types, boundary duplicates and an unrelated corrupt leaf before rebuilding and rerunning the full FUSE and Apple validation. No change to on-disk format, durability policy, physical device state or other services.
+
+Native QA tooling follow-up: Finder intermittently held a read-only synthetic image during detach. The three Apple validators now attach with -nobrowse and retry normal detach on a busy response. No forced unmount is used. This only affects task-owned test images and makes the native verification gate repeatable.
