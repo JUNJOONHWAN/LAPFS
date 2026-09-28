@@ -56,6 +56,6 @@ The published binary is `dccc7cead3774b9b1d247c3ac2e1334fdfa114e44e70dab087f158d
 
 [Summary receipt](validation/native-cow-beta7.json) · [All430 case receipts and image SHA values](validation/native-cow-beta7-matrix.json).
 
-Changed source: `file.rs` (from the preceding prototype), `txn.rs`, new `space_cow.rs`, and the CLI help version. Tests: exact-I/O matrix, portable Mac/Linux roundtrip and ring-overlap unit coverage. Packaging/version and README/limitations/overview/release documentation updated. No research files, external mail, scheduler, existing Corsair files or live mount were changed.
+Changed source: `src/journal.rs` (feature-gated fault-injection hooks from the preceding prototype), `file.rs` (from the preceding prototype), `txn.rs`, new `space_cow.rs`, and the CLI help version. Tests: exact-I/O matrix, portable Mac/Linux roundtrip and ring-overlap unit coverage. Packaging/version and README/limitations/overview/release documentation updated. No research files, external mail, scheduler, existing Corsair files or live mount were changed.
 
 Reproduction: generate with `python3 tests/verify_native_cow_matrix.py generate --output NEW_DIR --binary target/release/lapfs --fixture fixtures/block-test.dmg.gz` on Linux; transfer that directory and run `python3 tests/verify_native_cow_matrix.py check --output NEW_DIR --expected fixtures/expected.json` on macOS. The portable roundtrip script exposes all host/path operands through `--help`.
