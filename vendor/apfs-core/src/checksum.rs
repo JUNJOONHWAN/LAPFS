@@ -11,12 +11,16 @@ const MOD: u64 = 0xFFFF_FFFF;
 fn fletcher64_words(data: &[u8]) -> u64 {
     let mut s1: u64 = 0;
     let mut s2: u64 = 0;
-    for w in data.chunks_exact(4) {
-        let mut a = [0u8; 4];
-        a.copy_from_slice(w);
-        let v = u64::from(u32::from_le_bytes(a));
-        s1 = (s1 + v) % MOD;
-        s2 = (s2 + s1) % MOD;
+    // Delay reduction for at most 1024 words. Starting with s1,s2 < MOD,
+    // s1 <= 1025*MOD and s2 <= (1+1024+1024*1025/2)*MOD < 2^52.
+    // No u64 overflow, including all-ones input; modular sums are unchanged.
+    for group in data.chunks(4 * 1024) {
+        for w in group.chunks_exact(4) {
+            s1 += u64::from(u32::from_le_bytes(w.try_into().unwrap()));
+            s2 += s1;
+        }
+        s1 %= MOD;
+        s2 %= MOD;
     }
     let c1 = MOD - ((s1 + s2) % MOD);
     let c2 = MOD - ((s1 + c1) % MOD);
@@ -46,6 +50,26 @@ pub fn verify_block(block: &[u8]) -> Result<(), ParseError> {
 mod tests {
     use super::*;
     use std::path::Path;
+
+    #[test]
+    fn delayed_reduction_matches_reference_at_all_boundaries() {
+        fn reference(data: &[u8]) -> u64 {
+            let (mut a, mut b) = (0u64, 0u64);
+            for w in data.chunks_exact(4) {
+                a = (a + u64::from(u32::from_le_bytes(w.try_into().unwrap()))) % MOD;
+                b = (b + a) % MOD;
+            }
+            let c = MOD - ((a+b) % MOD);
+            ((MOD - ((a+c) % MOD)) << 32) | c
+        }
+        let mut random=vec![0; 65543];let mut seed=713u64;
+        for b in &mut random {seed^=seed<<13;seed^=seed>>7;seed^=seed<<17;*b=seed as u8;}
+        for data in [vec![0;65543],vec![255;65543],random] {
+            for len in (0..=8200).chain([16383,16384,16385,65535,65536,65543]) {
+                assert_eq!(fletcher64_words(&data[..len]),reference(&data[..len]),"length {len}");
+            }
+        }
+    }
 
     #[test]
     fn verifies_real_apfs_block_zero() {

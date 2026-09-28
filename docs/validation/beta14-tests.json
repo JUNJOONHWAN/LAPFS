@@ -1,0 +1,15 @@
+{
+  "rust_passed": 312,
+  "native_functional": 55,
+  "checksum_comparisons": 24621,
+  "binary_sha256": "32430230ccab42b237b9f6deef20c59b2aa79d031d0c1deaca37d11d68e1e16c",
+  "version_only_change_after_functional_tests": true,
+  "fuse_log": "/home/zooh/Documents/LAPFS/worktrees/write-amplification/evidence/checksum-fuse.log",
+  "rsync_log": "/home/zooh/Documents/LAPFS/worktrees/write-amplification/evidence/checksum-rsync.log",
+  "sync_log": "/home/zooh/Documents/LAPFS/worktrees/write-amplification/evidence/checksum-sync.log",
+  "final_benchmark": "/home/zooh/Documents/LAPFS/worktrees/write-amplification/evidence/beta14-qualified/throughput-28fjgurh/results.json",
+  "excluded_background_scan_pid": 3559477,
+  "physical_beta14_measured": false,
+  "native_benchmark": 4,
+  "native_total": 59
+}

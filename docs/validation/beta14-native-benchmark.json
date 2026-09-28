@@ -1,0 +1,86 @@
+[
+  {
+    "name": "0-old",
+    "image": "0-old.dmg.xz",
+    "image_sha256": "70fa0c90c5eb0c5fd4e6dd00f6f9da89479f7e29810b41dc024241bc17f0259d",
+    "expected": {
+      "bench-10240.bin": {
+        "bytes": 268435456,
+        "sha256": "bee7cb14da252a48ad9c0488b3dabd5bb44c90cb9dd10e19d63ddb8d6803ee75"
+      },
+      "bench-1048576.bin": {
+        "bytes": 268435456,
+        "sha256": "661d7396b7453d3d8e1842226d65c9684fec6b8f46bb1f7070f4356ae1c4b387"
+      }
+    },
+    "native": {
+      "fsck": "clean",
+      "original_files": 0,
+      "changed_files": 2,
+      "sha256": "matched"
+    }
+  },
+  {
+    "name": "1-new",
+    "image": "1-new.dmg.xz",
+    "image_sha256": "e8f48c53b91da855a440b5fbe2950bb5b545f83388083130a809b4a64bfdcad3",
+    "expected": {
+      "bench-10240.bin": {
+        "bytes": 268435456,
+        "sha256": "bee7cb14da252a48ad9c0488b3dabd5bb44c90cb9dd10e19d63ddb8d6803ee75"
+      },
+      "bench-1048576.bin": {
+        "bytes": 268435456,
+        "sha256": "661d7396b7453d3d8e1842226d65c9684fec6b8f46bb1f7070f4356ae1c4b387"
+      }
+    },
+    "native": {
+      "fsck": "clean",
+      "original_files": 0,
+      "changed_files": 2,
+      "sha256": "matched"
+    }
+  },
+  {
+    "name": "2-new",
+    "image": "2-new.dmg.xz",
+    "image_sha256": "0c0d33e46c789c48345a8d06616dd971304ef35e7105045ec4c0bedf72bad151",
+    "expected": {
+      "bench-10240.bin": {
+        "bytes": 268435456,
+        "sha256": "bee7cb14da252a48ad9c0488b3dabd5bb44c90cb9dd10e19d63ddb8d6803ee75"
+      },
+      "bench-1048576.bin": {
+        "bytes": 268435456,
+        "sha256": "661d7396b7453d3d8e1842226d65c9684fec6b8f46bb1f7070f4356ae1c4b387"
+      }
+    },
+    "native": {
+      "fsck": "clean",
+      "original_files": 0,
+      "changed_files": 2,
+      "sha256": "matched"
+    }
+  },
+  {
+    "name": "3-old",
+    "image": "3-old.dmg.xz",
+    "image_sha256": "4f2b1a3349a4f30875a82828103dae1a339773dade52c7fab65f363cc2fd1619",
+    "expected": {
+      "bench-10240.bin": {
+        "bytes": 268435456,
+        "sha256": "bee7cb14da252a48ad9c0488b3dabd5bb44c90cb9dd10e19d63ddb8d6803ee75"
+      },
+      "bench-1048576.bin": {
+        "bytes": 268435456,
+        "sha256": "661d7396b7453d3d8e1842226d65c9684fec6b8f46bb1f7070f4356ae1c4b387"
+      }
+    },
+    "native": {
+      "fsck": "clean",
+      "original_files": 0,
+      "changed_files": 2,
+      "sha256": "matched"
+    }
+  }
+]

@@ -1,6 +1,8 @@
+> **beta.14 후보** · APFS 체크섬 계산 최적화 · 실제 Corsair 처리량 검증 대기. [변경·검증 보고서](docs/CHECKSUM_PERFORMANCE.md)
+
 <p align="center"><img src="docs/assets/lapfs-banner.svg" alt="LAPFS beta.13 — Linux ARM64 APFS 읽기·쓰기, 데이터·할당표 CoW" width="100%"></p>
 <p align="center">
-  <a href="https://github.com/JUNJOONHWAN/LAPFS/releases"><img alt="Beta" src="https://img.shields.io/badge/release-0.3.0--beta.13-f5b84b"></a>
+  <a href="docs/CHECKSUM_PERFORMANCE.md"><img alt="Candidate" src="https://img.shields.io/badge/candidate-0.3.0--beta.14-f5b84b"></a>
   <img alt="Platform" src="https://img.shields.io/badge/target-DGX%20Spark%20%2F%20Linux%20ARM64-72d6c9">
   <a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/license-GPL--3.0--only-829bff"></a>
 </p>

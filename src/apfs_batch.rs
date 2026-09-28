@@ -218,6 +218,7 @@ pub(crate) fn prepare_held_payload(
 }
 
 pub(crate) fn prepare_memory(target:&mut Image,dir:&Path,offset:u64,actions:&[Action],cap:u64,reserve:u64,payload:Vec<u8>)->Result<Vec<u8>> {
+    let _profile = crate::journal::Phase::new("prepare_memory_total");
     ensure!(actions.len()==1 && matches!(actions[0],Action::WriteAt{..}),"Memory preparation requires one range write");
     let identity=target.identity.clone();
     let overlay=stage_overlay(target,identity,dir,offset,actions,cap,reserve,Some(payload),true)?;

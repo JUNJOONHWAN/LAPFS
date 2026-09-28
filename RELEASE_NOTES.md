@@ -1,3 +1,11 @@
+# 0.3.0-beta.14 · 후보
+
+- APFS Fletcher-64: 1024개 word 단위 나머지 연산 · 결과·디스크 형식 동일.
+- 체크섬·undo·flush·기록 후 재검증 유지.
+- `LAPFS_PROFILE`: `prepare_memory_total` 계측 추가.
+- 실제 Corsair 성능: 교체 후 측정 필요 · 300–400MB/s 미확인.
+- [전후 영향·검증](docs/CHECKSUM_PERFORMANCE.md).
+
 # 0.3.0-beta.13
 
 - 기본 FUSE 데이터 쓰기: 입력 WAL·디스크 redo 제거 · RAM redo + 영구 undo.
