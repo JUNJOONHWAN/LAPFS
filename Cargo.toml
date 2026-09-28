@@ -1,6 +1,6 @@
 [package]
 name = "spark-apfs-safe"
-version = "0.3.0-beta.6"
+version = "0.3.0-beta.7"
 edition = "2021"
 license = "GPL-3.0-only"
 

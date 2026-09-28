@@ -15,6 +15,8 @@ use apfs_core::block_device::{BlockError, WritableBlockDevice};
 use apfs_core::checksum::fletcher64;
 use std::collections::{HashMap, HashSet};
 use thiserror::Error;
+#[path = "space_cow.rs"]
+mod space_cow;
 
 // ---------------------------------------------------------------------------
 // Object type / storage class constants (from apfs-core::obj, replicated here
@@ -351,25 +353,13 @@ pub struct Transaction<D: WritableBlockDevice> {
     /// bitmap is first read into `dirty_bitmaps`. Dropped at commit/abort
     /// along with the dirty cache.
     dirty_runs: HashMap<u64, crate::free_runs::ChunkFreeRuns>,
-    /// Bitmap block paddrs that contain reclaim (clear-bit / free) mutations.
-    ///
-    /// Populated whenever `free_one_block_cached` clears a bit in a bitmap block.
-    /// Used by `commit()` to split the bitmap flush into two phases:
-    ///   Phase A (pre-NXSB):  alloc-only bitmaps - safe to persist early.
-    ///   Phase B (post-NXSB): reclaim bitmaps - must not be visible on disk
-    ///                         until the new checkpoint is atomically sealed.
-    ///
-    /// Write-ordering discipline (linux-apfs-rw write-ordering):
-    /// a pre-NXSB crash leaks the new blocks (overallocation, recoverable by
-    /// fsck), but never makes old-checkpoint blocks appear free - no corruption.
+    /// Bitmap block addresses touched by reclamation; tracked by allocator helpers.
+    /// All dirty allocation state is persisted through new blocks by space_cow.
     reclaim_bitmap_paddrs: HashSet<u64>,
-    /// CIB paddrs touched by reclaim operations (ci_free_count incremented by
-    /// `free_one_block_cached`). Deferred to Phase B flush alongside reclaim bitmaps
-    /// so that the free-count increment is also post-NXSB visible.
+    /// CIB addresses touched by reclamation. These are also copied at commit.
     reclaim_cib_paddrs: HashSet<u64>,
     /// Blocks that operations have logically freed (COW reclaim) but whose bitmap
-    /// bits must NOT be cleared until `commit()` Step 2 has flushed all staged
-    /// pending writes.
+    /// bits must NOT be cleared until all transaction allocations have finished.
     ///
     /// Root cause of M8 #3 batch corruption: if `free_block` immediately clears a
     /// bitmap bit inside `free_one_block_cached`, then `alloc_run_cached` in a
@@ -493,11 +483,11 @@ impl<D: WritableBlockDevice> Transaction<D> {
     ///      → subsequent alloc re-uses an already-pending address → pending write
     ///      overwrites container omap → BadMagic on re-open.
     ///
-    /// By deferring all bitmap clears to post-Step-2, freed blocks are invisible
+    /// By deferring all bitmap clears until allocation finishes, freed blocks are invisible
     /// to the allocator for the remainder of the transaction.
     ///
     /// [CERTAIN: empirical - overallocation = bitmap set but not in live extents;
-    ///  deferred free is safe because the reclaim bitmaps are Phase B (post-NXSB)]
+    ///  deferred frees become visible only through the new checkpoint allocator]
     pub fn free_block(&mut self, paddr: u64) -> Result<(), TxnError> {
         self.pending_frees.insert(paddr);
         Ok(())
@@ -1004,7 +994,7 @@ impl<D: WritableBlockDevice> Transaction<D> {
         //
         // The discarded intermediate blocks (B1..B_{N-1}) are removed from
         // self.pending (no point writing stale data) and freed via the deferred
-        // reclaim path (Phase B) so the bitmap stays consistent.  They were
+        // deferred reclaim path so the bitmap stays consistent.  They were
         // allocated this transaction and never committed, so clearing their bits
         // post-NXSB is equivalent to "never allocated" from the prior-checkpoint's
         // perspective.
@@ -1033,8 +1023,7 @@ impl<D: WritableBlockDevice> Transaction<D> {
         }
 
         // Remove stale pending writes for dropped intermediate blocks and
-        // remove them from allocated_blocks so Phase A does not flush their
-        // alloc-bits (they will be freed in Phase B below).
+        // remove them from allocated_blocks; reclaim them before allocator CoW.
         if !dropped_intermediate_padrs.is_empty() {
             let drop_set: std::collections::HashSet<u64> =
                 dropped_intermediate_padrs.iter().copied().collect();
@@ -1060,12 +1049,11 @@ impl<D: WritableBlockDevice> Transaction<D> {
             self.nx.omap_oid // no change
         };
 
-        // Free dropped intermediate blocks via deferred reclaim (Phase B).
+        // Free dropped intermediate blocks via deferred reclaim.
         // apply_omap_entries has already allocated the new omap structures, so
         // these padrs will not be re-allocated within this commit.  Clearing
-        // their bitmap bits post-NXSB (Phase B) is safe: old-checkpoint readers
-        // do not reference these blocks (they were never committed), and the new
-        // checkpoint will see them as free after Phase B completes.
+        // their bits in the new allocator view is safe: they were never committed
+        // and cannot be reused by this transaction's completed main-pool allocator.
         for paddr in dropped_intermediate_padrs {
             free_one_block_cached(
                 &mut self.dev,
@@ -1080,31 +1068,9 @@ impl<D: WritableBlockDevice> Transaction<D> {
             )?;
         }
 
-        // --- Step 1a: Drain pending_frees BEFORE the Phase A alloc/reclaim split. ---
-        // free_block() accumulates COW-replaced blocks (old omap header, old omap
-        // b-tree node, old catalog nodes, …) in pending_frees WITHOUT clearing their
-        // bitmap bits, so the allocator can never re-hand-out a freed block earlier
-        // in the same transaction (the M8 #3 batch double-free fix). All allocation
-        // for this transaction is complete by this point: operations allocate during
-        // their own execution and Step 1 (apply_omap_entries) is the last allocator
-        // caller, so clearing these bits now can never feed a freed block back to
-        // alloc_run_cached - the M8 #3 invariant is preserved.
-        //
-        // CRITICAL ORDERING (fsck "overallocation" fix, #136): the clears MUST be
-        // applied to dirty_bitmaps BEFORE the Phase A split below. A bitmap block
-        // touched by BOTH an allocation (set-bit) and a reclaim (clear-bit) is
-        // deferred to Phase B as ONE coherent copy. When the drain ran AFTER the
-        // split (the previous ordering) Phase A had already moved that bitmap into
-        // deferred_bitmaps with the clears missing; the drain then re-read a stale
-        // base from disk, and the Phase B `or_insert` merge kept the Phase-A copy
-        // and silently discarded the clears - leaving the old COW blocks marked
-        // allocated but unreferenced, which fsck_apfs reports as "overallocation"
-        // (empirically: one create_file leaked the old volume omap header + omap
-        // b-tree node + catalog root, decoded as o_xid=prev / type omap+btree).
-        //
-        // Perf (M8 #3 W3): sort paddrs by CIB index so paddrs in the same CIB are
-        // processed consecutively and hit the dirty_cibs cache on the 2nd+ call,
-        // reducing O(N×M_cibs) to O(N log N + N×avg_scan_within_cib).
+        // Drain frees only after all main-pool allocation has finished. The final
+        // allocation state is written to new allocator blocks by space_cow, leaving
+        // the previous checkpoint's CIBs and bitmaps untouched.
         {
             let blocks_per_chunk = u32_from_le(&self.sm.raw, 36) as u64;
             let chunks_per_cib = u32_from_le(&self.sm.raw, 40) as u64;
@@ -1126,67 +1092,14 @@ impl<D: WritableBlockDevice> Transaction<D> {
             }
         }
 
-        // --- Step 1b Phase A: Flush alloc-only bitmap + CIB writes (pre-NXSB). ---
-        // alloc_block / free_block accumulate bitmap and CIB mutations in memory.
-        // Phase A flushes only blocks that contain NEW allocation (set-bit) mutations
-        // and no reclaim (clear-bit) mutations. These are safe to persist before the
-        // NXSB write: a pre-NXSB crash leaks the new blocks (overallocation, recoverable
-        // by fsck) but never makes old-checkpoint blocks appear free - no corruption.
-        // Reclaim bitmaps (clear-bit mutations) are deferred to Phase B, after the NXSB
-        // write seals the new checkpoint (bug W2-1 fix).
-        //
-        // This is the primary M8 perf win: 4096 allocs for 16 MiB → 1 bitmap write.
-        // Write-ordering discipline: linux-apfs-rw write-ordering (allocation bits are
-        // pre-NXSB safe; reclaim/free bits must be post-NXSB).
-        let mut deferred_bitmaps: HashMap<u64, Vec<u8>> = HashMap::new();
-        let mut deferred_cibs: HashMap<u64, Vec<u8>> = HashMap::new();
-        {
-            let keys_to_defer: Vec<u64> = self
-                .dirty_bitmaps
-                .keys()
-                .filter(|k| self.reclaim_bitmap_paddrs.contains(k))
-                .copied()
-                .collect();
-            for k in keys_to_defer {
-                if let Some(buf) = self.dirty_bitmaps.remove(&k) {
-                    deferred_bitmaps.insert(k, buf);
-                }
-            }
-        }
-        {
-            let keys_to_defer: Vec<u64> = self
-                .dirty_cibs
-                .keys()
-                .filter(|k| self.reclaim_cib_paddrs.contains(k))
-                .copied()
-                .collect();
-            for k in keys_to_defer {
-                if let Some(buf) = self.dirty_cibs.remove(&k) {
-                    deferred_cibs.insert(k, buf);
-                }
-            }
-        }
-        // Flush alloc-only bitmaps now (pre-NXSB).
-        for (bm_paddr, bm_buf) in self.dirty_bitmaps.drain() {
-            let off = bm_paddr.checked_mul(self.nx.block_size as u64).ok_or(
-                TxnError::BlockOutOfRange {
-                    block: bm_paddr,
-                    size: self.dev.size(),
-                },
-            )?;
-            self.dev.write_at(off, &bm_buf)?;
-        }
-        // Flush alloc-only CIBs now (pre-NXSB).
-        for (cib_paddr, mut cib_buf) in self.dirty_cibs.drain() {
-            update_checksum_in_place(&mut cib_buf);
-            let off = cib_paddr.checked_mul(self.nx.block_size as u64).ok_or(
-                TxnError::BlockOutOfRange {
-                    block: cib_paddr,
-                    size: self.dev.size(),
-                },
-            )?;
-            self.dev.write_at(off, &cib_buf)?;
-        }
+        validate_ring_reservation(self.nx.xp_desc_blocks, self.nx.xp_desc_index,
+            self.nx.xp_desc_len, self.nx.xp_desc_next, 2)?;
+        validate_ring_reservation(self.nx.xp_data_blocks, self.nx.xp_data_index,
+            self.nx.xp_data_len, self.nx.xp_data_next,
+            u32::try_from(1 + self.other_ephemerals.len()).map_err(|_| TxnError::SpacemanParse("ephemeral count overflow".into()))?)?;
+
+        space_cow::persist(&mut self.dev, &mut self.sm, &mut self.other_ephemerals,
+            &mut self.dirty_bitmaps, &mut self.dirty_cibs, xid)?;
 
         // --- Step 2: Write all staged data/metadata blocks. ---
         for pw in &self.pending {
@@ -1198,9 +1111,6 @@ impl<D: WritableBlockDevice> Transaction<D> {
             )?;
             self.dev.write_at(byte_off, &pw.data)?;
         }
-
-        // (pending_frees were drained in Step 1a, before the Phase A split - see
-        // the #136 fix there. Draining here, after the split, dropped the clears.)
 
         // --- Step 2: Write spaceman + all other ephemerals to checkpoint data area. ---
         // data_index = xp_data_next (current superblock value).
@@ -1237,16 +1147,6 @@ impl<D: WritableBlockDevice> Transaction<D> {
         }
         let total_ephemerals = 1 + self.other_ephemerals.len() as u32; // spaceman + others
         let new_data_next = (data_index + total_ephemerals) % self.nx.xp_data_blocks;
-
-        // --- Step 2b: Sync previous checkpoint's spaceman free count to match bitmap. ---
-        // The allocation bitmap is shared across all checkpoints. When we allocate
-        // new blocks and set bits in the bitmap, the previous checkpoint's spaceman
-        // (still at its old data ring slot) reports a higher free_count than the
-        // bitmap actually shows - causing fsck to report "overallocation" for the
-        // old checkpoint. We fix this by patching the previous checkpoint's spaceman
-        // free_count to equal our new free_count, making it consistent with the bitmap.
-        // [CERTAIN: empirical - fsck validates all checkpoints in the ring; bitmap is shared]
-        sync_prev_spaceman_free_count(&mut self.dev, &self.nx, self.sm.free_count, bsz)?;
 
         // --- Step 3: Write checkpoint map block to descriptor area. ---
         // desc_index = xp_desc_next.
@@ -1326,10 +1226,7 @@ impl<D: WritableBlockDevice> Transaction<D> {
         // corrupt after an unclean stop. Mirrors linux-apfs-rw apfs_checkpoint_end
         // (filemap_write_and_wait before the superblock write).
         self.dev.flush_data()?;
-        // Write nx_superblock to block 0 (bootstrap) AND to the descriptor ring
-        // at nx_ring_slot (= desc_index + 1), one past the checkpoint map.
-        // [CERTAIN: empirical baseline macOS scratch image; linux-apfs-rw convention]
-        self.dev.write_at(0, &nx_raw)?;
+        // The bootstrap stays stable; the descriptor ring publishes the new checkpoint.
         let nx_ring_bno =
             self.nx.xp_desc_base + (nx_ring_slot as u64 % self.nx.xp_desc_blocks as u64);
         let nx_ring_off = nx_ring_bno.checked_mul(self.nx.block_size as u64).ok_or(
@@ -1339,73 +1236,15 @@ impl<D: WritableBlockDevice> Transaction<D> {
             },
         )?;
         self.dev.write_at(nx_ring_off, &nx_raw)?;
-        // --- COW-1 barrier #2: flush the sealed checkpoint (NXSB at block 0 +
-        // ring slot) to media BEFORE Phase B reclaim clears any allocation bits.
-        // The Phase B crash-safety argument below ("new NXSB is valid") only
-        // holds once the NXSB is durable; otherwise a crash could persist the
-        // freed-bit writes while the new NXSB is lost, letting the next mount
-        // fall back to the prior checkpoint whose still-live blocks are now
-        // marked free - silent corruption. Mirrors linux-apfs-rw
-        // apfs_checkpoint_end (filemap_write_and_wait after the superblock write).
+        // Make the new descriptor-ring checkpoint durable before returning success.
         self.dev.flush_data()?;
 
-        // --- Phase B: Flush reclaim bitmaps + CIBs (post-NXSB). ---
-        // Now that the new checkpoint is sealed (NXSB written), it is safe to
-        // persist the reclaim (clear-bit) bitmap mutations. Old-checkpoint
-        // readers see the previous checkpoint via its own NXSB; clearing these
-        // bits makes the freed blocks available to the NEXT transaction.
-        //
-        // Crash here: new NXSB is valid; old blocks that were freed show up
-        // as still-allocated in the bitmap (some bits not yet cleared). The
-        // new checkpoint's live extents do NOT reference those blocks, so fsck
-        // sees them as leaked (overallocation in old xid scope), not corruption.
-        // A subsequent fsck/scrub pass or the next transaction can reclaim them.
-        //
-        // Merge any reclaim bitmaps that were added by Step 2a (pending_frees
-        // drain) into deferred_bitmaps. These arrived after the Phase A split
-        // so they were not separated earlier; they must also be Phase B.
-        for (k, v) in self.dirty_bitmaps.drain() {
-            deferred_bitmaps.entry(k).or_insert(v);
-        }
-        for (k, v) in self.dirty_cibs.drain() {
-            deferred_cibs.entry(k).or_insert(v);
-        }
-        for (bm_paddr, bm_buf) in deferred_bitmaps {
-            let off = bm_paddr.checked_mul(self.nx.block_size as u64).ok_or(
-                TxnError::BlockOutOfRange {
-                    block: bm_paddr,
-                    size: self.dev.size(),
-                },
-            )?;
-            self.dev.write_at(off, &bm_buf)?;
-        }
-        for (cib_paddr, mut cib_buf) in deferred_cibs {
-            update_checksum_in_place(&mut cib_buf);
-            let off = cib_paddr.checked_mul(self.nx.block_size as u64).ok_or(
-                TxnError::BlockOutOfRange {
-                    block: cib_paddr,
-                    size: self.dev.size(),
-                },
-            )?;
-            self.dev.write_at(off, &cib_buf)?;
-        }
-
-        // --- Post-commit verification (trust-but-verify) -------------------
-        // Some USB controllers ACK a write that did not durably land (dropped,
-        // torn, or reordered). Re-read the sealed checkpoint - the NX superblock
-        // at block 0 and at its descriptor-ring slot, plus the checkpoint map -
-        // and confirm each has a valid Fletcher-64 and the new transaction XID.
-        // On failure we return Err WITHOUT having corrupted anything: every
-        // referenced block is COW (the previous checkpoint is intact), so the
-        // next mount simply falls back to it and the failed transaction is lost.
-        // This catches silent write failures that APFS's own model assumes the
-        // hardware does not make. [matches "trust-but-verify"; not a snapshot/
-        // reread layer - verifies only the atomic commit point.]
+        // Read-back verifies checksum and transaction identity. It cannot prove
+        // persistence across power loss if the device lies about flush completion.
         {
             let bsz = self.nx.block_size as usize;
             let mut buf = vec![0u8; bsz];
-            self.dev.read_at(0, &mut buf)?;
-            verify_checkpoint_block(&buf, Some(xid), "nxsb@block0")?;
+
             self.dev.read_at(nx_ring_off, &mut buf)?;
             verify_checkpoint_block(&buf, Some(xid), "nxsb@ring")?;
             let cmap_bno = self.nx.xp_desc_base + desc_index as u64;
@@ -1421,6 +1260,21 @@ impl<D: WritableBlockDevice> Transaction<D> {
 
         Ok(())
     }
+}
+
+/// A new checkpoint must not overwrite any slot of the active checkpoint.
+fn validate_ring_reservation(cap: u32, active: u32, len: u32, next: u32, needed: u32) -> Result<(), TxnError> {
+    if cap == 0 || active >= cap || next >= cap || len > cap || needed > cap {
+        return Err(TxnError::SpacemanParse("checkpoint ring geometry".into()));
+    }
+    for i in 0..needed {
+        let slot = (next as u64 + i as u64) % cap as u64;
+        let distance = (slot + cap as u64 - active as u64) % cap as u64;
+        if distance < len as u64 {
+            return Err(TxnError::SpacemanParse("checkpoint ring would overwrite active checkpoint".into()));
+        }
+    }
+    Ok(())
 }
 
 /// Verify a re-read checkpoint object: its Fletcher-64 must be valid and, when
@@ -2313,8 +2167,7 @@ fn free_one_block_cached<D: WritableBlockDevice>(
                 let cib_entry = dirty_cibs.entry(cib_bno).or_insert(cib_buf.clone());
                 write_u32_le_slice(cib_entry, ci_off + 20, ci_free_count + 1);
                 // Checksum deferred.
-                // Mark this CIB as reclaim-touched so commit() defers its flush
-                // to Phase B (post-NXSB), preserving crash-safety ordering.
+                // Track the CIB reclamation for checkpoint-local allocator persistence.
                 reclaim_cib_paddrs.insert(cib_bno);
             } else {
                 // Clear the bit in the cached bitmap; mirror the free into the
@@ -2374,7 +2227,7 @@ fn free_one_block_cached<D: WritableBlockDevice>(
                     runs.free(bit_idx as u32, 1);
                 }
                 // Mark bitmap and CIB as reclaim-touched so commit() defers their
-                // flush to Phase B (post-NXSB). This closes the power-loss window
+                // persist through allocator CoW. This closes the power-loss window
                 // where clearing a bit before NXSB leaves the old checkpoint with
                 // freed blocks that still appear in its live extent tree (bug W2-1).
                 reclaim_bitmap_paddrs.insert(ci_bitmap_addr);
@@ -2403,56 +2256,6 @@ fn free_one_block_cached<D: WritableBlockDevice>(
         "free_one_block_cached: paddr not found in any spaceman chunk - possible \
          stale reference or out-of-range address"
     );
-    Ok(())
-}
-
-/// Sync the previous checkpoint's spaceman free_count to match `new_free_count`.
-///
-/// The allocation bitmap is shared across checkpoints. When we allocate new
-/// blocks and set bits in the bitmap, the OLD checkpoint's spaceman (at its
-/// data ring slot) still has the old free_count, making it inconsistent with
-/// the bitmap. fsck_apfs validates ALL checkpoints in the ring and reports
-/// "overallocation" for any checkpoint whose spaceman free_count is greater
-/// than what the bitmap shows.
-///
-/// Fix: after our new spaceman has been written, patch the previous checkpoint's
-/// spaceman at its data ring slot(s) with the same free_count.
-/// [CERTAIN: empirical - fsck "overallocation" disappears when old spaceman is
-///  updated; macOS achieves this via the ip_bitmap mechanism (per-xid deltas),
-///  but for our minimal allocator patching the raw free_count is equivalent]
-fn sync_prev_spaceman_free_count<D: WritableBlockDevice>(
-    dev: &mut D,
-    nx: &NxView,
-    new_free_count: u64,
-    bsz: usize,
-) -> Result<(), TxnError> {
-    let prev_data_index = nx.xp_data_index;
-    let prev_data_len = nx.xp_data_len;
-    // Walk the previous checkpoint's data ring slots looking for the spaceman.
-    for i in 0..prev_data_len {
-        let slot = (prev_data_index + i) % nx.xp_data_blocks;
-        let bno = nx.xp_data_base + slot as u64;
-        let off = bno
-            .checked_mul(bsz as u64)
-            .ok_or_else(|| TxnError::SpacemanParse("prev sm paddr overflow".into()))?;
-        let mut buf = vec![0u8; bsz];
-        if dev.read_at(off, &mut buf).is_err() {
-            continue;
-        }
-        // Identify spaceman by o_type bits.
-        let o_type_low = u32_from_le(&buf, 0x18) & 0x0000_FFFF;
-        if o_type_low != OBJECT_TYPE_SPACEMAN {
-            continue;
-        }
-        // Update sm_dev[0].sm_free_count @72 (u64).
-        write_u64_le_slice(&mut buf, 72, new_free_count);
-        // Recompute Fletcher-64 (preserves o_xid - the old xid stays).
-        update_checksum_in_place(&mut buf);
-        dev.write_at(off, &buf)?;
-        // There is only one spaceman in the data ring; stop after finding it.
-        return Ok(());
-    }
-    // No previous spaceman found - not an error (first-ever write or ring empty).
     Ok(())
 }
 
@@ -3352,4 +3155,16 @@ mod tests {
             "fully-used chunk must give NoFreeBlocks, got: {err:?}"
         );
     }
+    #[test]
+    fn checkpoint_ring_reserves_disjoint_slots_including_wrap() {
+        assert!(validate_ring_reservation(8, 2, 2, 4, 2).is_ok());
+        assert!(validate_ring_reservation(8, 2, 2, 7, 3).is_ok());
+        assert!(validate_ring_reservation(8, 7, 2, 1, 2).is_ok());
+        assert!(validate_ring_reservation(8, 7, 2, 6, 2).is_err());
+        assert!(validate_ring_reservation(8, 2, 2, 7, 4).is_err());
+        assert!(validate_ring_reservation(0, 0, 0, 0, 1).is_err());
+        assert!(validate_ring_reservation(8, 0, 8, 0, 1).is_err());
+        assert!(validate_ring_reservation(8, 0, 2, 8, 1).is_err());
+    }
+
 }

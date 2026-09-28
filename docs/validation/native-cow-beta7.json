@@ -1,0 +1,141 @@
+{
+  "version": "0.3.0-beta.7",
+  "production_build": {
+    "tested_binary_sha256": "91531db2c4eb1161142ce443ee0e64794128b1b75f959c5f73cdcc005da446bf",
+    "published_binary_sha256": "dccc7cead3774b9b1d247c3ac2e1334fdfa114e44e70dab087f158da52fb3b32",
+    "text_section_identical": true,
+    "text_sha256": "d6f7b5e2fa9900bd7301c6d6237892f238c7dd60b6d2fafa2617df297529a0eb",
+    "changed_sections": [
+      ".note.gnu.build-id",
+      ".rodata"
+    ],
+    "rodata_differences": [
+      [
+        3327,
+        54,
+        55
+      ]
+    ],
+    "reason": "help banner beta.6 -> beta.7; execution code unchanged"
+  },
+  "matrix": {
+    "total": 430,
+    "failed": 0,
+    "types": {
+      "completed-prefix": 318,
+      "torn-checkpoint": 112
+    },
+    "original_files_per_image": 104,
+    "external_recovery_before_mac": false,
+    "fixture_gzip_sha256": "d972ae4dc20b70e48c4dafd279dc43c7f3919c338e8163055000cc85ded69f0a"
+  },
+  "rust": {
+    "passed": 296,
+    "failed": 0,
+    "standalone_worker_entries": 2,
+    "worker_entries_exercised_by_parent_tests": true
+  },
+  "fuse": {
+    "status": "passed",
+    "checks": [
+      "real_rw_fuse_mount",
+      "large_copy_bounded_queue",
+      "read_your_writes_across_handles",
+      "unaligned_random_overwrite",
+      "fsync_and_close",
+      "open_unlink_rejected",
+      "mkdir_unicode",
+      "truncate_and_unaligned_append",
+      "atomic_replace",
+      "unlink",
+      "rmdir_nonempty_guard",
+      "rmdir_nested_empty",
+      "ordinary_cp_command",
+      "unsupported_sparse_explicit_error",
+      "chmod_applied",
+      "mount_still_usable_after_rejection",
+      "original_104_files_preserved",
+      "symlink_read",
+      "sparse_read_above_4GiB",
+      "exclusive_raw_reader_denied",
+      "actual_fuse_sigkill_after_ack",
+      "pending_session_blocks_raw_read",
+      "recovery_preserves_acknowledged_writes",
+      "separate_operation_errno_logs",
+      "expected_lookup_misses_not_logged"
+    ],
+    "expected": {
+      "buffered.bin": {
+        "bytes": 12550013,
+        "sha256": "a5ae50c2741e3549e096fa66a7d3a22ecb14f74f7eca82b8da68e6f9a4a3e654"
+      },
+      "\uc790\ub8cc rw/\ud55c\uae00 space.txt": {
+        "bytes": 12,
+        "sha256": "cccdeb5753fb27b6d8b0308f4106eb4271373daea05b96d032aa58aeabdec08d"
+      },
+      "old.txt": {
+        "bytes": 23,
+        "sha256": "33b43c1b0a6f7d6607e292f170cc57c1c5a6bf0b67ec61003e25b1afdc767cd6"
+      },
+      "copy-command.bin": {
+        "bytes": 190000,
+        "sha256": "444bc2ad920c4e1921ee1a12ab79d6c3c764e2e1a4a399bd08c0037a1804ad73"
+      },
+      "crash-ack.bin": {
+        "bytes": 502007,
+        "sha256": "15ae5cb294534fd20634138a44c2a5642ec3263e1ca26bdbdd9201e825ec2ffb"
+      }
+    },
+    "copy_bytes": 12550013,
+    "copy_seconds": 6.65503186598653,
+    "spool_bytes_after_close": 594,
+    "committed_batches": 27,
+    "binary_sha256": "91531db2c4eb1161142ce443ee0e64794128b1b75f959c5f73cdcc005da446bf",
+    "physical_usb_writes": 0,
+    "image_sha256": "ea681fbc2f88b0674dd3f69970855bb67a1150c906d22ed76446591490819b85",
+    "apple_fsck": "clean",
+    "native_file_hashes": "original104_and_all_changed_match"
+  },
+  "rsync_native": {
+    "apple_fsck": "clean",
+    "original_files_verified": 104,
+    "rsync_file_sha256": "198153267082f552d192b9114a5cbc61fd3cb6965dd7e89fd091345da4966ab8",
+    "mtime_ns": 946684800987654321,
+    "mode": "0o640",
+    "image_sha256": "708819724e6a816f8fd0c94f488320d9ca817ec366a90b4e2b51187a52602e79"
+  },
+  "roundtrip": [
+    {
+      "cycle": 1,
+      "fsck": "clean",
+      "original_files": 104,
+      "linux_patch": "match",
+      "mode": "0640"
+    },
+    {
+      "cycle": 2,
+      "fsck": "clean",
+      "original_files": 104,
+      "linux_patch": "match",
+      "mode": "0640"
+    },
+    {
+      "cycle": 3,
+      "fsck": "clean",
+      "original_files": 104,
+      "linux_patch": "match",
+      "mode": "0640"
+    }
+  ],
+  "multichunk": {
+    "bytes": 272629778,
+    "sha256": "56d4178099553cd2273a9bce9f57635c7cd15285c8265bacc853d75cba55d855",
+    "binary_sha256": "91531db2c4eb1161142ce443ee0e64794128b1b75f959c5f73cdcc005da446bf",
+    "seconds": 13.490607060026377,
+    "import": "passed",
+    "apple_fsck": "clean",
+    "native_sha256": "match"
+  },
+  "live_corsair": "beta.5 unchanged; root handoff pending",
+  "hardware_power_cut_qualified": false
+}

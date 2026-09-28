@@ -31,7 +31,7 @@ There is no sustained USB 3.2 MB/s claim or recovery-time SLA. Small cached-imag
 
 ## Durability boundary
 
-Some existing APFS data blocks are modified in place under an **external** undo/redo journal. Correctness depends on the journal remaining available, flush behavior, device identity validation, and exclusive ownership. Never delete a pending owner/queue/journal or switch the volume to a native Mac writer before completing recovery. Diagnostic logs are not the recovery journal.
+Beta.7 copies modified file blocks, chunk bitmaps and CIBs, rotates the internal-pool bitmap, and writes checkpoint-local ephemeral objects. A dependency flush precedes ring NX publication; another flush precedes success. The previous active checkpoint and bootstrap remain unchanged. This improves Mac-first crash consistency for the tested supported subset; it does not guarantee hardware persistence when a device lies about flushes. Input accepted into the DGX queue may not yet exist on the USB device. Preserve journals and queues; stale recovery must not be forced over a Mac-modified generation. Diagnostic logs are not recovery data. See [exact evidence and limits](NATIVE_COW_IMPACT.md).
 
 ## Historical beta.2 real-volume blocker
 
@@ -45,6 +45,6 @@ The original 32 MiB limit is retained. Incremental metadata updates now pass the
 
 The disposable APFS test covers ordinary `rsync -a` initial transfer, identical repeat, changed-file atomic replacement, and `--delete` of a regular orphan. It checks nested directories, symlink target, permissions, nanosecond mtime, SHA and macOS readback. Linux success alone is not a release gate: Apple `fsck_apfs -n` must have no warning and original fixture files must retain their hashes. The physical Corsair beta.5 EIO and rsync gate is tracked separately in `docs/VALIDATION.md`.
 
-## Mac/Linux handoff limit (beta.6)
+## Historical Mac/Linux handoff limit (beta.6)
 
-A positive `handoff-ready` receipt proves a normal DGX unmount/recovery/flush and exclusive read-only APFS parse at that moment. It does not prove that a USB bridge persisted a flush it falsely acknowledged. If the cable is pulled during an APFS transaction, the DGX-only external journal is required for recovery; Mac cannot apply it. The user must return the drive to the same DGX before a Mac writer touches it. Unqualified no-eject Mac-first use is not guaranteed safe.
+In beta.6, a positive `handoff-ready` receipt proves a normal DGX unmount/recovery/flush and exclusive read-only APFS parse at that moment. It does not prove that a USB bridge persisted a flush it falsely acknowledged. If the cable is pulled during an APFS transaction, the DGX-only external journal is required for recovery; Mac cannot apply it. The user must return the drive to the same DGX before a Mac writer touches it. Unqualified no-eject Mac-first use is not guaranteed safe.

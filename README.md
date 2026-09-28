@@ -1,7 +1,7 @@
 <p align="center"><img src="docs/assets/lapfs-banner.svg" alt="LAPFS — buffered APFS access for Linux ARM64" width="100%"></p>
 
 <p align="center">
-  <a href="https://github.com/JUNJOONHWAN/LAPFS/releases"><img alt="Beta" src="https://img.shields.io/badge/release-0.3.0--beta.6-f5b84b"></a>
+  <a href="https://github.com/JUNJOONHWAN/LAPFS/releases"><img alt="Beta" src="https://img.shields.io/badge/release-0.3.0--beta.7-f5b84b"></a>
   <img alt="Platform" src="https://img.shields.io/badge/target-DGX%20Spark%20%2F%20Linux%20ARM64-72d6c9">
   <a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/license-GPL--3.0--only-829bff"></a>
 </p>
@@ -19,7 +19,7 @@ Designed for DGX Spark / GB10: readable APFS volumes, bounded durable write buff
 >
 > **beta.4 검증 상태:** beta.3의 선택 장치 쓰기 시험에 더해, beta.4의 빈 폴더 삭제는 합성 이미지의 Linux FUSE·Mac fsck/SHA로 확인했습니다. 실제 Corsair 장치에 beta.4를 재마운트한 뒤 mkdir·cd·rmdir와 비어 있지 않은 폴더의 삭제 거부를 확인했습니다. beta.2에서 실패했던 약 1 TB 볼륨에 8 MiB 시험 파일을 쓰고 fsync·정상 해제·원시 읽기·재마운트·삭제까지 확인했습니다. 이 한 장치의 시험을 전원 차단 안전성이나 범용 APFS 호환성으로 확대 해석하지 마세요.
 
-> **beta.6 이동 절차:** DGX에서 Mac으로 옮기기 전 `scripts/safe-eject.py`의 성공 영수증을 확인하세요. 정상 해제·잔여 작업 복구·최종 장치 flush·APFS 재검사를 묶었습니다. 갑작스러운 USB 분리 중 쓰기까지 무손상이라고 보증하지 않습니다. [정확한 절차](docs/RECOVERY.md) · [검증](docs/HANDOFF_AFTER.md)
+> **beta.7 이동 절차:** DGX에서 Mac으로 옮기기 전 `scripts/safe-eject.py`의 성공 영수증을 확인하세요. 정상 해제·잔여 작업 복구·최종 장치 flush·APFS 재검사를 묶었습니다. 갑작스러운 USB 분리 중 쓰기까지 무손상이라고 보증하지 않습니다. [정확한 절차](docs/RECOVERY.md) · [검증](docs/HANDOFF_AFTER.md)
 
 [시작하기](#빠른-시작) · [구조](#구조) · [목표와-현재-사양](#목표와-현재-사양) · [시험 결과](docs/VALIDATION.md) · [지원 제한](docs/LIMITATIONS.md) · [복구](docs/RECOVERY.md) · [English overview](docs/OVERVIEW.md)
 
@@ -35,8 +35,11 @@ flowchart LR
     FUSE --> Queue["DGX 내부 ext4/XFS\n영구 입력 큐 · 기본 4 MiB"]
     Queue --> Trigger["4 MiB / fsync / close\n메타데이터 변경 / 정상 해제"]
     Trigger --> Journal["외부 undo + redo\nflush · 블록 재검증"]
-    Journal --> COW["변경된 catalog·extent 노드만 CoW"]
-    COW --> APFS["지원 조건을 통과한 APFS"]
+    Journal --> COW["파일 데이터 · catalog · extent CoW"]
+    COW --> Space["할당 bitmap · CIB · 내부 pool bitmap CoW"]
+    Space --> Barrier["참조 블록 flush"]
+    Barrier --> Checkpoint["새 ring 체크포인트 기록 · flush"]
+    Checkpoint --> APFS["지원 조건을 통과한 APFS"]
     Queue -. "중단 후 재개" .-> Recover["mount-recover"]
     Recover --> Journal
     FUSE -. "작업·errno" .-> Log["별도 JSONL 오류 로그\n회전 보관 약 8 MiB"]
@@ -46,14 +49,14 @@ flowchart LR
 |---|---|
 | `write()` 성공 | 입력 payload와 큐 메타데이터가 **DGX 영구 저장소에 저장**됨. USB에 모두 반영됐다는 뜻은 아님 |
 | `fsync()` / close-flush 성공 | 해당 시점까지 큐 반영, 장치 flush, 변경 블록 읽기 재검증, commit 기록 완료 |
-| 중단 / 오류 | 미완료 소유권·큐·복구 저널 보존. 복구 없이 원시 접근 금지 |
+| 중단 / 오류 | 이전 또는 새 체크포인트 보존을 목표로 CoW 반영. 미반영 입력과 복구 기록은 DGX에 보존하며, 검증 범위는 아래 보고서 참고 |
 | 정상 해제 | 마지막 반영 후 소유권 해제. 해제 오류가 나면 복구 필요 |
 
-**일부 데이터 블록은 외부 저널 아래에서 제자리 갱신합니다.** APFS native CoW만으로 복구되는 설계가 아닙니다. 미완료 장치를 Mac으로 옮기기 전에 DGX의 외부 저널로 복구해야 합니다.
+**beta.7은 파일 데이터와 공간 할당표까지 CoW로 기록합니다.** 새 체크포인트를 공개하기 전 기존 활성 체크포인트를 보존하고, bootstrap 블록과 이전 spaceman을 덮어쓰지 않습니다. DGX 저널 복구 없이 Mac에서 검사한 중단·부분 NX 기록 이미지의 결과는 [검증 보고서](docs/NATIVE_COW_IMPACT.md)에 있습니다. 외부 큐에만 저장된 최신 입력은 USB에 없을 수 있으며, 실제 전원 차단·USB 캐시 신뢰성은 아직 인증하지 않았습니다. 정상 분리 절차를 계속 사용하세요.
 
 ## 목표와 현재 사양
 
-| 항목 | 현재 beta.5 | 목표 / 남은 검증 |
+| 항목 | 현재 beta.7 | 목표 / 남은 검증 |
 |---|---|---|
 | 기준 실행 환경 | DGX Spark / GB10, Linux ARM64, FUSE3 | 다른 배포판·USB 브리지 조합 검증 |
 | 읽기 | 일반 파일, 디렉터리, 링크 조회, 큰 파일 범위 읽기 | 암호화·압축 스트리밍 확대 |

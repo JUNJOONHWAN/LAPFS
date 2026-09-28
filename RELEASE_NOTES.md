@@ -1,3 +1,16 @@
+# LAPFS v0.3.0-beta.7 — native data and allocator CoW
+
+- Copy touched file data blocks and update extent references rather than overwriting previous-checkpoint data.
+- Copy chunk bitmaps and CIBs, rotate internal-pool bitmaps, and preserve the active checkpoint allocator until a new flushed ring checkpoint is published.
+- Stop rewriting bootstrap block zero and stop patching previous-checkpoint spaceman free counts.
+- Validate internal-pool queue bounds, live allocator aliases, bitmap freelists and checkpoint-ring overlap before publication.
+- Add reproducible multi-operation I/O-prefix and torn-NX replay with independent macOS fsck and original-file SHA checks. DGX external recovery is not run on those Mac-first images.
+- Retain bounded durable queue, external undo/redo, error logs and safe-eject helper. Unapplied queue input still lives on DGX.
+
+See `docs/NATIVE_COW_IMPACT.md` for final counts, source/build identities and the Mac-native-write/Linux-write roundtrip evidence. This is an experimental prerelease, not commercial or real-power-cut certification. Existing unsupported APFS/POSIX features remain unsupported. The live Corsair mount is a separate deployment gate.
+
+---
+
 # LAPFS v0.3.0-beta.6 — Mac/Linux handoff guard
 
 - Add final device sync before a session is marked closed and a fail-closed `handoff-ready` check.
