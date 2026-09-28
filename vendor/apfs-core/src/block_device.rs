@@ -27,6 +27,10 @@ pub trait BlockDevice {
 ///
 /// `#![forbid(unsafe_code)]` - no unsafe in this crate.
 pub trait WritableBlockDevice: BlockDevice {
+    /// Allocation hint only. A journaling host must independently check the
+    /// immutable checkpoint CIB and bitmap before omitting a free-page preimage.
+    fn allocated_from_cib(&mut self, _cib_offset:u64, _ci_offset:usize, _offset:u64, _blocks:usize)->Result<(),BlockError>{Ok(())}
+
     fn write_at(&mut self, offset: u64, buf: &[u8]) -> Result<(), BlockError>;
 
     /// Drop any internal read caches. A read-only cache layer must override

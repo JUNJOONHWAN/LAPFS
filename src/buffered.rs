@@ -58,6 +58,8 @@ struct Record {
     queue: Vec<Pending>,
     active: Option<String>,
     #[serde(default)]
+    volatile_active: bool,
+    #[serde(default)]
     active_count: Option<usize>,
     garbage: Vec<String>,
     closed: bool,
@@ -199,6 +201,7 @@ impl Session {
             sequence: 0,
             queue: vec![],
             active: None,
+            volatile_active: false,
             active_count: None,
             garbage: vec![],
             closed: false,
@@ -236,7 +239,7 @@ impl Session {
         journal::lock(&lock)?;
         let record: Record = journal::unseal(&dir.join("session.json"))?;
         ensure!(
-            matches!(record.version, 1 | 2),
+            matches!(record.version, 1 | 2 | 3),
             "Session is closed or has an unsupported version"
         );
         ensure!(
@@ -251,6 +254,7 @@ impl Session {
                 .is_none_or(|n| record.active.is_some() && n > 0 && n <= record.queue.len()),
             "Invalid active queue prefix"
         );
+        ensure!(!record.volatile_active || (record.version==3 && record.write_policy==WritePolicy::Grouped && record.active.is_some() && record.active_count.is_none() && record.queue.is_empty() && record.stream.is_none()),"Invalid volatile transaction state");
         let image = Image::open(&record.identity.path, true)?;
         image.check_identity(&record.identity, false)?;
         if !record.closed {
@@ -483,7 +487,7 @@ impl Session {
             let file = new_file(&self.dir.join(&name))?;
             journal::durable_sync(&file)?;
             journal::sync_dir(&self.dir)?;
-            self.record.version = 2; // Older readers must refuse this format.
+            self.record.version = self.record.version.max(2); // Older readers must refuse this format.
             self.record.stream = Some(name);
             self.save()?;
         }
@@ -567,7 +571,7 @@ impl Session {
             return Ok(());
         };
         ensure!(
-            self.record.version == 2
+            matches!(self.record.version, 2 | 3)
                 && !self.record.closed
                 && self.record.active.is_none()
                 && self.record.queue.is_empty(),
@@ -962,6 +966,31 @@ impl Session {
         }
         Ok((actions, i, None))
     }
+    /// Grouped-only range commit. No input WAL or disk redo: complete undo
+    /// is durable before target writes, so interrupted work can roll back.
+    pub fn write_group(&mut self,path:&str,offset:u64,data:&[u8])->Result<()> {
+        self.ready()?;
+        ensure!(self.record.write_policy==WritePolicy::Grouped,"Direct group requires grouped policy");
+        ensure!(!data.is_empty() && data.len() as u64<=self.record.group_bytes,"Invalid direct group size");
+        self.flush()?;
+        self.writable(path)?;
+        let attr=self.attr(path)?;
+        ensure!(offset<=attr.size && offset.checked_add(data.len() as u64).is_some_and(|n|n<=i64::MAX as u64),"Invalid direct group range");
+        self.read_cache=None;self.write_cache=None;
+        let result=(|| {
+            let name=format!("txn-{:016}",self.record.sequence);
+            self.record.version=3;self.record.volatile_active=true;self.record.active=Some(name.clone());self.record.active_count=None;self.save()?;
+            journal::fault_point("group-intent");
+            let p=self.dir.join(&name);
+            let action=Action::WriteAt{source:self.dir.join("volatile-input"),path:path.into(),offset};
+            let redo=apfs_batch::prepare_memory(&mut self.image,&p,self.record.offset,&[action],self.record.cap,self.record.reserve,data.to_vec())?;
+            journal::fault_point("group-prepared");
+            let mut j=Journal::open(&p)?;
+            j.apply_memory(&mut self.image,&redo)?;drop(j);
+            self.settle_active()
+        })();
+        if result.is_err(){self.poisoned=true;}result
+    }
     pub fn flush(&mut self) -> Result<()> {
         self.ready()?;
         let result = self.flush_inner();
@@ -1010,6 +1039,7 @@ impl Session {
         let p = self.dir.join(&name);
         if !p.exists() {
             self.record.active = None;
+            self.record.volatile_active = false;
             self.record.active_count = None;
             self.save()?;
             return Ok(());
@@ -1024,13 +1054,16 @@ impl Session {
             self.image.check_identity(&self.record.identity, true)?;
             journal::discard_building_owned(&p, true)?;
             self.record.active = None;
+            self.record.volatile_active = false;
             self.record.active_count = None;
             self.save()?;
             return Ok(());
         }
         let mut j = Journal::open(&p)?;
+        ensure!(j.manifest.volatile_redo == self.record.volatile_active,"Journal/session durability policy mismatch");
         self.image.check_identity(&j.manifest.identity, false)?;
         match j.state {
+            State::Prepared if self.record.volatile_active => j.recover(&mut self.image)?,
             State::Prepared => j.apply(&mut self.image)?,
             State::Applying | State::Recovering => {
                 j.recover(&mut self.image)?;
@@ -1044,6 +1077,10 @@ impl Session {
         self.record.identity = self.image.identity.clone();
         self.record.garbage.push(name);
         self.record.active = None;
+        if self.record.volatile_active {
+            self.record.volatile_active=false;self.record.active_count=None;self.record.sequence+=1;
+            self.save()?;journal::fault_point("group-retired");return self.garbage_collect();
+        }
         // Legacy sessions omitted this field and committed the complete queue.
         let count = self
             .record

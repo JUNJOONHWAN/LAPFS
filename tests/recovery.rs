@@ -501,3 +501,27 @@ fn preimage_windows_preserve_originals_and_fallback_on_speculative_errors() {
         assert!(bad.write(BLOCK as u64,&vec![1;BLOCK]).is_err());
     }
 }
+
+#[test]
+fn sparse_zero_undo_preserves_tail_mixed_pages_and_every_failure_rollback() {
+    use std::os::unix::fs::MetadataExt;
+    for mixed in [false, true] {
+        for failure in 0..5 {
+            let tmp=tempfile::tempdir().unwrap();let p=tmp.path().join("sparse");
+            let mut d=Disk::new();d.cache=vec![0;BLOCK*600];
+            if mixed { d.cache[BLOCK*128..BLOCK*129].fill(0x73); }
+            d.durable=d.cache.clone();let original=d.durable.clone();
+            let mut o=Overlay::new(d.clone(),identity(&d),&p,8*1024*1024,0,"sparse".into()).unwrap();
+            o.write(0,&vec![0x5a;BLOCK*600]).unwrap();o.flush().unwrap();
+            let (mut d,_)=o.finish().unwrap();
+            let m=std::fs::metadata(p.join("undo.bin")).unwrap();
+            assert_eq!(m.len(),original.len() as u64);
+            assert!(m.blocks()*512 < m.len()/4,"undo must have sparse zero runs");
+            assert_eq!(std::fs::read(p.join("undo.bin")).unwrap(),original);
+            let mut j=Journal::open(&p).unwrap();d.fail=Some(failure);d.torn=true;
+            let result=j.apply(&mut d);
+            if result.is_err() { d.crash();j.recover(&mut d).unwrap();assert_eq!(d.durable,original); }
+            else { assert_eq!(d.durable,vec![0x5a;BLOCK*600]); }
+        }
+    }
+}

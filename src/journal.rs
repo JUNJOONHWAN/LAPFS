@@ -4,7 +4,7 @@
 use anyhow::{bail, ensure, Context, Result};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use sha2::{Digest, Sha256};
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap,BTreeSet};
 use std::fs::{self, File, OpenOptions};
 use std::io::{Read, Seek, SeekFrom, Write, BufWriter};
 use std::os::fd::AsRawFd;
@@ -50,6 +50,7 @@ pub fn hash(b: &[u8]) -> String {
 }
 
 pub trait Device {
+    fn allocated_from_cib(&mut self,_base:u64,_cib:u64,_ci:usize,_offset:u64,_blocks:usize)->Result<()>{Ok(())}
     fn len(&self) -> u64;
     fn read(&mut self, offset: u64, bytes: &mut [u8]) -> Result<()>;
     fn write(&mut self, offset: u64, bytes: &[u8]) -> Result<()>;
@@ -57,6 +58,7 @@ pub trait Device {
 }
 
 impl<D: Device + ?Sized> Device for &mut D {
+    fn allocated_from_cib(&mut self,base:u64,cib:u64,ci:usize,offset:u64,blocks:usize)->Result<()>{(**self).allocated_from_cib(base,cib,ci,offset,blocks)}
     fn len(&self) -> u64 {
         (**self).len()
     }
@@ -382,6 +384,10 @@ pub enum Op {
 }
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Manifest {
+    #[serde(default)]
+    pub volatile_redo: bool,
+    #[serde(default)]
+    pub free_blocks: BTreeSet<u64>,
     pub identity: Identity,
     pub cap: u64,
     pub undo: BTreeMap<u64, Blob>,
@@ -487,7 +493,7 @@ impl Journal {
         );
         ensure!(
             self.undo.metadata()?.len() == self.manifest.undo_len
-                && self.redo.metadata()?.len() == self.manifest.redo_len,
+                && self.redo.metadata()?.len() == if self.manifest.volatile_redo { 0 } else { self.manifest.redo_len },
             "Journal data length mismatch"
         );
         ensure!(
@@ -497,6 +503,11 @@ impl Journal {
                 .is_some_and(|n| n <= self.manifest.cap),
             "Invalid journal budget"
         );
+        ensure!(self.manifest.volatile_redo || self.manifest.free_blocks.is_empty(),"Free-page omission requires volatile redo");
+        for target in &self.manifest.free_blocks {
+            ensure!(*target % BLOCK as u64 == 0 && !self.manifest.undo.contains_key(target),"Invalid omitted preimage");
+            bounds(self.manifest.identity.size,*target,BLOCK)?;
+        }
         let mut offsets = Vec::new();
         for (target, blob) in &self.manifest.undo {
             validate_page(*target, blob, self.manifest.identity.size)?;
@@ -519,8 +530,8 @@ impl Journal {
             if let Op::Write { target, blob } = op {
                 validate_page(*target, blob, self.manifest.identity.size)?;
                 ensure!(
-                    self.manifest.undo.contains_key(target),
-                    "Redo has no undo coverage"
+                    self.manifest.undo.contains_key(target) || self.manifest.free_blocks.contains(target),
+                    "Redo has no undo or original-free coverage"
                 );
                 ensure!(blob.offset == redo_offset, "Redo offset discontinuity");
                 redo_offset += BLOCK as u64;
@@ -535,10 +546,22 @@ impl Journal {
         undo.sort_unstable_by_key(|b| b.offset);
         for group in undo.chunks(IO_GROUP / BLOCK) { read_blob_group(&self.undo, group)?; }
         let redo: Vec<_> = self.manifest.ops.iter().filter_map(|op| match op { Op::Write { blob, .. } => Some(blob), _ => None }).collect();
-        for group in redo.chunks(IO_GROUP / BLOCK) { read_blob_group(&self.redo, group)?; }
+        if !self.manifest.volatile_redo { for group in redo.chunks(IO_GROUP / BLOCK) { read_blob_group(&self.redo, group)?; } }
         Ok(())
     }
     pub fn apply<D: Device>(&mut self, dev: &mut D) -> Result<()> {
+        ensure!(!self.manifest.volatile_redo,"Volatile redo cannot be replayed; recover this transaction");
+        self.apply_inner(dev,None)
+    }
+    pub(crate) fn apply_memory<D:Device>(&mut self,dev:&mut D,data:&[u8])->Result<()> {
+        ensure!(self.manifest.volatile_redo && data.len() as u64==self.manifest.redo_len,"Invalid volatile redo length");
+        for op in &self.manifest.ops { if let Op::Write{blob,..}=op {
+            let bytes=data.get(blob.offset as usize..blob.offset as usize+blob.len).context("Invalid volatile redo range")?;
+            ensure!(hash(bytes)==blob.sha256,"Volatile redo checksum mismatch");
+        }}
+        self.apply_inner(dev,Some(data))
+    }
+    fn apply_inner<D: Device>(&mut self, dev: &mut D, memory:Option<&[u8]>) -> Result<()> {
         ensure!(
             self.state == State::Prepared,
             "Apply requires PREPARED; incomplete writes require recover"
@@ -572,7 +595,12 @@ impl Journal {
                         }
                     }
                     let blobs: Vec<_> = self.manifest.ops[step..end].iter().map(|op| match op { Op::Write { blob, .. } => blob, _ => unreachable!() }).collect();
-                    dev.write(start, &read_blob_group(&self.redo, &blobs)?)?;
+                    if let Some(data)=memory {
+                        let bytes=data.get(redo_start as usize..redo_start as usize+blobs.len()*BLOCK).context("Invalid RAM apply range")?;
+                        // Validate again at the consuming boundary.
+                        for (blob,page) in blobs.iter().zip(bytes.chunks_exact(BLOCK)) { ensure!(hash(page)==blob.sha256,"Corrupt RAM apply bytes"); }
+                        dev.write(start,bytes)?;
+                    } else { dev.write(start, &read_blob_group(&self.redo, &blobs)?)?; }
                     fault_point("apply-write"); step = end;
                 }
             }
@@ -689,6 +717,7 @@ pub struct Overlay<D: Device> {
     guard: File,
     undo: BufWriter<File>,
     redo: BufWriter<File>,
+    memory_redo: Option<Vec<u8>>,
     manifest: Manifest,
     latest: BTreeMap<u64, Blob>,
     // Immutable base during preparation; latest redo always takes precedence.
@@ -733,10 +762,13 @@ impl<D: Device> Overlay<D> {
             guard,
             undo,
             redo,
+            memory_redo: None,
             latest: BTreeMap::new(),
             base_window: None,
             reserve,
             manifest: Manifest {
+                volatile_redo: false,
+                free_blocks:BTreeSet::new(),
                 identity,
                 cap,
                 undo: BTreeMap::new(),
@@ -746,6 +778,11 @@ impl<D: Device> Overlay<D> {
                 description,
             },
         })
+    }
+    pub(crate) fn use_memory_redo(&mut self) { self.memory_redo=Some(Vec::new()); self.manifest.volatile_redo=true; }
+    pub(crate) fn finish_memory(mut self) -> Result<(D, PathBuf, Vec<u8>)> {
+        let data=self.memory_redo.take().context("Missing volatile redo")?;
+        let (base,path)=self.finish()?; Ok((base,path,data))
     }
     fn base_page(&mut self, pageoff: u64) -> Result<Vec<u8>> {
         bounds(self.base.len(), pageoff, BLOCK)?;
@@ -805,6 +842,9 @@ impl<D: Device> Overlay<D> {
         let _profile = Phase::new("prepare_finish");
         ensure!(!self.manifest.undo.is_empty(), "Empty transaction");
         self.undo.flush()?;
+        // Seeking over a final zero run does not extend EOF. Publish its full
+        // logical length before syncing or sealing PREPARED.
+        self.undo.get_ref().set_len(self.manifest.undo_len)?;
         self.redo.flush()?;
         // Independent logs may synchronize concurrently. Both completions are
         // mandatory before manifest/PREPARED publication or any target write.
@@ -825,6 +865,34 @@ impl<D: Device> Overlay<D> {
     }
 }
 impl<D: Device> Device for Overlay<D> {
+    fn allocated_from_cib(&mut self,base:u64,cib_offset:u64,ci:usize,offset:u64,blocks:usize)->Result<()> {
+        if !self.manifest.volatile_redo {return Ok(());}
+        ensure!(cib_offset % BLOCK as u64==0 && offset % BLOCK as u64==0 && ci>=40 && (ci-40)%32==0 && ci+32<=BLOCK && blocks>0 && blocks<=BLOCK*8,"Invalid allocation proof bounds");
+        bounds(self.base.len(),offset,blocks*BLOCK)?;
+        let cib=self.base_page(cib_offset)?;
+        let u64at=|at:usize|u64::from_le_bytes(cib[at..at+8].try_into().unwrap());
+        let u32at=|at:usize|u32::from_le_bytes(cib[at..at+4].try_into().unwrap());
+        ensure!(apfs_core::checksum::fletcher64(&cib)==u64at(0),"Original CIB checksum mismatch");
+        ensure!((ci-40)/32 < u32at(36) as usize,"CIB proof entry outside original count");
+        let addr=u64at(ci+8);let count=u32at(ci+16) as u64;let free=u32at(ci+20) as u64;let bitmap=u64at(ci+24);
+        ensure!(count<=BLOCK as u64*8 && free<=count,"Invalid original chunk counts");
+        let chunk_start=base.checked_add(addr.checked_mul(BLOCK as u64).context("Chunk offset overflow")?).context("Chunk offset overflow")?;
+        ensure!(offset>=chunk_start,"Allocation precedes original chunk");let first=(offset-chunk_start)/BLOCK as u64;
+        ensure!(first+blocks as u64<=count,"Allocation exceeds original chunk");
+        let bits=if bitmap==0 {ensure!(free==count,"Missing original allocation bitmap");vec![0;BLOCK]} else {
+            self.base_page(base.checked_add(bitmap.checked_mul(BLOCK as u64).context("Bitmap offset overflow")?).context("Bitmap offset overflow")?)?
+        };
+        for i in 0..blocks {
+            let bit=first as usize+i;let at=offset+(i*BLOCK) as u64;
+            // Ignore the transaction's dirty bitmap: blocks freed/reclaimed
+            // during this transaction still need undo if allocated originally.
+            if bits[bit/8] & (1 << (bit%8)) == 0 && !self.manifest.undo.contains_key(&at) && !self.latest.contains_key(&at) {
+                self.manifest.free_blocks.insert(at);
+            }
+        }
+        Ok(())
+    }
+
     fn len(&self) -> u64 {
         self.base.len()
     }
@@ -837,6 +905,11 @@ impl<D: Device> Device for Overlay<D> {
             let start = (at - pageoff) as usize;
             let count = (BLOCK - start).min(out.len() - done);
             let page = if let Some(blob) = self.latest.get(&pageoff) {
+                if let Some(bytes)=&self.memory_redo {
+                    let page=bytes.get(blob.offset as usize..blob.offset as usize+blob.len).context("Invalid RAM redo range")?.to_vec();
+                    ensure!(hash(&page)==blob.sha256,"Corrupt RAM redo");
+                    out[done..done+count].copy_from_slice(&page[start..start+count]);done+=count;continue;
+                }
                 let buffered_start = self.manifest.redo_len - self.redo.buffer().len() as u64;
                 let page = if blob.offset >= buffered_start {
                     let start = (blob.offset - buffered_start) as usize;
@@ -862,7 +935,7 @@ impl<D: Device> Device for Overlay<D> {
             let pageoff = at / BLOCK as u64 * BLOCK as u64;
             let start = (at - pageoff) as usize;
             let count = (BLOCK - start).min(input.len() - done);
-            let fresh = !self.manifest.undo.contains_key(&pageoff);
+            let fresh = !self.manifest.undo.contains_key(&pageoff) && !self.manifest.free_blocks.contains(&pageoff);
             self.space(if fresh {
                 2 * BLOCK as u64
             } else {
@@ -875,7 +948,13 @@ impl<D: Device> Device for Overlay<D> {
                     len: BLOCK,
                     sha256: hash(&original),
                 };
-                self.undo.write_all(&original)?;
+                // A hole reads as exactly the original all-zero page. Keep the
+                // logical offsets, hashes and rollback format unchanged.
+                if original.iter().all(|&b| b == 0) {
+                    self.undo.seek(SeekFrom::Current(BLOCK as i64))?;
+                } else {
+                    self.undo.write_all(&original)?;
+                }
                 self.manifest.undo_len += BLOCK as u64;
                 self.manifest.undo.insert(pageoff, blob);
             }
@@ -887,7 +966,7 @@ impl<D: Device> Device for Overlay<D> {
                 len: BLOCK,
                 sha256: hash(&page),
             };
-            self.redo.write_all(&page)?;
+            if let Some(bytes)=&mut self.memory_redo { bytes.extend_from_slice(&page); } else { self.redo.write_all(&page)?; }
             self.manifest.redo_len += BLOCK as u64;
             self.manifest.ops.push(Op::Write {
                 target: pageoff,
@@ -981,4 +1060,60 @@ mod parallel_sync_tests {
             assert_eq!(result.is_ok(),fail==0);
         }
     }
+}
+
+#[cfg(test)]
+mod volatile_redo_tests {
+ use super::*;
+ struct Model {bytes:Vec<u8>,fail:bool}
+ impl Device for Model {
+  fn len(&self)->u64{self.bytes.len() as u64}
+  fn read(&mut self,o:u64,b:&mut[u8])->Result<()>{b.copy_from_slice(&self.bytes[o as usize..o as usize+b.len()]);Ok(())}
+  fn write(&mut self,o:u64,b:&[u8])->Result<()>{let n=if self.fail{b.len()/2}else{b.len()};self.bytes[o as usize..o as usize+n].copy_from_slice(&b[..n]);ensure!(!self.fail,"torn");Ok(())}
+  fn flush(&mut self)->Result<()>{Ok(())}
+ }
+ #[test]
+ fn ram_redo_rejects_corruption_and_missing_replay_then_recovers_torn_target() {
+  let tmp=tempfile::tempdir().unwrap();let p=tmp.path().join("j");
+  let original=vec![0x39;BLOCK*2];let model=Model{bytes:original.clone(),fail:false};
+  let id=Identity{path:"model".into(),size:original.len() as u64,dev:0,ino:1,mtime:0,mtime_ns:0,ctime:0,ctime_ns:0,generation:None};
+  let mut o=Overlay::new(model,id,&p,1024*1024,0,"ram redo".into()).unwrap();o.use_memory_redo();o.write(0,&vec![0x5a;BLOCK*2]).unwrap();o.flush().unwrap();
+  let(mut model,_,mut data)=o.finish_memory().unwrap();assert_eq!(fs::metadata(p.join("redo.bin")).unwrap().len(),0);
+  let mut j=Journal::open(&p).unwrap();assert!(j.apply(&mut model).is_err());assert_eq!(model.bytes,original);
+  data[0]^=1;assert!(j.apply_memory(&mut model,&data).is_err());assert_eq!(model.bytes,original);data[0]^=1;
+  model.fail=true;assert!(j.apply_memory(&mut model,&data).is_err());assert_eq!(j.state,State::Applying);drop(j);
+  model.fail=false;let mut j=Journal::open(&p).unwrap();j.recover(&mut model).unwrap();assert_eq!(model.bytes,original);
+ }
+}
+
+#[cfg(test)]
+mod original_free_tests {
+ use super::*;
+ struct Model(Vec<u8>);
+ impl Device for Model {
+  fn len(&self)->u64{self.0.len() as u64}
+  fn read(&mut self,o:u64,b:&mut[u8])->Result<()>{b.copy_from_slice(&self.0[o as usize..o as usize+b.len()]);Ok(())}
+  fn write(&mut self,o:u64,b:&[u8])->Result<()>{self.0[o as usize..o as usize+b.len()].copy_from_slice(b);Ok(())}
+  fn flush(&mut self)->Result<()>{Ok(())}
+ }
+ #[test]
+ fn free_proof_uses_original_cib_and_bitmap_not_dirty_view() {
+  let tmp=tempfile::tempdir().unwrap();let p=tmp.path().join("j");let mut bytes=vec![0x39;BLOCK*8];bytes[..BLOCK*2].fill(0);
+  bytes[36..40].copy_from_slice(&1u32.to_le_bytes());bytes[48..56].copy_from_slice(&3u64.to_le_bytes());bytes[56..60].copy_from_slice(&4u32.to_le_bytes());bytes[60..64].copy_from_slice(&3u32.to_le_bytes());bytes[64..72].copy_from_slice(&1u64.to_le_bytes());bytes[BLOCK]=1;
+  let checksum=apfs_core::checksum::fletcher64(&bytes[..BLOCK]);bytes[..8].copy_from_slice(&checksum.to_le_bytes());let original=bytes.clone();
+  let id=Identity{path:"model".into(),size:bytes.len() as u64,dev:0,ino:1,mtime:0,mtime_ns:0,ctime:0,ctime_ns:0,generation:None};
+  let mut o=Overlay::new(Model(bytes),id,&p,1024*1024,0,"proof".into()).unwrap();o.use_memory_redo();
+  // Simulate a dirty bitmap freeing block 3. Original checkpoint still owns it.
+  o.write(BLOCK as u64,&vec![0;BLOCK]).unwrap();
+  assert!(o.allocated_from_cib(0,0,72,(3*BLOCK) as u64,4).is_err());
+  o.allocated_from_cib(0,0,40,(3*BLOCK) as u64,4).unwrap();
+  o.write((3*BLOCK) as u64,&vec![0x5a;4*BLOCK]).unwrap();o.flush().unwrap();
+  let(mut model,_,_)=o.finish_memory().unwrap();let mut j=Journal::open(&p).unwrap();
+  assert!(j.manifest.undo.contains_key(&(3*BLOCK as u64)));assert_eq!(j.manifest.free_blocks.len(),3);
+  assert_eq!(j.manifest.undo_len,2*BLOCK as u64);
+  // Interrupted apply may leave only originally free bytes different.
+  j.set_state(State::Applying).unwrap();model.0[3*BLOCK..7*BLOCK].fill(0x5a);model.0[BLOCK..2*BLOCK].fill(0);
+  j.recover(&mut model).unwrap();
+  for i in 0..8 {if !(4..7).contains(&i){assert_eq!(&model.0[i*BLOCK..(i+1)*BLOCK],&original[i*BLOCK..(i+1)*BLOCK]);}}
+ }
 }

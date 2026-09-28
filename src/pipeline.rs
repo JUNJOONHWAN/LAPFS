@@ -106,11 +106,17 @@ impl Pipeline {
                 journal::fault_point("pipeline-batch-start");
                 #[cfg(feature = "fault-injection")]
                 ensure!(!fail, "injected pipeline storage failure");
-                for write in batch {
-                    ensure!(journal::hash(&write.bytes) == write.sha256, "Pipeline input checksum mismatch");
-                    session.write(&path, write.offset, &write.bytes)?;
+                for write in &batch {
+                    ensure!(journal::hash(&write.bytes)==write.sha256,"Pipeline input checksum mismatch");
                 }
-                session.flush()?;
+                let mut writes=batch.into_iter().peekable();
+                while let Some(first)=writes.next() {
+                    let offset=first.offset;let mut data=first.bytes;
+                    while writes.peek().is_some_and(|next|next.offset==offset+data.len() as u64) {
+                        data.extend_from_slice(&writes.next().unwrap().bytes);
+                    }
+                    session.write_group(&path,offset,&data)?;
+                }
                 journal::fault_point("pipeline-batch-complete");
                 Ok(())
             })();

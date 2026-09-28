@@ -31,7 +31,7 @@ fn run() -> Result<()> {
     };
     match a.get(1).map(String::as_str).unwrap_or("help") {
         "help" | "--help" | "-h" => println!(
-            r#"LAPFS 0.3.0-beta.12 — APFS 읽기 및 영구 버퍼 기반 쓰기 마운트
+            r#"LAPFS 0.3.0-beta.13 — APFS 읽기 및 영구 버퍼 기반 쓰기 마운트
 
 읽기: TARGET은 이미지 또는 Linux APFS 파티션(/dev/sda2 등)
 probe TARGET OFFSET_BYTES BATCH_JSON SCRATCH_PARENT CAP_MIB

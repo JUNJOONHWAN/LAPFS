@@ -2077,6 +2077,7 @@ fn alloc_run_cached<D: WritableBlockDevice>(
             sm.free_count = sm_free;
 
             let alloc_bno = ci_addr + first_bit as u64;
+            dev.allocated_from_cib(cib_off,ci_off,alloc_bno*bsz as u64,run_len)?;
             return Ok((alloc_bno, run_len));
         }
     }

@@ -35,7 +35,7 @@ A sudo RW mount exposes the invoking SUDO_UID/SUDO_GID with private projected pe
 sudo lapfs mount-recover /var/lib/lapfs/devices/UUID/session-01
 ```
 
-Recovery validates identity and recorded checksums, handles interrupted application, and replays complete recoverable log frames. In beta.8 grouped mode, unsynced input may be lost; only --durable-writes promises local durability for each acknowledged write. Committed work is retired without duplicate application. If recovery refuses, preserve its error and all state; do not attempt native repair on the only copy.
+Recovery validates identity and recorded checksums. Beta.13 v3 volatile groups have no persistent input/redo: PREPARED work is cancelled, APPLYING work is undone, and COMMITTED work is retained. Older queued work and durable-policy complete log frames retain their replay path. Use beta.13 or later for v3 recovery; use normal safe eject before downgrading. In beta.8 grouped mode, unsynced input may be lost; only --durable-writes promises local durability for each acknowledged write. Committed work is retired without duplicate application. If recovery refuses, preserve its error and all state; do not attempt native repair on the only copy.
 
 A cleanly closed session cannot be reused for a new mount: choose a new session directory. Until recovery completes, do not attach the volume to macOS as an independent writer. Offline `prepare/apply/recover/cleanup` commands have separate transaction semantics; see `lapfs help`.
 

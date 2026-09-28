@@ -1,3 +1,15 @@
+# 0.3.0-beta.13
+
+- 기본 FUSE 데이터 쓰기: 입력 WAL·디스크 redo 제거 · RAM redo + 영구 undo.
+- 원본 CIB·비트맵 기준 빈 블록 undo 생략 · 원래 사용 중인 블록 복구 유지.
+- 큰 순차 전송 기록량 약 4.1배 → 1.06배 · 공간 재사용 8회 확인.
+- 내부 이미지 1MiB write: beta.12 40.90–58.30 → beta.13 101.50–177.22MB/s · fsync/close 포함 · USB 수치 아님.
+- Rust 311 · FUSE/rsync/handoff · Mac 60개 이미지 fsck/SHA 통과.
+- 신규 세션 v3 · 미완료 v3 복구는 beta.13 이상 필요 · downgrade 전 정상 분리.
+- durable-writes·독립 배치 CLI는 기존 영구 입력/undo/redo 유지.
+- 실장치 적용·USB 성능·물리 전원 차단·상용 인증 미완료.
+- [변경 전후·측정·제한](docs/WRITE_AMPLIFICATION.md).
+
 # 0.3.0-beta.12
 
 - undo/redo 동기화 병렬 실행 · 양쪽 완료 전 APFS 변경 금지.

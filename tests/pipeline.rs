@@ -1,6 +1,7 @@
 #![cfg(feature="fault-injection")]
 use spark_apfs_safe::{buffered::{Session,WritePolicy},pipeline::Pipeline,journal::hash};
 use std::{path::PathBuf,sync::mpsc,time::Duration};
+use std::os::unix::process::ExitStatusExt;
 const GROUP:u64=4*1024*1024;
 fn fixture()->(PathBuf,u64,PathBuf) {
  (std::env::var("SPARK_APFS_TEST_IMAGE").unwrap().into(),std::env::var("SPARK_APFS_TEST_OFFSET").unwrap().parse().unwrap(),std::env::var("SPARK_APFS_TEST_OUTPUT").unwrap().into())
@@ -23,6 +24,7 @@ fn input_overlaps_storage_and_fsync_drains_both_buffers() {
  assert_eq!(p.read("/pipeline.bin",0,expected.len()).unwrap(),expected);
  let before_queries=std::fs::read(&image).unwrap();
  p.write("/pipeline.bin",4091,b"overlap across block").unwrap();expected[4091..4091+20].copy_from_slice(b"overlap across block");
+ p.write("/pipeline.bin",73,b"second").unwrap();expected[73..79].copy_from_slice(b"second");
  p.attr("/").unwrap();p.list("/").unwrap();p.space().unwrap();
  assert_eq!(p.read("/pipeline.bin",0,expected.len()).unwrap(),expected);
  assert_eq!(std::fs::read(&image).unwrap(),before_queries,"observers must not commit the volatile input buffer");
@@ -56,12 +58,17 @@ fn pipeline_crash_worker() {
 fn pipeline_process_crashes_preserve_committed_or_recoverable_groups() {
  let(source,offset,out)=fixture();let work=tempfile::Builder::new().prefix("pipeline-crash-").tempdir_in(out).unwrap().keep();let base=work.join("base.dmg");std::fs::copy(source,&base).unwrap();
  let mut s=Session::start_with_policy(&base,offset,&work.join("init"),GROUP,0,WritePolicy::Grouped).unwrap();s.create("/crash.txt").unwrap();s.write("/crash.txt",0,&[7;4096]).unwrap();s.close().unwrap();drop(s);
- let mut rows=vec![];
- for point in ["pipeline-input-accepted","pipeline-batch-start","mount-stream-frozen","state-Applying","apply-write","state-Committed","pipeline-batch-complete"] {
+ let base_bytes=std::fs::read(&base).unwrap();let mut rows=vec![];
+ for point in ["pipeline-input-accepted","pipeline-batch-start","group-intent","prepare-dir-created","group-prepared","state-Applying","apply-write","state-Committed","group-retired","pipeline-batch-complete"] {
   let image=work.join(format!("{point}.dmg"));std::fs::copy(&base,&image).unwrap();let dir=work.join(point);
-  let status=std::process::Command::new(std::env::current_exe().unwrap()).args(["--ignored","--exact","pipeline_crash_worker","--nocapture"]).env("LAPFS_WORKER_IMAGE",&image).env("LAPFS_WORKER_SESSION",&dir).env("SPARK_APFS_KILL_AT",point).status().unwrap();assert!(!status.success(),"{point} not reached");
-  spark_apfs_safe::buffered::recover(&dir).unwrap();let actual=spark_apfs_safe::apfs_batch::read_file(&image,offset,"/crash.txt").unwrap();let expected=if matches!(point,"pipeline-input-accepted"|"pipeline-batch-start") {vec![7;4096]} else {vec![0x5a;GROUP as usize]};assert_eq!(actual,expected,"{point}");
-  rows.push(serde_json::json!({"point":point,"image":image,"bytes":actual.len(),"sha256":hash(&actual)}));
+  let status=std::process::Command::new(std::env::current_exe().unwrap()).args(["--ignored","--exact","pipeline_crash_worker","--nocapture"]).env("LAPFS_WORKER_IMAGE",&image).env("LAPFS_WORKER_SESSION",&dir).env("SPARK_APFS_KILL_AT",point).status().unwrap();assert_eq!(status.signal(),Some(libc::SIGKILL),"{point} not reached");
+  let before_recovery=work.join(format!("{point}-before-recovery.dmg"));std::fs::copy(&image,&before_recovery).unwrap();
+  let mut originally_free=std::collections::BTreeSet::new();
+  for e in std::fs::read_dir(&dir).unwrap().flatten() {
+   let m=e.path().join("manifest.json");if m.is_file(){let j=spark_apfs_safe::journal::Journal::open(&e.path()).unwrap();originally_free.extend(j.manifest.free_blocks.clone());}
+  }
+  spark_apfs_safe::buffered::recover(&dir).unwrap();let actual=spark_apfs_safe::apfs_batch::read_file(&image,offset,"/crash.txt").unwrap();let expected=if matches!(point,"state-Committed"|"group-retired"|"pipeline-batch-complete") {vec![0x5a;GROUP as usize]} else {vec![7;4096]};assert_eq!(actual,expected,"{point}");if !matches!(point,"state-Committed"|"group-retired"|"pipeline-batch-complete") {let recovered=std::fs::read(&image).unwrap();for (i,(a,b)) in recovered.chunks(4096).zip(base_bytes.chunks(4096)).enumerate(){if a!=b {assert!(originally_free.contains(&((i*4096) as u64)),"allocated bytes changed after rollback: {point} block {i}");}}}
+  rows.push(serde_json::json!({"point":point,"image":image,"before_recovery_image":before_recovery,"bytes":actual.len(),"sha256":hash(&actual)}));
  }
  std::fs::write(work.join("results.json"),serde_json::to_vec_pretty(&rows).unwrap()).unwrap();println!("PIPELINE_CRASH_EVIDENCE={}",work.display());
 }

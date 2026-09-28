@@ -1,0 +1,167 @@
+{
+  "rust_passed": 311,
+  "targeted_final_pipeline_rechecks": "passed; noncontiguous writes, original-allocated rollback equality and SIGKILL signal assertion",
+  "binary_sha256": "c6131a12dd2f4bc8aa546053e3679ddf261489a56303aa99a33015b6032de6e0",
+  "native_images": 60,
+  "physical_runtime": "beta12 remains active; beta13 activation/physical throughput pending",
+  "fuse": {
+    "status": "passed",
+    "checks": [
+      "real_rw_fuse_mount",
+      "large_copy_bounded_queue",
+      "read_your_writes_across_handles",
+      "unaligned_random_overwrite",
+      "fsync_and_close",
+      "open_unlink_rejected",
+      "mkdir_unicode",
+      "truncate_and_unaligned_append",
+      "atomic_replace",
+      "unlink",
+      "rmdir_nonempty_guard",
+      "rmdir_nested_empty",
+      "ordinary_cp_command",
+      "unsupported_sparse_explicit_error",
+      "chmod_applied",
+      "mount_still_usable_after_rejection",
+      "original_104_files_preserved",
+      "symlink_read",
+      "sparse_read_above_4GiB",
+      "exclusive_raw_reader_denied",
+      "actual_fuse_sigkill_after_ack",
+      "pending_session_blocks_raw_read",
+      "recovery_preserves_acknowledged_writes",
+      "separate_operation_errno_logs",
+      "expected_lookup_misses_not_logged"
+    ],
+    "expected": {
+      "buffered.bin": {
+        "bytes": 12550013,
+        "sha256": "a5ae50c2741e3549e096fa66a7d3a22ecb14f74f7eca82b8da68e6f9a4a3e654"
+      },
+      "\uc790\ub8cc rw/\ud55c\uae00 space.txt": {
+        "bytes": 12,
+        "sha256": "cccdeb5753fb27b6d8b0308f4106eb4271373daea05b96d032aa58aeabdec08d"
+      },
+      "old.txt": {
+        "bytes": 23,
+        "sha256": "33b43c1b0a6f7d6607e292f170cc57c1c5a6bf0b67ec61003e25b1afdc767cd6"
+      },
+      "copy-command.bin": {
+        "bytes": 190000,
+        "sha256": "444bc2ad920c4e1921ee1a12ab79d6c3c764e2e1a4a399bd08c0037a1804ad73"
+      },
+      "crash-ack.bin": {
+        "bytes": 502007,
+        "sha256": "15ae5cb294534fd20634138a44c2a5642ec3263e1ca26bdbdd9201e825ec2ffb"
+      }
+    },
+    "copy_bytes": 12550013,
+    "copy_seconds": 0.43234171997755766,
+    "spool_bytes_after_close": 648,
+    "committed_batches": 24,
+    "binary_sha256": "c6131a12dd2f4bc8aa546053e3679ddf261489a56303aa99a33015b6032de6e0",
+    "physical_usb_writes": 0,
+    "image_sha256": "eea717c2743a374529254edd3b4a66fd8bded9bc9ce5990048a63100937beab0"
+  },
+  "rsync": {
+    "status": "passed",
+    "binary_sha256": "c6131a12dd2f4bc8aa546053e3679ddf261489a56303aa99a33015b6032de6e0",
+    "runs": [
+      {
+        "label": "initial",
+        "rc": 0,
+        "stdout": "created directory /home/zooh/Documents/LAPFS/worktrees/write-amplification/evidence/lapfs-rsync-ybxps0sn/mount/syncset\ncd+++++++++ ./\n>f+++++++++ large.bin\ncL+++++++++ link -> payload.txt\n>f+++++++++ payload.txt\ncd+++++++++ nested/\n>f+++++++++ nested/other.bin\n",
+        "stderr": ""
+      },
+      {
+        "label": "repeat",
+        "rc": 0,
+        "stdout": "",
+        "stderr": ""
+      },
+      {
+        "label": "replace",
+        "rc": 0,
+        "stdout": ">f.s....... payload.txt\n",
+        "stderr": ""
+      },
+      {
+        "label": "link-change",
+        "rc": 0,
+        "stdout": ".d..t...... ./\ncLc.t...... link -> nested/other.bin\n",
+        "stderr": ""
+      },
+      {
+        "label": "delete",
+        "rc": 0,
+        "stdout": "*deleting   orphan-dir/child.txt\n*deleting   orphan-dir/\n*deleting   orphan.txt\n*deleting   orphan-link\n",
+        "stderr": ""
+      }
+    ],
+    "payload_sha256": "198153267082f552d192b9114a5cbc61fd3cb6965dd7e89fd091345da4966ab8",
+    "mtime_ns": 946684800987654321,
+    "mode": "0o640",
+    "link": "nested/other.bin",
+    "nested_sha256": "785b0751fc2c53dc14a4ce3d800e69ef9ce1009eb327ccf458afe09c242c26c9",
+    "large_sha256": "eb342089af193d0d9912b0435466f010628e7edd99e5831e1663c435f9ee2665",
+    "large_bytes": 12550013
+  },
+  "handoff": {
+    "clean": {
+      "status": "passed",
+      "image": "/home/zooh/Documents/LAPFS/worktrees/write-amplification/evidence/lapfs-handoff-q3382uae/clean/native.dmg",
+      "image_sha256": "22133cb1a993b5672162eb61bbddf930d2d67b2e0f08c6b1113274e489997729",
+      "file_sha256": "7efda6f2333886c706938cce927009b091d1edb606d390f628ef378d7a1a6f95"
+    },
+    "clean-durable": {
+      "status": "passed",
+      "image": "/home/zooh/Documents/LAPFS/worktrees/write-amplification/evidence/lapfs-handoff-q3382uae/clean-durable/native.dmg",
+      "image_sha256": "78455fc01251a94c60629d20b53bc7bc1a569ffb27a48a681c37fb258548d65d",
+      "file_sha256": "7efda6f2333886c706938cce927009b091d1edb606d390f628ef378d7a1a6f95"
+    },
+    "clean-default": {
+      "status": "passed",
+      "image": "/home/zooh/Documents/LAPFS/worktrees/write-amplification/evidence/lapfs-handoff-q3382uae/clean-default/native.dmg",
+      "image_sha256": "cd0b1167d2b572a8347d7a7042eb7dd2410fc4e5d1d27b84b8b48eca1648e504",
+      "file_sha256": "7efda6f2333886c706938cce927009b091d1edb606d390f628ef378d7a1a6f95"
+    },
+    "killed": {
+      "status": "passed",
+      "image": "/home/zooh/Documents/LAPFS/worktrees/write-amplification/evidence/lapfs-handoff-q3382uae/killed/native.dmg",
+      "image_sha256": "ade979f047984b4867743241c87ddb93397512b2aa5737c5e7b427e0e3c93f9d",
+      "file_sha256": "7efda6f2333886c706938cce927009b091d1edb606d390f628ef378d7a1a6f95"
+    }
+  },
+  "sync_append": [
+    {
+      "name": "sync",
+      "image": "/home/zooh/Documents/LAPFS/worktrees/write-amplification/evidence/pipeline-fuse-2b032d7t/sync/native.dmg",
+      "expected": {
+        "append.bin": {
+          "bytes": 1212157,
+          "sha256": "e2d0901d284e731e75d063b51d875f9b36c26ed3fb709df2cfc7993ccb7271f8"
+        },
+        "sync-ack.bin": {
+          "bytes": 251008,
+          "sha256": "216a2000396dd684c87845b35f90d3e0d17f05de26029622ab24ccc0601e2952"
+        }
+      },
+      "dgx_recovery_before_native": false
+    },
+    {
+      "name": "dsync",
+      "image": "/home/zooh/Documents/LAPFS/worktrees/write-amplification/evidence/pipeline-fuse-2b032d7t/dsync/native.dmg",
+      "expected": {
+        "append.bin": {
+          "bytes": 1212157,
+          "sha256": "e2d0901d284e731e75d063b51d875f9b36c26ed3fb709df2cfc7993ccb7271f8"
+        },
+        "sync-ack.bin": {
+          "bytes": 251008,
+          "sha256": "216a2000396dd684c87845b35f90d3e0d17f05de26029622ab24ccc0601e2952"
+        }
+      },
+      "dgx_recovery_before_native": false
+    }
+  ]
+}

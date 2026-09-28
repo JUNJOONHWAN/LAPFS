@@ -91,6 +91,10 @@ impl<D: Device> BlockDevice for Adapter<D> {
     }
 }
 impl<D: Device> WritableBlockDevice for Adapter<D> {
+    fn allocated_from_cib(&mut self,cib:u64,ci:usize,offset:u64,blocks:usize)->Result<(),BlockError>{
+        self.inner.allocated_from_cib(self.base,self.base+cib,ci,self.base+offset,blocks).map_err(block_err)
+    }
+
     fn write_at(&mut self, off: u64, data: &[u8]) -> Result<(), BlockError> {
         if off
             .checked_add(data.len() as u64)
@@ -208,9 +212,16 @@ pub(crate) fn prepare_held_payload(
 ) -> Result<PathBuf> {
     ensure!(payload.is_none() || (actions.len() == 1 && matches!(actions[0], Action::WriteAt { .. })), "Invalid in-memory write action");
     let identity = target.identity.clone();
-    let overlay = stage_overlay(target, identity, dir, offset, actions, cap, reserve, payload)?;
+    let overlay = stage_overlay(target, identity, dir, offset, actions, cap, reserve, payload, false)?;
     let (_, dir) = overlay.finish()?;
     Ok(dir)
+}
+
+pub(crate) fn prepare_memory(target:&mut Image,dir:&Path,offset:u64,actions:&[Action],cap:u64,reserve:u64,payload:Vec<u8>)->Result<Vec<u8>> {
+    ensure!(actions.len()==1 && matches!(actions[0],Action::WriteAt{..}),"Memory preparation requires one range write");
+    let identity=target.identity.clone();
+    let overlay=stage_overlay(target,identity,dir,offset,actions,cap,reserve,Some(payload),true)?;
+    let (_,_,bytes)=overlay.finish_memory()?;Ok(bytes)
 }
 
 fn stage_overlay<D: Device>(
@@ -222,6 +233,7 @@ fn stage_overlay<D: Device>(
     cap: u64,
     reserve: u64,
     mut payload: Option<Vec<u8>>,
+    memory_redo: bool,
 ) -> Result<Overlay<D>> {
     ensure!(
         !actions.is_empty() && actions.len() <= 64,
@@ -232,7 +244,7 @@ fn stage_overlay<D: Device>(
         "Enrolled partition requires offset 0"
     );
     let len = container_range(&mut target, offset)?;
-    let overlay = Overlay::new(
+    let mut overlay = Overlay::new(
         target,
         identity,
         dir,
@@ -240,6 +252,7 @@ fn stage_overlay<D: Device>(
         reserve,
         serde_json::to_string(actions)?,
     )?;
+    if memory_redo { overlay.use_memory_redo(); }
     let mut dev = Adapter {
         inner: overlay,
         base: offset,
@@ -623,6 +636,7 @@ pub fn probe(
         cap,
         crate::journal::DEFAULT_RESERVE,
         None,
+        false,
     ) {
         Ok(overlay) => {
             let stats = overlay.statistics();

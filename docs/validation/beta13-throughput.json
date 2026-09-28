@@ -1,0 +1,347 @@
+{
+  "method": "DGX internal ext4; 1GiB APFS images; ABBA beta12/new/new/beta12; random seed713; 256MiB/file; fsync+close included; /proc/daemon/io write_bytes includes internal logs and target image; cache/system load uncontrolled; physical NAND amplification not measured",
+  "rows": [
+    {
+      "read_seconds": 0.46304258302552626,
+      "read_MB_s": 579.7208849476418,
+      "random_seed": 713,
+      "write_amplification": 4.192352294921875,
+      "daemon_io_delta": {
+        "rchar": 3129985899,
+        "wchar": 1122114663,
+        "syscr": 103047,
+        "syscw": 29933,
+        "read_bytes": 274829312,
+        "write_bytes": 1125376000,
+        "cancelled_write_bytes": 0
+      },
+      "run": 0,
+      "label": "old",
+      "chunk": 10240,
+      "bytes": 268435456,
+      "seconds": 7.467990268021822,
+      "MiB_s": 34.27963760159147,
+      "sha256": "bee7cb14da252a48ad9c0488b3dabd5bb44c90cb9dd10e19d63ddb8d6803ee75",
+      "image": "/home/zooh/Documents/LAPFS/worktrees/write-amplification/evidence/throughput-qualified/throughput-ko3csyul/0-old/native.dmg",
+      "binary_sha256": "89ad6da18aafcfe19d8975c5aabe0a15c3c10491e4f08c146f104dbb13e971b6",
+      "write_MB_s": 35.944805277726374
+    },
+    {
+      "read_seconds": 0.36468354501994327,
+      "read_MB_s": 736.0777848787233,
+      "random_seed": 713,
+      "write_amplification": 4.1032257080078125,
+      "daemon_io_delta": {
+        "rchar": 3075329101,
+        "wchar": 1097071973,
+        "syscr": 71327,
+        "syscw": 5529,
+        "read_bytes": 269025280,
+        "write_bytes": 1101451264,
+        "cancelled_write_bytes": 0
+      },
+      "run": 0,
+      "label": "old",
+      "chunk": 1048576,
+      "bytes": 268435456,
+      "seconds": 6.563076081045438,
+      "MiB_s": 39.00609970671277,
+      "sha256": "661d7396b7453d3d8e1842226d65c9684fec6b8f46bb1f7070f4356ae1c4b387",
+      "image": "/home/zooh/Documents/LAPFS/worktrees/write-amplification/evidence/throughput-qualified/throughput-ko3csyul/0-old/native.dmg",
+      "binary_sha256": "89ad6da18aafcfe19d8975c5aabe0a15c3c10491e4f08c146f104dbb13e971b6",
+      "write_MB_s": 40.90086000606605
+    },
+    {
+      "read_seconds": 0.29291056195506826,
+      "read_MB_s": 916.441709060588,
+      "random_seed": 713,
+      "write_amplification": 1.0603485107421875,
+      "daemon_io_delta": {
+        "rchar": 708462801,
+        "wchar": 281195581,
+        "syscr": 28952,
+        "syscw": 28735,
+        "read_bytes": 1044480,
+        "write_bytes": 284635136,
+        "cancelled_write_bytes": 0
+      },
+      "run": 1,
+      "label": "new",
+      "chunk": 10240,
+      "bytes": 268435456,
+      "seconds": 2.6289780890219845,
+      "MiB_s": 97.37623948598045,
+      "sha256": "bee7cb14da252a48ad9c0488b3dabd5bb44c90cb9dd10e19d63ddb8d6803ee75",
+      "image": "/home/zooh/Documents/LAPFS/worktrees/write-amplification/evidence/throughput-qualified/throughput-ko3csyul/1-new/native.dmg",
+      "binary_sha256": "c6131a12dd2f4bc8aa546053e3679ddf261489a56303aa99a33015b6032de6e0",
+      "write_MB_s": 102.10638769525143
+    },
+    {
+      "read_seconds": 0.316335501964204,
+      "read_MB_s": 848.5783427191036,
+      "random_seed": 713,
+      "write_amplification": 1.0610809326171875,
+      "daemon_io_delta": {
+        "rchar": 679039446,
+        "wchar": 280660787,
+        "syscr": 3912,
+        "syscw": 4610,
+        "read_bytes": 0,
+        "write_bytes": 284831744,
+        "cancelled_write_bytes": 0
+      },
+      "run": 1,
+      "label": "new",
+      "chunk": 1048576,
+      "bytes": 268435456,
+      "seconds": 1.5146625370252877,
+      "MiB_s": 169.01454531434416,
+      "sha256": "661d7396b7453d3d8e1842226d65c9684fec6b8f46bb1f7070f4356ae1c4b387",
+      "image": "/home/zooh/Documents/LAPFS/worktrees/write-amplification/evidence/throughput-qualified/throughput-ko3csyul/1-new/native.dmg",
+      "binary_sha256": "c6131a12dd2f4bc8aa546053e3679ddf261489a56303aa99a33015b6032de6e0",
+      "write_MB_s": 177.22459586753374
+    },
+    {
+      "read_seconds": 0.2613633220316842,
+      "read_MB_s": 1027.0586320733191,
+      "random_seed": 713,
+      "write_amplification": 1.05950927734375,
+      "daemon_io_delta": {
+        "rchar": 704400818,
+        "wchar": 281192397,
+        "syscr": 27917,
+        "syscw": 28700,
+        "read_bytes": 1470464,
+        "write_bytes": 284409856,
+        "cancelled_write_bytes": 0
+      },
+      "run": 2,
+      "label": "new",
+      "chunk": 10240,
+      "bytes": 268435456,
+      "seconds": 1.9933690470061265,
+      "MiB_s": 128.42579269728833,
+      "sha256": "bee7cb14da252a48ad9c0488b3dabd5bb44c90cb9dd10e19d63ddb8d6803ee75",
+      "image": "/home/zooh/Documents/LAPFS/worktrees/write-amplification/evidence/throughput-qualified/throughput-ko3csyul/2-new/native.dmg",
+      "binary_sha256": "c6131a12dd2f4bc8aa546053e3679ddf261489a56303aa99a33015b6032de6e0",
+      "write_MB_s": 134.6642040033518
+    },
+    {
+      "read_seconds": 0.3217370280181058,
+      "read_MB_s": 834.3318692708685,
+      "random_seed": 713,
+      "write_amplification": 1.063262939453125,
+      "daemon_io_delta": {
+        "rchar": 679039378,
+        "wchar": 280660883,
+        "syscr": 3911,
+        "syscw": 4599,
+        "read_bytes": 0,
+        "write_bytes": 285417472,
+        "cancelled_write_bytes": 0
+      },
+      "run": 2,
+      "label": "new",
+      "chunk": 1048576,
+      "bytes": 268435456,
+      "seconds": 2.6447901990031824,
+      "MiB_s": 96.7940671046369,
+      "sha256": "661d7396b7453d3d8e1842226d65c9684fec6b8f46bb1f7070f4356ae1c4b387",
+      "image": "/home/zooh/Documents/LAPFS/worktrees/write-amplification/evidence/throughput-qualified/throughput-ko3csyul/2-new/native.dmg",
+      "binary_sha256": "c6131a12dd2f4bc8aa546053e3679ddf261489a56303aa99a33015b6032de6e0",
+      "write_MB_s": 101.49593570831173
+    },
+    {
+      "read_seconds": 0.4949296039994806,
+      "read_MB_s": 542.3709833293417,
+      "random_seed": 713,
+      "write_amplification": 4.202972412109375,
+      "daemon_io_delta": {
+        "rchar": 3134699621,
+        "wchar": 1122118010,
+        "syscr": 104249,
+        "syscw": 29983,
+        "read_bytes": 84635648,
+        "write_bytes": 1128226816,
+        "cancelled_write_bytes": 0
+      },
+      "run": 3,
+      "label": "old",
+      "chunk": 10240,
+      "bytes": 268435456,
+      "seconds": 7.831529553979635,
+      "MiB_s": 32.68837820702754,
+      "sha256": "bee7cb14da252a48ad9c0488b3dabd5bb44c90cb9dd10e19d63ddb8d6803ee75",
+      "image": "/home/zooh/Documents/LAPFS/worktrees/write-amplification/evidence/throughput-qualified/throughput-ko3csyul/3-old/native.dmg",
+      "binary_sha256": "89ad6da18aafcfe19d8975c5aabe0a15c3c10491e4f08c146f104dbb13e971b6",
+      "write_MB_s": 34.27624886681211
+    },
+    {
+      "read_seconds": 0.4395677690044977,
+      "read_MB_s": 610.680479617361,
+      "random_seed": 713,
+      "write_amplification": 4.09869384765625,
+      "daemon_io_delta": {
+        "rchar": 3074673805,
+        "wchar": 1097072380,
+        "syscr": 71168,
+        "syscw": 5540,
+        "read_bytes": 248909824,
+        "write_bytes": 1100234752,
+        "cancelled_write_bytes": 0
+      },
+      "run": 3,
+      "label": "old",
+      "chunk": 1048576,
+      "bytes": 268435456,
+      "seconds": 4.604681963974144,
+      "MiB_s": 55.595587708962015,
+      "sha256": "661d7396b7453d3d8e1842226d65c9684fec6b8f46bb1f7070f4356ae1c4b387",
+      "image": "/home/zooh/Documents/LAPFS/worktrees/write-amplification/evidence/throughput-qualified/throughput-ko3csyul/3-old/native.dmg",
+      "binary_sha256": "89ad6da18aafcfe19d8975c5aabe0a15c3c10491e4f08c146f104dbb13e971b6",
+      "write_MB_s": 58.29619897751255
+    }
+  ],
+  "reused_space": {
+    "image": "/home/zooh/Documents/LAPFS/worktrees/write-amplification/evidence/reuse-io1c30go/native.dmg",
+    "binary_sha256": "c6131a12dd2f4bc8aa546053e3679ddf261489a56303aa99a33015b6032de6e0",
+    "rows": [
+      {
+        "pass": 0,
+        "bytes": 268435456,
+        "seconds": 3.3081803410314023,
+        "MB_s": 81.14293307126931,
+        "write_amplification": 1.0587158203125,
+        "io_delta": {
+          "rchar": 688808801,
+          "wchar": 280519317,
+          "syscr": 4022,
+          "syscw": 4603,
+          "read_bytes": 1441792,
+          "write_bytes": 284196864,
+          "cancelled_write_bytes": 0
+        },
+        "sha256": "e01948a31ac79b779cf6b3c0a96808a371935bcbf4464058c94d2192dadf2a28"
+      },
+      {
+        "pass": 1,
+        "bytes": 268435456,
+        "seconds": 3.0594346220023,
+        "MB_s": 87.74021646663519,
+        "write_amplification": 1.0575714111328125,
+        "io_delta": {
+          "rchar": 661541174,
+          "wchar": 280471239,
+          "syscr": 3781,
+          "syscw": 4367,
+          "read_bytes": 4096,
+          "write_bytes": 283889664,
+          "cancelled_write_bytes": 0
+        },
+        "sha256": "41b5ba54787bdae24845b2ebf76e6d37cce8a2a14d08638f437a7507d56d2ab7"
+      },
+      {
+        "pass": 2,
+        "bytes": 268435456,
+        "seconds": 2.2453529139747843,
+        "MB_s": 119.55156551528833,
+        "write_amplification": 1.057586669921875,
+        "io_delta": {
+          "rchar": 658338034,
+          "wchar": 280487408,
+          "syscr": 3761,
+          "syscw": 4353,
+          "read_bytes": 0,
+          "write_bytes": 283893760,
+          "cancelled_write_bytes": 0
+        },
+        "sha256": "1c1c3bcc8c6519161ba8cf86ad6830e049fc8014fbdd30f52da82dc669ecea16"
+      },
+      {
+        "pass": 3,
+        "bytes": 268435456,
+        "seconds": 1.619532287993934,
+        "MB_s": 165.7487522724866,
+        "write_amplification": 1.057098388671875,
+        "io_delta": {
+          "rchar": 669896942,
+          "wchar": 280487357,
+          "syscr": 3783,
+          "syscw": 4367,
+          "read_bytes": 0,
+          "write_bytes": 283762688,
+          "cancelled_write_bytes": 0
+        },
+        "sha256": "40714733da16a73b7b70105b05bda6acc49633ef6d4b424b0235969d3ef7243f"
+      },
+      {
+        "pass": 4,
+        "bytes": 268435456,
+        "seconds": 1.6312852010014467,
+        "MB_s": 164.55458299701814,
+        "write_amplification": 1.0573883056640625,
+        "io_delta": {
+          "rchar": 658337964,
+          "wchar": 280487262,
+          "syscr": 3760,
+          "syscw": 4353,
+          "read_bytes": 0,
+          "write_bytes": 283840512,
+          "cancelled_write_bytes": 0
+        },
+        "sha256": "8780130e8aad81952b8c5b6e7c319630a8f0d23d8c2e25e130c2fd8a25058c96"
+      },
+      {
+        "pass": 5,
+        "bytes": 268435456,
+        "seconds": 1.6191424269927666,
+        "MB_s": 165.78866165502512,
+        "write_amplification": 1.056915283203125,
+        "io_delta": {
+          "rchar": 669896940,
+          "wchar": 280487348,
+          "syscr": 3785,
+          "syscw": 4367,
+          "read_bytes": 0,
+          "write_bytes": 283713536,
+          "cancelled_write_bytes": 0
+        },
+        "sha256": "dfa0c00ee0ef13d6b161de215827bb8232ae2b618b4a448b09fa999185ba61ef"
+      },
+      {
+        "pass": 6,
+        "bytes": 268435456,
+        "seconds": 2.059041670989245,
+        "MB_s": 130.36912257877373,
+        "write_amplification": 1.0576019287109375,
+        "io_delta": {
+          "rchar": 662585716,
+          "wchar": 280487488,
+          "syscr": 3778,
+          "syscw": 4364,
+          "read_bytes": 0,
+          "write_bytes": 283897856,
+          "cancelled_write_bytes": 0
+        },
+        "sha256": "ee7b958624c3eb9ced43a6c5c2affbc14df4d5eaf45075e17bdd03f289b70f62"
+      },
+      {
+        "pass": 7,
+        "bytes": 268435456,
+        "seconds": 3.0309871659846976,
+        "MB_s": 88.56370591486537,
+        "write_amplification": 1.05706787109375,
+        "io_delta": {
+          "rchar": 679481718,
+          "wchar": 280487595,
+          "syscr": 3830,
+          "syscw": 4356,
+          "read_bytes": 0,
+          "write_bytes": 283754496,
+          "cancelled_write_bytes": 0
+        },
+        "sha256": "2104446ed39f689bf76b01f3ad845f094298ca2806b7e82d0eb3fee437173a8b"
+      }
+    ]
+  }
+}
