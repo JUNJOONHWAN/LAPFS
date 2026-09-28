@@ -1498,22 +1498,52 @@ pub fn write_range_plain<D: WritableBlockDevice>(
     }
     if covered != old_alloc { return Err(bad()); }
     apfs_core::inode::parse_unknown_xfields(old).map_err(|_| bad())?;
-    // Existing data blocks are journaled in-place by the external undo/redo layer.
-    // This function is NOT independently crash-safe and MUST NOT bypass that layer.
+    // Preserve the old checkpoint's file data. Only touched blocks get a new
+    // physical address; untouched portions of an extent are split into runs.
+    // The external journal still protects other in-place APFS structures.
+    fn add_run(runs: &mut Vec<(u64, u64, u64)>, logical: u64, phys: u64, count: u64) {
+        if count == 0 { return; }
+        if let Some(last) = runs.last_mut() {
+            if last.0 + last.2 * 4096 == logical && last.1 + last.2 == phys {
+                last.2 += count;
+                return;
+            }
+        }
+        runs.push((logical, phys, count));
+    }
+    let mut replacement_records = Vec::new();
+    let mut extent_remove_keys = Vec::new();
+    let mut extref_remove_keys = Vec::new();
+    let mut extref_inserts = Vec::new();
+    let mut old_blocks_to_free = Vec::new();
     for (k,v) in &all {
         if rd_u64(k,0) & 0x0FFF_FFFF_FFFF_FFFF != file_id || rd_u64(k,0)>>60 != APFS_TYPE_FILE_EXTENT {continue;}
         let logical=rd_u64(k,8); let length=rd_u64(v,0); let phys=rd_u64(v,8);
         let first=offset.max(logical); let last=end.min(logical.checked_add(length).ok_or_else(bad)?);
         if first>=last {continue;}
-        let mut at=first;
-        while at<last {
-            let block_at=at/bsz as u64*bsz as u64;
-            let physical=phys.checked_add((block_at-logical)/bsz as u64).ok_or_else(bad)?;
-            let mut raw=vec![0;bsz];txn.read_block(physical,&mut raw)?;
-            let n=((block_at+bsz as u64).min(last)-at) as usize;
-            let local=(at-block_at) as usize;let input=(at-offset) as usize;
-            raw[local..local+n].copy_from_slice(&content[input..input+n]);
-            txn.stage_raw(physical,raw);at+=n as u64;
+        let first_block=(first-logical)/bsz as u64;
+        let past_block=(last-logical).div_ceil(bsz as u64);
+        let mut segments=Vec::new();
+        add_run(&mut segments,logical,phys,first_block);
+        for i in first_block..past_block {
+            let old_phys=phys.checked_add(i).ok_or_else(bad)?;
+            let new_phys=txn.alloc_block()?;
+            let block_at=logical+i*bsz as u64;
+            let mut raw=vec![0;bsz];txn.read_block(old_phys,&mut raw)?;
+            let at=offset.max(block_at);let to=end.min(block_at+bsz as u64);
+            let n=(to-at) as usize;
+            raw[(at-block_at) as usize..(at-block_at) as usize+n]
+                .copy_from_slice(&content[(at-offset) as usize..(at-offset) as usize+n]);
+            txn.stage_raw(new_phys,raw);
+            add_run(&mut segments,block_at,new_phys,1);
+            old_blocks_to_free.push(old_phys);
+        }
+        add_run(&mut segments,logical+past_block*bsz as u64,phys+past_block,length/bsz as u64-past_block);
+        extent_remove_keys.push(k.clone());
+        extref_remove_keys.push(build_phys_ext_key(phys));
+        for (log,p,count) in segments {
+            replacement_records.push((build_file_extent_key(file_id,log),build_file_extent_val(count*bsz as u64,p)));
+            extref_inserts.push((build_phys_ext_key(p),build_phys_ext_val(count,file_id,1)));
         }
     }
     // --- Allocate + write the data blocks (raw content, last block zero-padded). ---
@@ -1551,12 +1581,16 @@ pub fn write_range_plain<D: WritableBlockDevice>(
         old, extract_inode_name(old).unwrap_or(name), Some(DstreamArgs {
             size: new_size, alloced_size: new_alloc,
         }), now))];
+    records.extend(replacement_records);
     for &(logical, physical, count) in &runs {
         records.push((build_file_extent_key(file_id, old_alloc + (logical * bsz) as u64), build_file_extent_val(count * bsz as u64, physical)));
+        extref_inserts.push((build_phys_ext_key(physical), build_phys_ext_val(count, file_id, 1)));
     }
-    let (new_omap_tree_paddr, node_delta) = rewrite_fstree(txn, vsb_raw, &omap_node, new_xid, records, &[inode_key], None, now, bsz)?;
-    let inserts = runs.iter().map(|&(_, p, count)| (build_phys_ext_key(p), build_phys_ext_val(count, file_id, 1))).collect();
-    let (new_extref_paddr, old_extref_padrs, extref_node_delta) = rewrite_extref_tree(txn, rd_u64(vsb_raw, VSBI_EXTENTREF_TREE_OID), new_xid, inserts, &[], &[], bsz)?;
+    let mut remove_keys = vec![inode_key];
+    remove_keys.extend(extent_remove_keys);
+    let (new_omap_tree_paddr, node_delta) = rewrite_fstree(txn, vsb_raw, &omap_node, new_xid, records, &remove_keys, None, now, bsz)?;
+    let (new_extref_paddr, old_extref_padrs, extref_node_delta) = rewrite_extref_tree(txn, rd_u64(vsb_raw, VSBI_EXTENTREF_TREE_OID), new_xid, extref_inserts, &extref_remove_keys, &[], bsz)?;
+    for paddr in old_blocks_to_free { txn.free_block(paddr)?; }
     // --- COW the volume omap header (om_tree_oid -> rewritten b-tree). ---
     let new_vomap_paddr = txn.alloc_block()?;
     let mut new_vomap = omap_raw.to_vec();

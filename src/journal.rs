@@ -497,7 +497,7 @@ impl Journal {
         }
         self.set_state(State::Applying)?;
         // From here any error retains APPLYING and the complete undo log.
-        for op in &self.manifest.ops {
+        for (step, op) in self.manifest.ops.iter().enumerate() {
             match op {
                 Op::Write { target, blob } => {
                     dev.write(*target, &read_blob(&mut self.redo, blob)?)?;
@@ -505,6 +505,17 @@ impl Journal {
                 }
                 Op::Flush => dev.flush()?,
             }
+            // Test-only: model every persisted prefix without running recovery.
+            #[cfg(feature = "fault-injection")]
+            if std::env::var("SPARK_APFS_KILL_AFTER_APPLY_OP")
+                .ok()
+                .and_then(|s| s.parse::<usize>().ok())
+                == Some(step + 1)
+            {
+                unsafe { libc::kill(libc::getpid(), libc::SIGKILL); }
+            }
+            #[cfg(not(feature = "fault-injection"))]
+            let _ = step;
         }
         dev.flush()?;
         let mut last = BTreeMap::new();
