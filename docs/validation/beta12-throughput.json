@@ -1,0 +1,189 @@
+{
+  "method": "DGX internal ext4; 1GiB APFS images; ABBA beta11/beta12/beta12/beta11; 256MiB per file; write timer includes fsync and close; read timer includes streamed SHA; cache state uncontrolled; not physical USB or linux-apfs-rw comparison",
+  "results": [
+    {
+      "read_seconds": 0.29851782199693844,
+      "read_MB_s": 899.2275710853639,
+      "daemon_io_delta": {
+        "rchar": 3106421155,
+        "wchar": 1121625813,
+        "syscr": 97045,
+        "syscw": 29671,
+        "read_bytes": 252416000,
+        "write_bytes": 1123110912,
+        "cancelled_write_bytes": 0
+      },
+      "run": 0,
+      "label": "old",
+      "chunk": 10240,
+      "bytes": 268435456,
+      "seconds": 4.4964134189649485,
+      "MiB_s": 56.93426652456924,
+      "sha256": "486cc817b95d853d3c357ff283b204c0144bd255e73fe2deb1389493b257e3c0",
+      "image": "/home/zooh/Documents/LAPFS/worktrees/write-pipeline/evidence/throughput-final/throughput-t6yysk30/0-old/native.dmg",
+      "binary_sha256": "476d14b3fd89a59606ce1235d368aa4095f6a1581c8a5f90bb5671cc64c92985",
+      "write_MB_s": 59.699905455266716
+    },
+    {
+      "read_seconds": 0.8617592240334488,
+      "read_MB_s": 311.4970498877779,
+      "daemon_io_delta": {
+        "rchar": 3074673634,
+        "wchar": 1097029409,
+        "syscr": 71168,
+        "syscw": 5460,
+        "read_bytes": 269815808,
+        "write_bytes": 1100247040,
+        "cancelled_write_bytes": 0
+      },
+      "run": 0,
+      "label": "old",
+      "chunk": 1048576,
+      "bytes": 268435456,
+      "seconds": 8.582747249980457,
+      "MiB_s": 29.827279371483638,
+      "sha256": "486cc817b95d853d3c357ff283b204c0144bd255e73fe2deb1389493b257e3c0",
+      "image": "/home/zooh/Documents/LAPFS/worktrees/write-pipeline/evidence/throughput-final/throughput-t6yysk30/0-old/native.dmg",
+      "binary_sha256": "476d14b3fd89a59606ce1235d368aa4095f6a1581c8a5f90bb5671cc64c92985",
+      "write_MB_s": 31.276169294232826
+    },
+    {
+      "read_seconds": 0.8561547139543109,
+      "read_MB_s": 313.5361537171016,
+      "daemon_io_delta": {
+        "rchar": 3099030830,
+        "wchar": 1121620909,
+        "syscr": 95163,
+        "syscw": 29599,
+        "read_bytes": 270209024,
+        "write_bytes": 1128480768,
+        "cancelled_write_bytes": 0
+      },
+      "run": 1,
+      "label": "new",
+      "chunk": 10240,
+      "bytes": 268435456,
+      "seconds": 6.810756164020859,
+      "MiB_s": 37.5876031728121,
+      "sha256": "486cc817b95d853d3c357ff283b204c0144bd255e73fe2deb1389493b257e3c0",
+      "image": "/home/zooh/Documents/LAPFS/worktrees/write-pipeline/evidence/throughput-final/throughput-t6yysk30/1-new/native.dmg",
+      "binary_sha256": "89ad6da18aafcfe19d8975c5aabe0a15c3c10491e4f08c146f104dbb13e971b6",
+      "write_MB_s": 39.413458584534624
+    },
+    {
+      "read_seconds": 0.8132929989951663,
+      "read_MB_s": 330.05996157799876,
+      "daemon_io_delta": {
+        "rchar": 3074673570,
+        "wchar": 1097030322,
+        "syscr": 71167,
+        "syscw": 5529,
+        "read_bytes": 276533248,
+        "write_bytes": 1100267520,
+        "cancelled_write_bytes": 0
+      },
+      "run": 1,
+      "label": "new",
+      "chunk": 1048576,
+      "bytes": 268435456,
+      "seconds": 5.55876194301527,
+      "MiB_s": 46.05342028033251,
+      "sha256": "486cc817b95d853d3c357ff283b204c0144bd255e73fe2deb1389493b257e3c0",
+      "image": "/home/zooh/Documents/LAPFS/worktrees/write-pipeline/evidence/throughput-final/throughput-t6yysk30/1-new/native.dmg",
+      "binary_sha256": "89ad6da18aafcfe19d8975c5aabe0a15c3c10491e4f08c146f104dbb13e971b6",
+      "write_MB_s": 48.29051122386994
+    },
+    {
+      "read_seconds": 0.40002766594989225,
+      "read_MB_s": 671.0422274483996,
+      "daemon_io_delta": {
+        "rchar": 3099030822,
+        "wchar": 1121620796,
+        "syscr": 95163,
+        "syscw": 29601,
+        "read_bytes": 243847168,
+        "write_bytes": 1128034304,
+        "cancelled_write_bytes": 0
+      },
+      "run": 2,
+      "label": "new",
+      "chunk": 10240,
+      "bytes": 268435456,
+      "seconds": 5.5033748840214685,
+      "MiB_s": 46.51691105820756,
+      "sha256": "486cc817b95d853d3c357ff283b204c0144bd255e73fe2deb1389493b257e3c0",
+      "image": "/home/zooh/Documents/LAPFS/worktrees/write-pipeline/evidence/throughput-final/throughput-t6yysk30/2-new/native.dmg",
+      "binary_sha256": "89ad6da18aafcfe19d8975c5aabe0a15c3c10491e4f08c146f104dbb13e971b6",
+      "write_MB_s": 48.77651652977105
+    },
+    {
+      "read_seconds": 0.3157184799783863,
+      "read_MB_s": 850.2367552839376,
+      "daemon_io_delta": {
+        "rchar": 3074755556,
+        "wchar": 1097030389,
+        "syscr": 71188,
+        "syscw": 5540,
+        "read_bytes": 275070976,
+        "write_bytes": 1104486400,
+        "cancelled_write_bytes": 0
+      },
+      "run": 2,
+      "label": "new",
+      "chunk": 1048576,
+      "bytes": 268435456,
+      "seconds": 6.408953977981582,
+      "MiB_s": 39.944115822879404,
+      "sha256": "486cc817b95d853d3c357ff283b204c0144bd255e73fe2deb1389493b257e3c0",
+      "image": "/home/zooh/Documents/LAPFS/worktrees/write-pipeline/evidence/throughput-final/throughput-t6yysk30/2-new/native.dmg",
+      "binary_sha256": "89ad6da18aafcfe19d8975c5aabe0a15c3c10491e4f08c146f104dbb13e971b6",
+      "write_MB_s": 41.8844411930916
+    },
+    {
+      "read_seconds": 0.4833095850190148,
+      "read_MB_s": 555.4109918789195,
+      "daemon_io_delta": {
+        "rchar": 3103871603,
+        "wchar": 1121624171,
+        "syscr": 96395,
+        "syscw": 29632,
+        "read_bytes": 274931712,
+        "write_bytes": 1125593088,
+        "cancelled_write_bytes": 0
+      },
+      "run": 3,
+      "label": "old",
+      "chunk": 10240,
+      "bytes": 268435456,
+      "seconds": 7.413015628990252,
+      "MiB_s": 34.5338540767208,
+      "sha256": "486cc817b95d853d3c357ff283b204c0144bd255e73fe2deb1389493b257e3c0",
+      "image": "/home/zooh/Documents/LAPFS/worktrees/write-pipeline/evidence/throughput-final/throughput-t6yysk30/3-old/native.dmg",
+      "binary_sha256": "476d14b3fd89a59606ce1235d368aa4095f6a1581c8a5f90bb5671cc64c92985",
+      "write_MB_s": 36.21137057235159
+    },
+    {
+      "read_seconds": 0.6749628690304235,
+      "read_MB_s": 397.70403427614394,
+      "daemon_io_delta": {
+        "rchar": 3074673634,
+        "wchar": 1097030111,
+        "syscr": 71168,
+        "syscw": 5460,
+        "read_bytes": 269410304,
+        "write_bytes": 1100947456,
+        "cancelled_write_bytes": 0
+      },
+      "run": 3,
+      "label": "old",
+      "chunk": 1048576,
+      "bytes": 268435456,
+      "seconds": 9.069653958023991,
+      "MiB_s": 28.22599419832494,
+      "sha256": "486cc817b95d853d3c357ff283b204c0144bd255e73fe2deb1389493b257e3c0",
+      "image": "/home/zooh/Documents/LAPFS/worktrees/write-pipeline/evidence/throughput-final/throughput-t6yysk30/3-old/native.dmg",
+      "binary_sha256": "476d14b3fd89a59606ce1235d368aa4095f6a1581c8a5f90bb5671cc64c92985",
+      "write_MB_s": 29.597100092502775
+    }
+  ]
+}

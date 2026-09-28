@@ -806,8 +806,9 @@ impl<D: Device> Overlay<D> {
         ensure!(!self.manifest.undo.is_empty(), "Empty transaction");
         self.undo.flush()?;
         self.redo.flush()?;
-        durable_sync(self.undo.get_ref())?;
-        durable_sync(self.redo.get_ref())?;
+        // Independent logs may synchronize concurrently. Both completions are
+        // mandatory before manifest/PREPARED publication or any target write.
+        finish_both(|| durable_sync(self.undo.get_ref()), || durable_sync(self.redo.get_ref()))?;
         // BTreeMap order is independent from first-touch order. Check append
         // coverage without copying or rewriting the undo data.
         let mut entries: Vec<_> = self.manifest.undo.values().cloned().collect();
@@ -948,4 +949,36 @@ pub(crate) fn discard_building_owned(dir: &Path, allow_missing_state: bool) -> R
     }
     fs::remove_dir(dir)?;
     sync_dir(dir.parent().context("No journal parent")?)
+}
+
+
+fn finish_both(
+    left: impl FnOnce() -> Result<()> + Send,
+    right: impl FnOnce() -> Result<()>,
+) -> Result<()> {
+    std::thread::scope(|scope| {
+        let worker = std::thread::Builder::new().name("lapfs-undo-sync".into()).spawn_scoped(scope, left)?;
+        let right_result = right();
+        let left_result = worker.join().map_err(|_| anyhow::anyhow!("Undo synchronization worker panicked"));
+        left_result??;
+        right_result
+    })
+}
+
+#[cfg(test)]
+mod parallel_sync_tests {
+    use super::*;
+    use std::sync::{Barrier, atomic::{AtomicUsize, Ordering}};
+    #[test]
+    fn independent_syncs_overlap_and_both_finish_on_either_failure() {
+        for fail in [0,1,2] {
+            let gate=Barrier::new(2);let finished=AtomicUsize::new(0);
+            let result=finish_both(
+                || {gate.wait();finished.fetch_add(1,Ordering::SeqCst);ensure!(fail!=1,"left failure");Ok(())},
+                || {gate.wait();finished.fetch_add(1,Ordering::SeqCst);ensure!(fail!=2,"right failure");Ok(())},
+            );
+            assert_eq!(finished.load(Ordering::SeqCst),2);
+            assert_eq!(result.is_ok(),fail==0);
+        }
+    }
 }

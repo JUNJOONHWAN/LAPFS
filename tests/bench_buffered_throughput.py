@@ -1,7 +1,7 @@
 import os,sys,time,json,gzip,shutil,subprocess,hashlib,tempfile,argparse
 from pathlib import Path
 root=Path(__file__).resolve().parents[1]
-p=argparse.ArgumentParser();p.add_argument('--size-mib',type=int,default=16);p.add_argument('--old',required=True);p.add_argument('--binary',default='target/release/lapfs');p.add_argument('--output',default='evidence');args=p.parse_args()
+p=argparse.ArgumentParser();p.add_argument('--fixture',default=str(root/'fixtures/block-test.dmg.gz'));p.add_argument('--offset',type=int,default=20480);p.add_argument('--size-mib',type=int,default=16);p.add_argument('--old',required=True);p.add_argument('--binary',default='target/release/lapfs');p.add_argument('--output',default='evidence');args=p.parse_args()
 output=Path(args.output).resolve();output.mkdir(parents=True,exist_ok=True)
 work=Path(tempfile.mkdtemp(prefix='throughput-',dir=output))
 old=Path(args.old).resolve()
@@ -12,8 +12,8 @@ def proc_io(pid):
  return {k:int(v) for k,v in (line.split(":") for line in Path(f"/proc/{pid}/io").read_text().splitlines())}
 for run,(label,binary) in enumerate([('old',old),('new',new),('new',new),('old',old)]):
  d=work/f'{run}-{label}';d.mkdir(); mp=d/'mount';mp.mkdir();image=d/'native.dmg'
- with gzip.open(root/'fixtures/block-test.dmg.gz','rb') as a,image.open('wb') as b:shutil.copyfileobj(a,b)
- log=(d/'mount.log').open('wb');p=subprocess.Popen([str(binary),'mount-rw',str(image),'20480',str(mp),str(d/'session')],stdout=log,stderr=log)
+ with gzip.open(args.fixture,'rb') as a,image.open('wb') as b:shutil.copyfileobj(a,b)
+ log=(d/'mount.log').open('wb');p=subprocess.Popen([str(binary),'mount-rw',str(image),str(args.offset),str(mp),str(d/'session')],stdout=log,stderr=log)
  try:
   for i in range(300):
    if os.path.ismount(mp):break
@@ -27,8 +27,12 @@ for run,(label,binary) in enumerate([('old',old),('new',new),('new',new),('old',
     os.fsync(fd)
    finally:os.close(fd)
    elapsed=time.monotonic()-t; after=proc_io(p.pid)
-   assert hashlib.sha256(dest.read_bytes()).hexdigest()==h.hexdigest()
-   row={'daemon_io_delta':{k:after[k]-before[k] for k in before},'run':run,'label':label,'chunk':chunk,'bytes':size,'seconds':elapsed,'MiB_s':args.size_mib/elapsed,'sha256':h.hexdigest(),'image':str(image),'binary_sha256':hashlib.sha256(binary.read_bytes()).hexdigest()};rows.append(row);print(json.dumps(row),flush=True)
+   read_started=time.monotonic(); read_hash=hashlib.sha256(); read_bytes=0
+   with dest.open('rb',buffering=0) as f:
+    while block:=f.read(1048576):read_hash.update(block);read_bytes+=len(block)
+   read_seconds=time.monotonic()-read_started
+   assert read_bytes==size and read_hash.hexdigest()==h.hexdigest()
+   row={'read_seconds':read_seconds,'read_MB_s':read_bytes/1e6/read_seconds,'daemon_io_delta':{k:after[k]-before[k] for k in before},'run':run,'label':label,'chunk':chunk,'bytes':size,'seconds':elapsed,'MiB_s':args.size_mib/elapsed,'sha256':h.hexdigest(),'image':str(image),'binary_sha256':hashlib.sha256(binary.read_bytes()).hexdigest()};rows.append(row);print(json.dumps(row),flush=True)
  finally:
   if os.path.ismount(mp):subprocess.run(['fusermount3','-u',str(mp)],check=True)
   p.wait(timeout=60)

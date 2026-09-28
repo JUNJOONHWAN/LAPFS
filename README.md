@@ -1,6 +1,6 @@
-<p align="center"><img src="docs/assets/lapfs-banner.svg" alt="LAPFS beta.11 — Linux ARM64 APFS 읽기·쓰기, 데이터·할당표 CoW" width="100%"></p>
+<p align="center"><img src="docs/assets/lapfs-banner.svg" alt="LAPFS beta.12 — Linux ARM64 APFS 읽기·쓰기, 데이터·할당표 CoW" width="100%"></p>
 <p align="center">
-  <a href="https://github.com/JUNJOONHWAN/LAPFS/releases"><img alt="Beta" src="https://img.shields.io/badge/release-0.3.0--beta.11-f5b84b"></a>
+  <a href="https://github.com/JUNJOONHWAN/LAPFS/releases"><img alt="Beta" src="https://img.shields.io/badge/release-0.3.0--beta.12-f5b84b"></a>
   <img alt="Platform" src="https://img.shields.io/badge/target-DGX%20Spark%20%2F%20Linux%20ARM64-72d6c9">
   <a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/license-GPL--3.0--only-829bff"></a>
 </p>
@@ -18,7 +18,7 @@
 | 데이터 조건 | 별도 백업 필요 · 유일한 사본 사용 부적합 |
 | 미검증 | 물리 전원 차단 · USB 브리지 캐시 신뢰성 · 장기 실장치 부하 |
 
-[릴리스](https://github.com/JUNJOONHWAN/LAPFS/releases/tag/v0.3.0-beta.11) · [HTML 매뉴얼 다운로드](https://github.com/JUNJOONHWAN/LAPFS/releases/download/v0.3.0-beta.11/LAPFS-beta11-architecture.html) · [HTML 소스](docs/architecture.html) · [English overview](docs/OVERVIEW.md)
+[릴리스](https://github.com/JUNJOONHWAN/LAPFS/releases/tag/v0.3.0-beta.12) · [HTML 매뉴얼 다운로드](https://github.com/JUNJOONHWAN/LAPFS/releases/download/v0.3.0-beta.12/LAPFS-beta12-architecture.html) · [HTML 소스](docs/architecture.html) · [English overview](docs/OVERVIEW.md)
 
 [저장 위치](#저장-위치) · [중단 처리](#중단-처리) · [사양](#사양) · [설치·시험](#설치시험) · [지원 제한](#지원-제한) · [검증](#검증)
 
@@ -32,15 +32,16 @@
 
 - 파생 merged 파일 기록·동기화 제거
 - 순차 원본 블록 읽기 집계 · 복구 로그·CoW·flush 검사 유지
-- 실장치 쓰기 성능: beta.11 적용 후 확인 필요
-- [beta.11 변경 전후·시험·성능 제한](docs/WRITE_IO.md)
+- undo/redo 병렬 동기화 · 32MiB 두 묶음 입력 파이프라인
+- 실장치 쓰기 성능: beta.12 적용 후 확인 필요
+- [beta.12 변경 전후·시험·성능 제한](docs/WRITE_PIPELINE.md)
 
 ## 쓰기 정책
 
 | 항목 | 기본값 `--grouped-writes` | `--durable-writes` |
 |---|---|---|
-| 일반 write | RAM 입력 큐 · 경계에서 로그 저장 | 연속 로그 · 매 write 동기화 |
-| 영구 저장 | fsync · close · 정상 분리 · 32 MiB/작업 수 경계 | 각 write의 DGX 로그 · fsync/close의 APFS 반영 |
+| 일반 write | RAM 입력 큐 · 경계에서 비동기 저장 제출 | 연속 로그 · 매 write 동기화 |
+| 영구 저장 | fsync · close · 정상 분리 | 각 write의 DGX 로그 · fsync/close의 APFS 반영 |
 | 갑작스러운 분리 | 마지막 미동기화 입력 유실 가능 | DGX 로그 복구 필요 가능 |
 | APFS 구조 | 데이터·할당표 CoW · 체크포인트 순서 | 동일 |
 | 이전 세션 재개 | 저장된 정책 유지 · 정책 불일치 거부 | 동일 |
@@ -55,7 +56,7 @@
 
 | 위치 | 저장 내용 | 기준 |
 |---|---|---|
-| DGX RAM → 내부 ext4/XFS | 입력 큐 · undo/redo · 복구 상태 | RAM 입력 32 MiB · 배치 복구 상한 128 MiB |
+| DGX RAM → 내부 ext4/XFS | 입력 큐 · undo/redo · 복구 상태 | 논리 입력 32 MiB × 2 · 배치 복구 상한 128 MiB |
 | 외장 APFS | 파일 데이터 · catalog · extent · 할당표 · 체크포인트 | 변경 블록 CoW · 참조 블록 flush · 새 NX 공개 |
 | 별도 오류 로그 | 작업명 · errno · 오류 정보 | 현재 파일 + 보관 3개 · 약 8 MiB |
 
@@ -65,7 +66,8 @@
 ```mermaid
 flowchart LR
     IO["파일 I/O · FUSE"] --> Queue["DGX RAM → 입력 로그 · fsync 경계"]
-    Queue --> Journal["undo / redo"]
+    Queue --> Worker["32MiB 저장 중 + 32MiB 다음 입력"]
+    Worker --> Journal["undo / redo 병렬 sync · 양쪽 완료 확인"]
     Journal --> COW["APFS 데이터·할당표 CoW"]
     COW --> Flush["참조 블록 flush"]
     Flush --> NX["ring NX 기록 · flush"]
@@ -98,20 +100,20 @@ flowchart LR
 
 ## 사양
 
-| 항목 | beta.11 |
+| 항목 | beta.12 |
 |---|---|
 | 읽기 | 일반 파일 · 디렉터리 · 심볼릭 링크 · 4 GiB 초과 범위 읽기 |
 | 파일 쓰기 | 생성 · 복사 · 범위 수정 · append · 닫힌 파일 삭제 |
 | 디렉터리 | mkdir · 빈 폴더 rmdir |
 | 이름 변경 | 같은 폴더 내 파일 rename/replace · 닫힌 대상 |
 | 메타데이터 | chmod · atime/mtime · 심볼릭 링크 생성/삭제 |
-| 쓰기 큐 | 기본 데이터 상한 32 MiB |
+| 쓰기 큐 | 기본 논리 입력 32 MiB × 2 · 전체 RAM 상한 아님 |
 | 배치 복구 기록 | undo + redo 상한 128 MiB |
 | 내부 여유 공간 | 1 GiB 예비 공간 + 96 MiB 작업 여유 검사 |
 | 전체 파일·디스크 staging | 불필요 |
 | 총 RAM 상한 | 미인증 |
 | 오류 로그 | 2 MiB × 4개 · 약 8 MiB |
-| beta.11 USB 지속 처리량 | 실장치 교체 후 측정 필요 |
+| beta.12 USB 지속 처리량 | 실장치 교체 후 측정 필요 |
 | macOS 역할 | 독립 검사 · macOS FUSE 드라이버 미제공 |
 
 공간 수치: 계층별 제한 · 전체 사용량 보장 아님 · 실패 세션/복구 기록 자동 삭제 없음

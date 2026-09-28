@@ -1,5 +1,5 @@
-//! Buffered writable FUSE beta. The kernel never acknowledges volatile writeback;
-//! direct I/O requests are acknowledged only after Session's durable WAL publish.
+//! Buffered writable FUSE beta. Grouped writes use bounded volatile inputs;
+//! fsync/close drain the worker. Durable writes acknowledge only durable WAL.
 use crate::buffered::{Session, WritePolicy, GROUP_BYTES};
 use anyhow::{ensure, Context, Result};
 use fuser::{
@@ -67,7 +67,7 @@ fn errno(op: &str, e: anyhow::Error) -> i32 {
 }
 struct Host {
     shutdown_failed: Arc<AtomicBool>,
-    session: Session,
+    session: crate::pipeline::Pipeline,
     paths: crate::inode_paths::InodePaths,
     handles: HashMap<u64, (u64, i32)>,
     next: u64,
@@ -586,7 +586,7 @@ pub fn mount_with_policy(target: &Path, offset: u64, mountpoint: &Path, session_
     };
     let host = Host {
         shutdown_failed: shutdown_failed.clone(),
-        session,
+        session: crate::pipeline::Pipeline::new(session)?,
         paths: crate::inode_paths::InodePaths::new(),
         handles: HashMap::new(),
         next: 1,

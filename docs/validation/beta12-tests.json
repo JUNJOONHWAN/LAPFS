@@ -1,0 +1,166 @@
+{
+  "rust_passed": 308,
+  "binary_sha256": "89ad6da18aafcfe19d8975c5aabe0a15c3c10491e4f08c146f104dbb13e971b6",
+  "native_images": 46,
+  "physical_runtime": "beta10 active; beta12 activation and actual USB performance pending",
+  "fuse": {
+    "status": "passed",
+    "checks": [
+      "real_rw_fuse_mount",
+      "large_copy_bounded_queue",
+      "read_your_writes_across_handles",
+      "unaligned_random_overwrite",
+      "fsync_and_close",
+      "open_unlink_rejected",
+      "mkdir_unicode",
+      "truncate_and_unaligned_append",
+      "atomic_replace",
+      "unlink",
+      "rmdir_nonempty_guard",
+      "rmdir_nested_empty",
+      "ordinary_cp_command",
+      "unsupported_sparse_explicit_error",
+      "chmod_applied",
+      "mount_still_usable_after_rejection",
+      "original_104_files_preserved",
+      "symlink_read",
+      "sparse_read_above_4GiB",
+      "exclusive_raw_reader_denied",
+      "actual_fuse_sigkill_after_ack",
+      "pending_session_blocks_raw_read",
+      "recovery_preserves_acknowledged_writes",
+      "separate_operation_errno_logs",
+      "expected_lookup_misses_not_logged"
+    ],
+    "expected": {
+      "buffered.bin": {
+        "bytes": 12550013,
+        "sha256": "a5ae50c2741e3549e096fa66a7d3a22ecb14f74f7eca82b8da68e6f9a4a3e654"
+      },
+      "\uc790\ub8cc rw/\ud55c\uae00 space.txt": {
+        "bytes": 12,
+        "sha256": "cccdeb5753fb27b6d8b0308f4106eb4271373daea05b96d032aa58aeabdec08d"
+      },
+      "old.txt": {
+        "bytes": 23,
+        "sha256": "33b43c1b0a6f7d6607e292f170cc57c1c5a6bf0b67ec61003e25b1afdc767cd6"
+      },
+      "copy-command.bin": {
+        "bytes": 190000,
+        "sha256": "444bc2ad920c4e1921ee1a12ab79d6c3c764e2e1a4a399bd08c0037a1804ad73"
+      },
+      "crash-ack.bin": {
+        "bytes": 502007,
+        "sha256": "15ae5cb294534fd20634138a44c2a5642ec3263e1ca26bdbdd9201e825ec2ffb"
+      }
+    },
+    "copy_bytes": 12550013,
+    "copy_seconds": 0.459725235006772,
+    "spool_bytes_after_close": 618,
+    "committed_batches": 24,
+    "binary_sha256": "89ad6da18aafcfe19d8975c5aabe0a15c3c10491e4f08c146f104dbb13e971b6",
+    "physical_usb_writes": 0,
+    "image_sha256": "216df370c570eef751f23bfaff910c469950311f12e27bb0e848c388cd058d85"
+  },
+  "rsync": {
+    "status": "passed",
+    "binary_sha256": "89ad6da18aafcfe19d8975c5aabe0a15c3c10491e4f08c146f104dbb13e971b6",
+    "runs": [
+      {
+        "label": "initial",
+        "rc": 0,
+        "stdout": "created directory /home/zooh/Documents/LAPFS/worktrees/write-pipeline/evidence/lapfs-rsync-kmoqxh56/mount/syncset\ncd+++++++++ ./\n>f+++++++++ large.bin\ncL+++++++++ link -> payload.txt\n>f+++++++++ payload.txt\ncd+++++++++ nested/\n>f+++++++++ nested/other.bin\n",
+        "stderr": ""
+      },
+      {
+        "label": "repeat",
+        "rc": 0,
+        "stdout": "",
+        "stderr": ""
+      },
+      {
+        "label": "replace",
+        "rc": 0,
+        "stdout": ">f.s....... payload.txt\n",
+        "stderr": ""
+      },
+      {
+        "label": "link-change",
+        "rc": 0,
+        "stdout": ".d..t...... ./\ncLc.t...... link -> nested/other.bin\n",
+        "stderr": ""
+      },
+      {
+        "label": "delete",
+        "rc": 0,
+        "stdout": "*deleting   orphan-dir/child.txt\n*deleting   orphan-dir/\n*deleting   orphan.txt\n*deleting   orphan-link\n.d..t...... ./\n",
+        "stderr": ""
+      }
+    ],
+    "payload_sha256": "198153267082f552d192b9114a5cbc61fd3cb6965dd7e89fd091345da4966ab8",
+    "mtime_ns": 946684800987654321,
+    "mode": "0o640",
+    "link": "nested/other.bin",
+    "nested_sha256": "785b0751fc2c53dc14a4ce3d800e69ef9ce1009eb327ccf458afe09c242c26c9",
+    "large_sha256": "eb342089af193d0d9912b0435466f010628e7edd99e5831e1663c435f9ee2665",
+    "large_bytes": 12550013
+  },
+  "handoff": {
+    "clean": {
+      "status": "passed",
+      "image": "/home/zooh/Documents/LAPFS/worktrees/write-pipeline/evidence/lapfs-handoff-4lyy_sop/clean/native.dmg",
+      "image_sha256": "2b5f62210ab9447c3dfd06100ab1191752b3fc67e6e4d93caf6c0075196e186e",
+      "file_sha256": "7efda6f2333886c706938cce927009b091d1edb606d390f628ef378d7a1a6f95"
+    },
+    "clean-durable": {
+      "status": "passed",
+      "image": "/home/zooh/Documents/LAPFS/worktrees/write-pipeline/evidence/lapfs-handoff-4lyy_sop/clean-durable/native.dmg",
+      "image_sha256": "e1ab3ff99d16967fdf66577c90a97c1f9c06dab57a64f09b68ac8a64349fdd10",
+      "file_sha256": "7efda6f2333886c706938cce927009b091d1edb606d390f628ef378d7a1a6f95"
+    },
+    "clean-default": {
+      "status": "passed",
+      "image": "/home/zooh/Documents/LAPFS/worktrees/write-pipeline/evidence/lapfs-handoff-4lyy_sop/clean-default/native.dmg",
+      "image_sha256": "79b0ee672b1063fc6a2ef7acb3fd799b8fe00156ea30c23189ae6431a1008853",
+      "file_sha256": "7efda6f2333886c706938cce927009b091d1edb606d390f628ef378d7a1a6f95"
+    },
+    "killed": {
+      "status": "passed",
+      "image": "/home/zooh/Documents/LAPFS/worktrees/write-pipeline/evidence/lapfs-handoff-4lyy_sop/killed/native.dmg",
+      "image_sha256": "599e33b30d0a3d6c57fe2838937e8d8798a4eb7cae2a386852f2423412a21579",
+      "file_sha256": "7efda6f2333886c706938cce927009b091d1edb606d390f628ef378d7a1a6f95"
+    }
+  },
+  "sync_append": [
+    {
+      "name": "sync",
+      "image": "/home/zooh/Documents/LAPFS/worktrees/write-pipeline/evidence/pipeline-fuse-rety2ir1/sync/native.dmg",
+      "expected": {
+        "append.bin": {
+          "bytes": 1212157,
+          "sha256": "e2d0901d284e731e75d063b51d875f9b36c26ed3fb709df2cfc7993ccb7271f8"
+        },
+        "sync-ack.bin": {
+          "bytes": 251008,
+          "sha256": "216a2000396dd684c87845b35f90d3e0d17f05de26029622ab24ccc0601e2952"
+        }
+      },
+      "dgx_recovery_before_native": false
+    },
+    {
+      "name": "dsync",
+      "image": "/home/zooh/Documents/LAPFS/worktrees/write-pipeline/evidence/pipeline-fuse-rety2ir1/dsync/native.dmg",
+      "expected": {
+        "append.bin": {
+          "bytes": 1212157,
+          "sha256": "e2d0901d284e731e75d063b51d875f9b36c26ed3fb709df2cfc7993ccb7271f8"
+        },
+        "sync-ack.bin": {
+          "bytes": 251008,
+          "sha256": "216a2000396dd684c87845b35f90d3e0d17f05de26029622ab24ccc0601e2952"
+        }
+      },
+      "dgx_recovery_before_native": false
+    }
+  ]
+}

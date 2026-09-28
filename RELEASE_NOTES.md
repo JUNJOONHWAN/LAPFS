@@ -1,3 +1,14 @@
+# 0.3.0-beta.12
+
+- undo/redo 동기화 병렬 실행 · 양쪽 완료 전 APFS 변경 금지.
+- 기본 32MiB 두 묶음 입력 파이프라인 · 단일 저장 worker · fsync/close 오류 전파.
+- 조회로 인한 불필요한 배치 분할 방지 · pending read 합성·체크섬 검사.
+- Rust 308 · Linux FUSE/rsync/handoff · Mac 46개 이미지 fsck/SHA 통과.
+- 내부 이미지 1MiB write: beta.11 29.60–31.28 → beta.12 41.88–48.28MB/s. 작은 write 개선 미확인.
+- 실제 Corsair 성능·linux-apfs-rw 비교·물리 전원 차단 검증 미완료.
+- beta.11: 중간 개발 후보 · 별도 공개 배포 없음.
+- [변경 전후·성능·제한](docs/WRITE_PIPELINE.md).
+
 # 0.3.0-beta.11
 
 - 파생 merged 파일 제거 · 검증된 WAL 데이터 직접 전달.

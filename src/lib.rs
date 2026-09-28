@@ -18,3 +18,5 @@ pub mod buffered;
 pub mod mount_rw;
 
 pub mod error_log;
+
+pub mod pipeline;

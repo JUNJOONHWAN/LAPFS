@@ -1,0 +1,925 @@
+[
+  {
+    "name": "buffered-crash-durable-mount-stream-written",
+    "image": "buffered-crash-durable-mount-stream-written.dmg.gz",
+    "image_sha256": "9db503734dbe6c437f3ba6e7a3b43ed282ac32fe62978491f8d87ef25f1f4883",
+    "expected": {
+      "crash.txt": {
+        "bytes": 8197,
+        "sha256": "b2cab53dd5b50284acc297494bded9b33c0474d52ac34740d99857c7ab20508d"
+      }
+    },
+    "extra": {},
+    "native": {
+      "fsck": "clean",
+      "original_files": 104,
+      "changed_files": 1,
+      "sha256": "matched"
+    }
+  },
+  {
+    "name": "buffered-crash-durable-mount-stream-synced",
+    "image": "buffered-crash-durable-mount-stream-synced.dmg.gz",
+    "image_sha256": "b939cba7ee2d664c93b0edef3c3da70a31c3b5f4a48826d9a5d38fe08d859ed9",
+    "expected": {
+      "crash.txt": {
+        "bytes": 8197,
+        "sha256": "b2cab53dd5b50284acc297494bded9b33c0474d52ac34740d99857c7ab20508d"
+      }
+    },
+    "extra": {},
+    "native": {
+      "fsck": "clean",
+      "original_files": 104,
+      "changed_files": 1,
+      "sha256": "matched"
+    }
+  },
+  {
+    "name": "buffered-crash-durable-mount-stream-flushed",
+    "image": "buffered-crash-durable-mount-stream-flushed.dmg.gz",
+    "image_sha256": "6f5e66583a9913c5f1538370b21685869df206edd0228df0ad1adae5a26a5131",
+    "expected": {
+      "crash.txt": {
+        "bytes": 8197,
+        "sha256": "b2cab53dd5b50284acc297494bded9b33c0474d52ac34740d99857c7ab20508d"
+      }
+    },
+    "extra": {},
+    "native": {
+      "fsck": "clean",
+      "original_files": 104,
+      "changed_files": 1,
+      "sha256": "matched"
+    }
+  },
+  {
+    "name": "buffered-crash-durable-mount-stream-frozen",
+    "image": "buffered-crash-durable-mount-stream-frozen.dmg.gz",
+    "image_sha256": "d1a31745195fa10b2a2b9c4072cfba37b85837069c209567343ad1f62422dab7",
+    "expected": {
+      "crash.txt": {
+        "bytes": 8197,
+        "sha256": "b2cab53dd5b50284acc297494bded9b33c0474d52ac34740d99857c7ab20508d"
+      }
+    },
+    "extra": {},
+    "native": {
+      "fsck": "clean",
+      "original_files": 104,
+      "changed_files": 1,
+      "sha256": "matched"
+    }
+  },
+  {
+    "name": "buffered-crash-durable-mount-wal-published",
+    "image": "buffered-crash-durable-mount-wal-published.dmg.gz",
+    "image_sha256": "95ad424a609d8f1a29925b1c414d5f861a495519235c2f0b306933909f515ab4",
+    "expected": {
+      "crash.txt": {
+        "bytes": 8197,
+        "sha256": "b2cab53dd5b50284acc297494bded9b33c0474d52ac34740d99857c7ab20508d"
+      }
+    },
+    "extra": {},
+    "native": {
+      "fsck": "clean",
+      "original_files": 104,
+      "changed_files": 1,
+      "sha256": "matched"
+    }
+  },
+  {
+    "name": "buffered-crash-durable-prepare-dir-created",
+    "image": "buffered-crash-durable-prepare-dir-created.dmg.gz",
+    "image_sha256": "badbee102298206f58919916c4a7dc434c4e737369c6876b934e557d21425a76",
+    "expected": {
+      "crash.txt": {
+        "bytes": 8197,
+        "sha256": "b2cab53dd5b50284acc297494bded9b33c0474d52ac34740d99857c7ab20508d"
+      }
+    },
+    "extra": {},
+    "native": {
+      "fsck": "clean",
+      "original_files": 104,
+      "changed_files": 1,
+      "sha256": "matched"
+    }
+  },
+  {
+    "name": "buffered-crash-durable-state-Applying",
+    "image": "buffered-crash-durable-state-Applying.dmg.gz",
+    "image_sha256": "171fbcd97ee33172de90f3636c503aaf9e14a275f0bd3175aefd70c6a57b66f2",
+    "expected": {
+      "crash.txt": {
+        "bytes": 8197,
+        "sha256": "b2cab53dd5b50284acc297494bded9b33c0474d52ac34740d99857c7ab20508d"
+      }
+    },
+    "extra": {},
+    "native": {
+      "fsck": "clean",
+      "original_files": 104,
+      "changed_files": 1,
+      "sha256": "matched"
+    }
+  },
+  {
+    "name": "buffered-crash-durable-apply-write",
+    "image": "buffered-crash-durable-apply-write.dmg.gz",
+    "image_sha256": "ad2f8342546712227a544ba14839e37959d0f1e3165578bf4913db6b911ee106",
+    "expected": {
+      "crash.txt": {
+        "bytes": 8197,
+        "sha256": "b2cab53dd5b50284acc297494bded9b33c0474d52ac34740d99857c7ab20508d"
+      }
+    },
+    "extra": {},
+    "native": {
+      "fsck": "clean",
+      "original_files": 104,
+      "changed_files": 1,
+      "sha256": "matched"
+    }
+  },
+  {
+    "name": "buffered-crash-durable-state-Committed",
+    "image": "buffered-crash-durable-state-Committed.dmg.gz",
+    "image_sha256": "bb0339dd2dfefdedb2f4e899987bdf5ba8a4a959513ae871207080ee1181eadd",
+    "expected": {
+      "crash.txt": {
+        "bytes": 8197,
+        "sha256": "b2cab53dd5b50284acc297494bded9b33c0474d52ac34740d99857c7ab20508d"
+      }
+    },
+    "extra": {},
+    "native": {
+      "fsck": "clean",
+      "original_files": 104,
+      "changed_files": 1,
+      "sha256": "matched"
+    }
+  },
+  {
+    "name": "buffered-crash-durable-mount-queue-retired",
+    "image": "buffered-crash-durable-mount-queue-retired.dmg.gz",
+    "image_sha256": "b6f6e023f93c5e8461f012d0ef8e0fe14a07e9c65dbe30b2bcc7fd897180775f",
+    "expected": {
+      "crash.txt": {
+        "bytes": 8197,
+        "sha256": "b2cab53dd5b50284acc297494bded9b33c0474d52ac34740d99857c7ab20508d"
+      }
+    },
+    "extra": {},
+    "native": {
+      "fsck": "clean",
+      "original_files": 104,
+      "changed_files": 1,
+      "sha256": "matched"
+    }
+  },
+  {
+    "name": "buffered-crash-durable-mount-gc-entry",
+    "image": "buffered-crash-durable-mount-gc-entry.dmg.gz",
+    "image_sha256": "f025ef1e31a9427c4b08da3898c6b822e854acb35ccc260a5596615d37a475ba",
+    "expected": {
+      "crash.txt": {
+        "bytes": 8197,
+        "sha256": "b2cab53dd5b50284acc297494bded9b33c0474d52ac34740d99857c7ab20508d"
+      }
+    },
+    "extra": {},
+    "native": {
+      "fsck": "clean",
+      "original_files": 104,
+      "changed_files": 1,
+      "sha256": "matched"
+    }
+  },
+  {
+    "name": "buffered-crash-durable-mount-closed",
+    "image": "buffered-crash-durable-mount-closed.dmg.gz",
+    "image_sha256": "882ecfe205126a5a4f78f3fdf55dbc7a89795943656fe5363ed527b86f59c96d",
+    "expected": {
+      "crash.txt": {
+        "bytes": 8197,
+        "sha256": "b2cab53dd5b50284acc297494bded9b33c0474d52ac34740d99857c7ab20508d"
+      }
+    },
+    "extra": {},
+    "native": {
+      "fsck": "clean",
+      "original_files": 104,
+      "changed_files": 1,
+      "sha256": "matched"
+    }
+  },
+  {
+    "name": "buffered-crash-grouped-mount-stream-written",
+    "image": "buffered-crash-grouped-mount-stream-written.dmg.gz",
+    "image_sha256": "90708919b8da875c9c79fc82014302aa2b73e474b2cab18d8f74a821daf1923f",
+    "expected": {
+      "crash.txt": {
+        "bytes": 8197,
+        "sha256": "b2cab53dd5b50284acc297494bded9b33c0474d52ac34740d99857c7ab20508d"
+      }
+    },
+    "extra": {},
+    "native": {
+      "fsck": "clean",
+      "original_files": 104,
+      "changed_files": 1,
+      "sha256": "matched"
+    }
+  },
+  {
+    "name": "buffered-crash-grouped-mount-stream-flushed",
+    "image": "buffered-crash-grouped-mount-stream-flushed.dmg.gz",
+    "image_sha256": "effa3359bd1cac5cbeed6118e4fc3588705fca0bff5985ec10cb0c200923fe1d",
+    "expected": {
+      "crash.txt": {
+        "bytes": 8197,
+        "sha256": "b2cab53dd5b50284acc297494bded9b33c0474d52ac34740d99857c7ab20508d"
+      }
+    },
+    "extra": {},
+    "native": {
+      "fsck": "clean",
+      "original_files": 104,
+      "changed_files": 1,
+      "sha256": "matched"
+    }
+  },
+  {
+    "name": "buffered-crash-grouped-mount-stream-frozen",
+    "image": "buffered-crash-grouped-mount-stream-frozen.dmg.gz",
+    "image_sha256": "1e0c7c28ed6653a74947d427022d8ff6763544c5b6a8b34603cc475ee0a35436",
+    "expected": {
+      "crash.txt": {
+        "bytes": 8197,
+        "sha256": "b2cab53dd5b50284acc297494bded9b33c0474d52ac34740d99857c7ab20508d"
+      }
+    },
+    "extra": {},
+    "native": {
+      "fsck": "clean",
+      "original_files": 104,
+      "changed_files": 1,
+      "sha256": "matched"
+    }
+  },
+  {
+    "name": "buffered-crash-grouped-mount-wal-published",
+    "image": "buffered-crash-grouped-mount-wal-published.dmg.gz",
+    "image_sha256": "a06f733add54ba0a77f175c887e73cdd5d3c8dbc76981cd99b0bc54b2873c993",
+    "expected": {
+      "crash.txt": {
+        "bytes": 8197,
+        "sha256": "666c38332d78f3e8ab39db361c4ba2476698ec1553d7c8e26fd3caaa68f2aa7c"
+      }
+    },
+    "extra": {},
+    "native": {
+      "fsck": "clean",
+      "original_files": 104,
+      "changed_files": 1,
+      "sha256": "matched"
+    }
+  },
+  {
+    "name": "buffered-crash-grouped-prepare-dir-created",
+    "image": "buffered-crash-grouped-prepare-dir-created.dmg.gz",
+    "image_sha256": "64ca04ebc7d4bac499232d876ee5bea85b57411d1f725bdadb9bf55d11555b92",
+    "expected": {
+      "crash.txt": {
+        "bytes": 8197,
+        "sha256": "b2cab53dd5b50284acc297494bded9b33c0474d52ac34740d99857c7ab20508d"
+      }
+    },
+    "extra": {},
+    "native": {
+      "fsck": "clean",
+      "original_files": 104,
+      "changed_files": 1,
+      "sha256": "matched"
+    }
+  },
+  {
+    "name": "buffered-crash-grouped-state-Applying",
+    "image": "buffered-crash-grouped-state-Applying.dmg.gz",
+    "image_sha256": "fcfb4128f43cf3e2150275dd7fb6ab25a847f3a0fa1a6d3323f4494fe6a530a9",
+    "expected": {
+      "crash.txt": {
+        "bytes": 8197,
+        "sha256": "b2cab53dd5b50284acc297494bded9b33c0474d52ac34740d99857c7ab20508d"
+      }
+    },
+    "extra": {},
+    "native": {
+      "fsck": "clean",
+      "original_files": 104,
+      "changed_files": 1,
+      "sha256": "matched"
+    }
+  },
+  {
+    "name": "buffered-crash-grouped-apply-write",
+    "image": "buffered-crash-grouped-apply-write.dmg.gz",
+    "image_sha256": "4bace214a3d64f2ce13f24d09886a21d0f3a3691a04292965f47cfb032b9abbe",
+    "expected": {
+      "crash.txt": {
+        "bytes": 8197,
+        "sha256": "b2cab53dd5b50284acc297494bded9b33c0474d52ac34740d99857c7ab20508d"
+      }
+    },
+    "extra": {},
+    "native": {
+      "fsck": "clean",
+      "original_files": 104,
+      "changed_files": 1,
+      "sha256": "matched"
+    }
+  },
+  {
+    "name": "buffered-crash-grouped-state-Committed",
+    "image": "buffered-crash-grouped-state-Committed.dmg.gz",
+    "image_sha256": "97d3e5b50b544f5ca7e2d6ecae36e7e9f65f8ec171071dd4a2393ccd4743cfed",
+    "expected": {
+      "crash.txt": {
+        "bytes": 8197,
+        "sha256": "b2cab53dd5b50284acc297494bded9b33c0474d52ac34740d99857c7ab20508d"
+      }
+    },
+    "extra": {},
+    "native": {
+      "fsck": "clean",
+      "original_files": 104,
+      "changed_files": 1,
+      "sha256": "matched"
+    }
+  },
+  {
+    "name": "buffered-crash-grouped-mount-queue-retired",
+    "image": "buffered-crash-grouped-mount-queue-retired.dmg.gz",
+    "image_sha256": "0e64ac83f07c4e340e08f4dff6d43b88bdfe96100e0b237c2bfce7a90630fe52",
+    "expected": {
+      "crash.txt": {
+        "bytes": 8197,
+        "sha256": "b2cab53dd5b50284acc297494bded9b33c0474d52ac34740d99857c7ab20508d"
+      }
+    },
+    "extra": {},
+    "native": {
+      "fsck": "clean",
+      "original_files": 104,
+      "changed_files": 1,
+      "sha256": "matched"
+    }
+  },
+  {
+    "name": "buffered-crash-grouped-mount-gc-entry",
+    "image": "buffered-crash-grouped-mount-gc-entry.dmg.gz",
+    "image_sha256": "806343f60c8c621ec17422cf09f982ca7a47d035f2d22b4b4bd089af041159b2",
+    "expected": {
+      "crash.txt": {
+        "bytes": 8197,
+        "sha256": "b2cab53dd5b50284acc297494bded9b33c0474d52ac34740d99857c7ab20508d"
+      }
+    },
+    "extra": {},
+    "native": {
+      "fsck": "clean",
+      "original_files": 104,
+      "changed_files": 1,
+      "sha256": "matched"
+    }
+  },
+  {
+    "name": "buffered-crash-grouped-mount-closed",
+    "image": "buffered-crash-grouped-mount-closed.dmg.gz",
+    "image_sha256": "94cca507a9d0bf01a5220e0d856f5573c681c8f7ec5e28ac9c2c87caf45ea463",
+    "expected": {
+      "crash.txt": {
+        "bytes": 8197,
+        "sha256": "b2cab53dd5b50284acc297494bded9b33c0474d52ac34740d99857c7ab20508d"
+      }
+    },
+    "extra": {},
+    "native": {
+      "fsck": "clean",
+      "original_files": 104,
+      "changed_files": 1,
+      "sha256": "matched"
+    }
+  },
+  {
+    "name": "prefix-crash-prepare-dir-created",
+    "image": "prefix-crash-prepare-dir-created.dmg.gz",
+    "image_sha256": "81cf66b0106449e270ab02ff3b43665b6052f6876d63adab6e036541b44d86a9",
+    "expected": {
+      "crash.txt": {
+        "bytes": 8197,
+        "sha256": "99706a374f377482ae96bda2b7a9a33ff8d82ed4a4898de39ef9b64782e6ccaf"
+      }
+    },
+    "extra": {},
+    "native": {
+      "fsck": "clean",
+      "original_files": 104,
+      "changed_files": 1,
+      "sha256": "matched"
+    }
+  },
+  {
+    "name": "prefix-crash-state-Applying",
+    "image": "prefix-crash-state-Applying.dmg.gz",
+    "image_sha256": "f1a66872324f0910d27bcbf7c67cdad4dad2b97705e12cfa9aefe952093b6986",
+    "expected": {
+      "crash.txt": {
+        "bytes": 8197,
+        "sha256": "99706a374f377482ae96bda2b7a9a33ff8d82ed4a4898de39ef9b64782e6ccaf"
+      }
+    },
+    "extra": {},
+    "native": {
+      "fsck": "clean",
+      "original_files": 104,
+      "changed_files": 1,
+      "sha256": "matched"
+    }
+  },
+  {
+    "name": "prefix-crash-apply-write",
+    "image": "prefix-crash-apply-write.dmg.gz",
+    "image_sha256": "ead8faad9c5485504c9a1c7722cc10a19ad493209232e8256e8a12cbc9ecbe9a",
+    "expected": {
+      "crash.txt": {
+        "bytes": 8197,
+        "sha256": "99706a374f377482ae96bda2b7a9a33ff8d82ed4a4898de39ef9b64782e6ccaf"
+      }
+    },
+    "extra": {},
+    "native": {
+      "fsck": "clean",
+      "original_files": 104,
+      "changed_files": 1,
+      "sha256": "matched"
+    }
+  },
+  {
+    "name": "prefix-crash-state-Committed",
+    "image": "prefix-crash-state-Committed.dmg.gz",
+    "image_sha256": "d23960f15736cb5e4a85cd7293c522990da46a8474f90de74f89adb9963b1405",
+    "expected": {
+      "crash.txt": {
+        "bytes": 8197,
+        "sha256": "99706a374f377482ae96bda2b7a9a33ff8d82ed4a4898de39ef9b64782e6ccaf"
+      }
+    },
+    "extra": {},
+    "native": {
+      "fsck": "clean",
+      "original_files": 104,
+      "changed_files": 1,
+      "sha256": "matched"
+    }
+  },
+  {
+    "name": "prefix-crash-mount-queue-retired",
+    "image": "prefix-crash-mount-queue-retired.dmg.gz",
+    "image_sha256": "86f58d8847d8ff298fe02905fcceba992ac2a76972e238b950d65c616a5ffe5e",
+    "expected": {
+      "crash.txt": {
+        "bytes": 8197,
+        "sha256": "99706a374f377482ae96bda2b7a9a33ff8d82ed4a4898de39ef9b64782e6ccaf"
+      }
+    },
+    "extra": {},
+    "native": {
+      "fsck": "clean",
+      "original_files": 104,
+      "changed_files": 1,
+      "sha256": "matched"
+    }
+  },
+  {
+    "name": "prefix-crash-mount-gc-entry",
+    "image": "prefix-crash-mount-gc-entry.dmg.gz",
+    "image_sha256": "e619ddd4e505b44d06e031568f678bde4ab73915a71dc27b90998c53ce5f8f67",
+    "expected": {
+      "crash.txt": {
+        "bytes": 8197,
+        "sha256": "99706a374f377482ae96bda2b7a9a33ff8d82ed4a4898de39ef9b64782e6ccaf"
+      }
+    },
+    "extra": {},
+    "native": {
+      "fsck": "clean",
+      "original_files": 104,
+      "changed_files": 1,
+      "sha256": "matched"
+    }
+  },
+  {
+    "name": "prefix-crash-mount-closed",
+    "image": "prefix-crash-mount-closed.dmg.gz",
+    "image_sha256": "ab5be51bb928be5a6aeaa0cfdaeb9f8f459f51288518d0dea0a584309c9eac5b",
+    "expected": {
+      "crash.txt": {
+        "bytes": 8197,
+        "sha256": "99706a374f377482ae96bda2b7a9a33ff8d82ed4a4898de39ef9b64782e6ccaf"
+      }
+    },
+    "extra": {},
+    "native": {
+      "fsck": "clean",
+      "original_files": 104,
+      "changed_files": 1,
+      "sha256": "matched"
+    }
+  },
+  {
+    "name": "pipeline-crash-pipeline-input-accepted",
+    "image": "pipeline-crash-pipeline-input-accepted.dmg.gz",
+    "image_sha256": "4ff39cfa2a322dce17c2acc85a67cef0a99328b0d29d915997bb82c27592bb97",
+    "expected": {
+      "crash.txt": {
+        "bytes": 4096,
+        "sha256": "c9ac7b0624824f844f6c7f3d50fab9741a8914e878467e8daaedca143a34d90b"
+      }
+    },
+    "extra": {},
+    "native": {
+      "fsck": "clean",
+      "original_files": 104,
+      "changed_files": 1,
+      "sha256": "matched"
+    }
+  },
+  {
+    "name": "pipeline-crash-pipeline-batch-start",
+    "image": "pipeline-crash-pipeline-batch-start.dmg.gz",
+    "image_sha256": "4ff39cfa2a322dce17c2acc85a67cef0a99328b0d29d915997bb82c27592bb97",
+    "expected": {
+      "crash.txt": {
+        "bytes": 4096,
+        "sha256": "c9ac7b0624824f844f6c7f3d50fab9741a8914e878467e8daaedca143a34d90b"
+      }
+    },
+    "extra": {},
+    "native": {
+      "fsck": "clean",
+      "original_files": 104,
+      "changed_files": 1,
+      "sha256": "matched"
+    }
+  },
+  {
+    "name": "pipeline-crash-mount-stream-frozen",
+    "image": "pipeline-crash-mount-stream-frozen.dmg.gz",
+    "image_sha256": "28de5a62295d6ede25b6366348a945ec1b58b838e98ad737f6b31ad4118a181f",
+    "expected": {
+      "crash.txt": {
+        "bytes": 4194304,
+        "sha256": "4656153f1921ea9f09001428d189084d3db94509dd71990a8a971cfa02998087"
+      }
+    },
+    "extra": {},
+    "native": {
+      "fsck": "clean",
+      "original_files": 104,
+      "changed_files": 1,
+      "sha256": "matched"
+    }
+  },
+  {
+    "name": "pipeline-crash-state-Applying",
+    "image": "pipeline-crash-state-Applying.dmg.gz",
+    "image_sha256": "c8135a34fe0fcdeac2995e026f6f9007437439967ad20828583d92e9630b98a3",
+    "expected": {
+      "crash.txt": {
+        "bytes": 4194304,
+        "sha256": "4656153f1921ea9f09001428d189084d3db94509dd71990a8a971cfa02998087"
+      }
+    },
+    "extra": {},
+    "native": {
+      "fsck": "clean",
+      "original_files": 104,
+      "changed_files": 1,
+      "sha256": "matched"
+    }
+  },
+  {
+    "name": "pipeline-crash-apply-write",
+    "image": "pipeline-crash-apply-write.dmg.gz",
+    "image_sha256": "32d0fcd9bc2a9b8777b9d1c96e9a7b2120a1200ca1576977505bed743969e316",
+    "expected": {
+      "crash.txt": {
+        "bytes": 4194304,
+        "sha256": "4656153f1921ea9f09001428d189084d3db94509dd71990a8a971cfa02998087"
+      }
+    },
+    "extra": {},
+    "native": {
+      "fsck": "clean",
+      "original_files": 104,
+      "changed_files": 1,
+      "sha256": "matched"
+    }
+  },
+  {
+    "name": "pipeline-crash-state-Committed",
+    "image": "pipeline-crash-state-Committed.dmg.gz",
+    "image_sha256": "a1f40954595f7e057a8937a4a07f95bca6b32f9faafd31d1e6faa1d5e67c7ea4",
+    "expected": {
+      "crash.txt": {
+        "bytes": 4194304,
+        "sha256": "4656153f1921ea9f09001428d189084d3db94509dd71990a8a971cfa02998087"
+      }
+    },
+    "extra": {},
+    "native": {
+      "fsck": "clean",
+      "original_files": 104,
+      "changed_files": 1,
+      "sha256": "matched"
+    }
+  },
+  {
+    "name": "pipeline-crash-pipeline-batch-complete",
+    "image": "pipeline-crash-pipeline-batch-complete.dmg.gz",
+    "image_sha256": "e4c54078173dd60c8ce2441464b4e7d7660d5d61d605f0b3c667114762bb3c0a",
+    "expected": {
+      "crash.txt": {
+        "bytes": 4194304,
+        "sha256": "4656153f1921ea9f09001428d189084d3db94509dd71990a8a971cfa02998087"
+      }
+    },
+    "extra": {},
+    "native": {
+      "fsck": "clean",
+      "original_files": 104,
+      "changed_files": 1,
+      "sha256": "matched"
+    }
+  },
+  {
+    "name": "pipeline-overlap",
+    "image": "pipeline-overlap.dmg.gz",
+    "image_sha256": "4c75f1b3099ea132660460aba49cca4d995e9b41df47193c073cef721cb42e6d",
+    "expected": {
+      "other.bin": {
+        "bytes": 10,
+        "sha256": "6ae74cdd206208ac61982d0d9b8b3a72720a5c092b077bf71e08b46e482f14cf"
+      },
+      "pipeline-renamed.bin": {
+        "bytes": 5242880,
+        "sha256": "2f5453b8d30cac5ca794066958ec7b8cb329ee18362816607c5ab2a50b7435ef"
+      }
+    },
+    "extra": {},
+    "native": {
+      "fsck": "clean",
+      "original_files": 104,
+      "changed_files": 2,
+      "sha256": "matched"
+    }
+  },
+  {
+    "name": "fuse",
+    "image": "fuse.dmg.gz",
+    "image_sha256": "216df370c570eef751f23bfaff910c469950311f12e27bb0e848c388cd058d85",
+    "expected": {
+      "buffered.bin": {
+        "bytes": 12550013,
+        "sha256": "a5ae50c2741e3549e096fa66a7d3a22ecb14f74f7eca82b8da68e6f9a4a3e654"
+      },
+      "\uc790\ub8cc rw/\ud55c\uae00 space.txt": {
+        "bytes": 12,
+        "sha256": "cccdeb5753fb27b6d8b0308f4106eb4271373daea05b96d032aa58aeabdec08d"
+      },
+      "old.txt": {
+        "bytes": 23,
+        "sha256": "33b43c1b0a6f7d6607e292f170cc57c1c5a6bf0b67ec61003e25b1afdc767cd6"
+      },
+      "copy-command.bin": {
+        "bytes": 190000,
+        "sha256": "444bc2ad920c4e1921ee1a12ab79d6c3c764e2e1a4a399bd08c0037a1804ad73"
+      },
+      "crash-ack.bin": {
+        "bytes": 502007,
+        "sha256": "15ae5cb294534fd20634138a44c2a5642ec3263e1ca26bdbdd9201e825ec2ffb"
+      }
+    },
+    "extra": {},
+    "native": {
+      "fsck": "clean",
+      "original_files": 104,
+      "changed_files": 5,
+      "sha256": "matched"
+    }
+  },
+  {
+    "name": "rsync",
+    "image": "rsync.dmg.gz",
+    "image_sha256": "472ba62f4ce4cb41f25ab8ceef1fb285f69968b664eded9306a4fa286478799b",
+    "expected": {
+      "syncset/payload.txt": {
+        "sha256": "198153267082f552d192b9114a5cbc61fd3cb6965dd7e89fd091345da4966ab8"
+      },
+      "syncset/nested/other.bin": {
+        "sha256": "785b0751fc2c53dc14a4ce3d800e69ef9ce1009eb327ccf458afe09c242c26c9"
+      },
+      "syncset/large.bin": {
+        "sha256": "eb342089af193d0d9912b0435466f010628e7edd99e5831e1663c435f9ee2665"
+      }
+    },
+    "extra": {
+      "status": "passed",
+      "binary_sha256": "89ad6da18aafcfe19d8975c5aabe0a15c3c10491e4f08c146f104dbb13e971b6",
+      "runs": [
+        {
+          "label": "initial",
+          "rc": 0,
+          "stdout": "created directory /home/zooh/Documents/LAPFS/worktrees/write-pipeline/evidence/lapfs-rsync-kmoqxh56/mount/syncset\ncd+++++++++ ./\n>f+++++++++ large.bin\ncL+++++++++ link -> payload.txt\n>f+++++++++ payload.txt\ncd+++++++++ nested/\n>f+++++++++ nested/other.bin\n",
+          "stderr": ""
+        },
+        {
+          "label": "repeat",
+          "rc": 0,
+          "stdout": "",
+          "stderr": ""
+        },
+        {
+          "label": "replace",
+          "rc": 0,
+          "stdout": ">f.s....... payload.txt\n",
+          "stderr": ""
+        },
+        {
+          "label": "link-change",
+          "rc": 0,
+          "stdout": ".d..t...... ./\ncLc.t...... link -> nested/other.bin\n",
+          "stderr": ""
+        },
+        {
+          "label": "delete",
+          "rc": 0,
+          "stdout": "*deleting   orphan-dir/child.txt\n*deleting   orphan-dir/\n*deleting   orphan.txt\n*deleting   orphan-link\n.d..t...... ./\n",
+          "stderr": ""
+        }
+      ],
+      "payload_sha256": "198153267082f552d192b9114a5cbc61fd3cb6965dd7e89fd091345da4966ab8",
+      "mtime_ns": 946684800987654321,
+      "mode": "0o640",
+      "link": "nested/other.bin",
+      "nested_sha256": "785b0751fc2c53dc14a4ce3d800e69ef9ce1009eb327ccf458afe09c242c26c9",
+      "large_sha256": "eb342089af193d0d9912b0435466f010628e7edd99e5831e1663c435f9ee2665",
+      "large_bytes": 12550013
+    },
+    "native": {
+      "fsck": "clean",
+      "original_files": 104,
+      "changed_files": 3,
+      "sha256": "matched"
+    }
+  },
+  {
+    "name": "sync",
+    "image": "sync.dmg.gz",
+    "image_sha256": "549c33372250fecba0e1a8c221123e63ceb32d935325cd0633d42c764b008122",
+    "expected": {
+      "append.bin": {
+        "bytes": 1212157,
+        "sha256": "e2d0901d284e731e75d063b51d875f9b36c26ed3fb709df2cfc7993ccb7271f8"
+      },
+      "sync-ack.bin": {
+        "bytes": 251008,
+        "sha256": "216a2000396dd684c87845b35f90d3e0d17f05de26029622ab24ccc0601e2952"
+      }
+    },
+    "extra": {
+      "dgx_recovery_before_native": false
+    },
+    "native": {
+      "fsck": "clean",
+      "original_files": 104,
+      "changed_files": 2,
+      "sha256": "matched"
+    }
+  },
+  {
+    "name": "dsync",
+    "image": "dsync.dmg.gz",
+    "image_sha256": "9b2182747d3d02eec15492e96ac7e92cc35ba6fbcb34ec74cd7b45d61eb14ab7",
+    "expected": {
+      "append.bin": {
+        "bytes": 1212157,
+        "sha256": "e2d0901d284e731e75d063b51d875f9b36c26ed3fb709df2cfc7993ccb7271f8"
+      },
+      "sync-ack.bin": {
+        "bytes": 251008,
+        "sha256": "216a2000396dd684c87845b35f90d3e0d17f05de26029622ab24ccc0601e2952"
+      }
+    },
+    "extra": {
+      "dgx_recovery_before_native": false
+    },
+    "native": {
+      "fsck": "clean",
+      "original_files": 104,
+      "changed_files": 2,
+      "sha256": "matched"
+    }
+  },
+  {
+    "name": "0-old",
+    "image": "0-old.dmg.gz",
+    "image_sha256": "2bb4a6e50dd2de3516cca179c0e07ead0dcca3abb53873aa49a617496dabeec4",
+    "expected": {
+      "bench-10240.bin": {
+        "bytes": 268435456,
+        "sha256": "486cc817b95d853d3c357ff283b204c0144bd255e73fe2deb1389493b257e3c0"
+      },
+      "bench-1048576.bin": {
+        "bytes": 268435456,
+        "sha256": "486cc817b95d853d3c357ff283b204c0144bd255e73fe2deb1389493b257e3c0"
+      }
+    },
+    "extra": {},
+    "native": {
+      "fsck": "clean",
+      "original_files": 0,
+      "changed_files": 2,
+      "sha256": "matched"
+    }
+  },
+  {
+    "name": "1-new",
+    "image": "1-new.dmg.gz",
+    "image_sha256": "6b11c032ccf123112c2b25cd985accd72c56c69a1f110c333c5f3b2e29240213",
+    "expected": {
+      "bench-10240.bin": {
+        "bytes": 268435456,
+        "sha256": "486cc817b95d853d3c357ff283b204c0144bd255e73fe2deb1389493b257e3c0"
+      },
+      "bench-1048576.bin": {
+        "bytes": 268435456,
+        "sha256": "486cc817b95d853d3c357ff283b204c0144bd255e73fe2deb1389493b257e3c0"
+      }
+    },
+    "extra": {},
+    "native": {
+      "fsck": "clean",
+      "original_files": 0,
+      "changed_files": 2,
+      "sha256": "matched"
+    }
+  },
+  {
+    "name": "2-new",
+    "image": "2-new.dmg.gz",
+    "image_sha256": "55762961605a24facc1944cdddd4fc6c7b000bf82700d853070721f9d987a3dc",
+    "expected": {
+      "bench-10240.bin": {
+        "bytes": 268435456,
+        "sha256": "486cc817b95d853d3c357ff283b204c0144bd255e73fe2deb1389493b257e3c0"
+      },
+      "bench-1048576.bin": {
+        "bytes": 268435456,
+        "sha256": "486cc817b95d853d3c357ff283b204c0144bd255e73fe2deb1389493b257e3c0"
+      }
+    },
+    "extra": {},
+    "native": {
+      "fsck": "clean",
+      "original_files": 0,
+      "changed_files": 2,
+      "sha256": "matched"
+    }
+  },
+  {
+    "name": "3-old",
+    "image": "3-old.dmg.gz",
+    "image_sha256": "3c6d213013dc24b01b98db1a5cd757b8b3fe3dd4e1b2e6ab532096dcdccdb2fc",
+    "expected": {
+      "bench-10240.bin": {
+        "bytes": 268435456,
+        "sha256": "486cc817b95d853d3c357ff283b204c0144bd255e73fe2deb1389493b257e3c0"
+      },
+      "bench-1048576.bin": {
+        "bytes": 268435456,
+        "sha256": "486cc817b95d853d3c357ff283b204c0144bd255e73fe2deb1389493b257e3c0"
+      }
+    },
+    "extra": {},
+    "native": {
+      "fsck": "clean",
+      "original_files": 0,
+      "changed_files": 2,
+      "sha256": "matched"
+    }
+  }
+]

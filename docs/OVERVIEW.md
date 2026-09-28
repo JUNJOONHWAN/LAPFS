@@ -3,7 +3,7 @@
 LAPFS is an experimental Linux APFS reader and buffered writable FUSE host for DGX Spark / GB10. Its public name and CLI are LAPFS/lapfs; the internal Rust crate name remains `spark-apfs-safe` for source compatibility, and is not a safety certification.
 
 - Beta.9 default: checksummed grouped writes buffered in RAM, then persisted to the local input log at synchronization boundaries. A normal write acknowledgement does not promise power-loss durability; fsync, close and normal unmount persist and apply the group. `--durable-writes` retains per-write local durability. Unflushed grouped input may be lost after sudden removal or host power failure.
-- Default 32 MiB grouping; fsync/close/metadata changes/unmount drain the queue.
+- Beta.12: two bounded 32 MiB logical input batches (not a total memory bound), one storage worker, and overlapping undo/redo synchronization. Both log syncs must finish before APFS mutation. Default 32 MiB grouping; fsync/close/metadata changes/unmount drain the queue.
 - A bounded external undo/redo journal protects supported APFS mutations and enables readback verification and recovery.
 - Full-device and full-file staging are not required. Catalog memory and long-term performance remain unqualified.
 - Error diagnostics live separately from recovery data and rotate at approximately 8 MiB total.
@@ -15,3 +15,5 @@ The DGX source repository is canonical. Linux ARM64 release assets are built and
 Sequential I/O grouping, ARM SHA-256 acceleration and bounded RAM input are documented in [beta.9 throughput](SEQUENTIAL_IO.md). Local image results are not USB throughput guarantees.
 
 Beta.10 adds a bounded 8MiB committed-read window, invalidated by writes, flushes and recovery. Pending data overlays each reply. See [read performance](READ_AHEAD.md).
+
+See [beta.12 pipeline](WRITE_PIPELINE.md) for implementation, failure checks and local-image benchmarks. Physical USB throughput and comparative performance against linux-apfs-rw remain unverified.

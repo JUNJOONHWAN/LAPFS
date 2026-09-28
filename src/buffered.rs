@@ -1170,6 +1170,7 @@ impl Session {
         ))?;
         Ok((len / 4096, txn.sm.free_count.saturating_sub(pending)))
     }
+    pub fn group_bytes(&self) -> u64 { self.record.group_bytes }
     pub fn write_policy(&self) -> WritePolicy { self.record.write_policy }
     pub fn is_closed(&self) -> bool {
         self.record.closed
