@@ -1,6 +1,6 @@
-<p align="center"><img src="docs/assets/lapfs-banner.svg" alt="LAPFS beta.10 — Linux ARM64 APFS 읽기·쓰기, 데이터·할당표 CoW" width="100%"></p>
+<p align="center"><img src="docs/assets/lapfs-banner.svg" alt="LAPFS beta.11 — Linux ARM64 APFS 읽기·쓰기, 데이터·할당표 CoW" width="100%"></p>
 <p align="center">
-  <a href="https://github.com/JUNJOONHWAN/LAPFS/releases"><img alt="Beta" src="https://img.shields.io/badge/release-0.3.0--beta.10-f5b84b"></a>
+  <a href="https://github.com/JUNJOONHWAN/LAPFS/releases"><img alt="Beta" src="https://img.shields.io/badge/release-0.3.0--beta.11-f5b84b"></a>
   <img alt="Platform" src="https://img.shields.io/badge/target-DGX%20Spark%20%2F%20Linux%20ARM64-72d6c9">
   <a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/license-GPL--3.0--only-829bff"></a>
 </p>
@@ -18,7 +18,7 @@
 | 데이터 조건 | 별도 백업 필요 · 유일한 사본 사용 부적합 |
 | 미검증 | 물리 전원 차단 · USB 브리지 캐시 신뢰성 · 장기 실장치 부하 |
 
-[릴리스](https://github.com/JUNJOONHWAN/LAPFS/releases/tag/v0.3.0-beta.10) · [HTML 매뉴얼 다운로드](https://github.com/JUNJOONHWAN/LAPFS/releases/download/v0.3.0-beta.10/LAPFS-beta10-architecture.html) · [HTML 소스](docs/architecture.html) · [English overview](docs/OVERVIEW.md)
+[릴리스](https://github.com/JUNJOONHWAN/LAPFS/releases/tag/v0.3.0-beta.11) · [HTML 매뉴얼 다운로드](https://github.com/JUNJOONHWAN/LAPFS/releases/download/v0.3.0-beta.11/LAPFS-beta11-architecture.html) · [HTML 소스](docs/architecture.html) · [English overview](docs/OVERVIEW.md)
 
 [저장 위치](#저장-위치) · [중단 처리](#중단-처리) · [사양](#사양) · [설치·시험](#설치시험) · [지원 제한](#지원-제한) · [검증](#검증)
 
@@ -27,6 +27,13 @@
 - 최대 8MiB RAM 선행 읽기 · 파일 1개 구간 캐시
 - 쓰기·메타데이터 변경·복구 시 캐시 무효화
 - [beta.10 읽기 성능·변경 전후 보고서](docs/READ_AHEAD.md)
+
+## 쓰기 I/O
+
+- 파생 merged 파일 기록·동기화 제거
+- 순차 원본 블록 읽기 집계 · 복구 로그·CoW·flush 검사 유지
+- 실장치 쓰기 성능: beta.11 적용 후 확인 필요
+- [beta.11 변경 전후·시험·성능 제한](docs/WRITE_IO.md)
 
 ## 쓰기 정책
 
@@ -91,7 +98,7 @@ flowchart LR
 
 ## 사양
 
-| 항목 | beta.10 |
+| 항목 | beta.11 |
 |---|---|
 | 읽기 | 일반 파일 · 디렉터리 · 심볼릭 링크 · 4 GiB 초과 범위 읽기 |
 | 파일 쓰기 | 생성 · 복사 · 범위 수정 · append · 닫힌 파일 삭제 |
@@ -104,7 +111,7 @@ flowchart LR
 | 전체 파일·디스크 staging | 불필요 |
 | 총 RAM 상한 | 미인증 |
 | 오류 로그 | 2 MiB × 4개 · 약 8 MiB |
-| beta.10 USB 지속 처리량 | 실장치 교체 후 측정 필요 |
+| beta.11 USB 지속 처리량 | 실장치 교체 후 측정 필요 |
 | macOS 역할 | 독립 검사 · macOS FUSE 드라이버 미제공 |
 
 공간 수치: 계층별 제한 · 전체 사용량 보장 아님 · 실패 세션/복구 기록 자동 삭제 없음

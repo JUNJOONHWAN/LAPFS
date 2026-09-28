@@ -8,6 +8,8 @@ old=Path(args.old).resolve()
 new=Path(args.binary).resolve()
 shutil.copy2(new,work/'new-lapfs');new=work/'new-lapfs'
 rows=[]
+def proc_io(pid):
+ return {k:int(v) for k,v in (line.split(":") for line in Path(f"/proc/{pid}/io").read_text().splitlines())}
 for run,(label,binary) in enumerate([('old',old),('new',new),('new',new),('old',old)]):
  d=work/f'{run}-{label}';d.mkdir(); mp=d/'mount';mp.mkdir();image=d/'native.dmg'
  with gzip.open(root/'fixtures/block-test.dmg.gz','rb') as a,image.open('wb') as b:shutil.copyfileobj(a,b)
@@ -18,15 +20,15 @@ for run,(label,binary) in enumerate([('old',old),('new',new),('new',new),('old',
    assert p.poll() is None,(d/'mount.log').read_text();time.sleep(.05)
   assert os.path.ismount(mp)
   for chunk in [10240,1048576]:
-   data=bytes(range(256))*(chunk//256); size=args.size_mib*1048576;dest=mp/f'bench-{chunk}.bin';h=hashlib.sha256(); t=time.monotonic();fd=os.open(dest,os.O_WRONLY|os.O_CREAT,0o600)
+   data=bytes(range(256))*(chunk//256); size=args.size_mib*1048576;dest=mp/f'bench-{chunk}.bin';h=hashlib.sha256(); before=proc_io(p.pid); t=time.monotonic();fd=os.open(dest,os.O_WRONLY|os.O_CREAT,0o600)
    try:
     for off in range(0,size,chunk):
      b=data[:min(chunk,size-off)];assert os.write(fd,b)==len(b);h.update(b)
     os.fsync(fd)
    finally:os.close(fd)
-   elapsed=time.monotonic()-t
+   elapsed=time.monotonic()-t; after=proc_io(p.pid)
    assert hashlib.sha256(dest.read_bytes()).hexdigest()==h.hexdigest()
-   row={'run':run,'label':label,'chunk':chunk,'bytes':size,'seconds':elapsed,'MiB_s':args.size_mib/elapsed,'sha256':h.hexdigest(),'image':str(image),'binary_sha256':hashlib.sha256(binary.read_bytes()).hexdigest()};rows.append(row);print(json.dumps(row),flush=True)
+   row={'daemon_io_delta':{k:after[k]-before[k] for k in before},'run':run,'label':label,'chunk':chunk,'bytes':size,'seconds':elapsed,'MiB_s':args.size_mib/elapsed,'sha256':h.hexdigest(),'image':str(image),'binary_sha256':hashlib.sha256(binary.read_bytes()).hexdigest()};rows.append(row);print(json.dumps(row),flush=True)
  finally:
   if os.path.ismount(mp):subprocess.run(['fusermount3','-u',str(mp)],check=True)
   p.wait(timeout=60)

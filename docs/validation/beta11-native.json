@@ -1,0 +1,641 @@
+[
+  {
+    "name": "prefix-crash-MHYZJ7-prepare-dir-created",
+    "image": "prefix-crash-MHYZJ7-prepare-dir-created.dmg.gz",
+    "image_sha256": "d45d5b537e38082a87503deceed105c9a87c0ffff09a735ca9e2722dfc9be8cb",
+    "expected": {
+      "crash.txt": {
+        "bytes": 8197,
+        "sha256": "99706a374f377482ae96bda2b7a9a33ff8d82ed4a4898de39ef9b64782e6ccaf"
+      }
+    },
+    "extra": {},
+    "native": {
+      "fsck": "clean",
+      "original_files": 104,
+      "changed_files": 1,
+      "sha256": "matched"
+    }
+  },
+  {
+    "name": "prefix-crash-MHYZJ7-state-Applying",
+    "image": "prefix-crash-MHYZJ7-state-Applying.dmg.gz",
+    "image_sha256": "f87166975f9c51ee58b228d1e213644614fdeb541964e5e11ba588986c7a50d3",
+    "expected": {
+      "crash.txt": {
+        "bytes": 8197,
+        "sha256": "99706a374f377482ae96bda2b7a9a33ff8d82ed4a4898de39ef9b64782e6ccaf"
+      }
+    },
+    "extra": {},
+    "native": {
+      "fsck": "clean",
+      "original_files": 104,
+      "changed_files": 1,
+      "sha256": "matched"
+    }
+  },
+  {
+    "name": "prefix-crash-MHYZJ7-apply-write",
+    "image": "prefix-crash-MHYZJ7-apply-write.dmg.gz",
+    "image_sha256": "dd62afc25cf08f5c0cf0c0f968403d78c37dddff8626b8bed54df1d777fcca20",
+    "expected": {
+      "crash.txt": {
+        "bytes": 8197,
+        "sha256": "99706a374f377482ae96bda2b7a9a33ff8d82ed4a4898de39ef9b64782e6ccaf"
+      }
+    },
+    "extra": {},
+    "native": {
+      "fsck": "clean",
+      "original_files": 104,
+      "changed_files": 1,
+      "sha256": "matched"
+    }
+  },
+  {
+    "name": "prefix-crash-MHYZJ7-state-Committed",
+    "image": "prefix-crash-MHYZJ7-state-Committed.dmg.gz",
+    "image_sha256": "9b43051b358c4de8faf5cd311c6139cf78f4ea6f21038a19b3a2f80d498962f8",
+    "expected": {
+      "crash.txt": {
+        "bytes": 8197,
+        "sha256": "99706a374f377482ae96bda2b7a9a33ff8d82ed4a4898de39ef9b64782e6ccaf"
+      }
+    },
+    "extra": {},
+    "native": {
+      "fsck": "clean",
+      "original_files": 104,
+      "changed_files": 1,
+      "sha256": "matched"
+    }
+  },
+  {
+    "name": "prefix-crash-MHYZJ7-mount-queue-retired",
+    "image": "prefix-crash-MHYZJ7-mount-queue-retired.dmg.gz",
+    "image_sha256": "ea6bb7967482a50cfd3352567f582388c22fcd22d841e2f5bf03fc573d83c207",
+    "expected": {
+      "crash.txt": {
+        "bytes": 8197,
+        "sha256": "99706a374f377482ae96bda2b7a9a33ff8d82ed4a4898de39ef9b64782e6ccaf"
+      }
+    },
+    "extra": {},
+    "native": {
+      "fsck": "clean",
+      "original_files": 104,
+      "changed_files": 1,
+      "sha256": "matched"
+    }
+  },
+  {
+    "name": "prefix-crash-MHYZJ7-mount-gc-entry",
+    "image": "prefix-crash-MHYZJ7-mount-gc-entry.dmg.gz",
+    "image_sha256": "0ad578757f2177b7cbd04b8e7480851d6e42307b88b118cd9946eb177312ad5e",
+    "expected": {
+      "crash.txt": {
+        "bytes": 8197,
+        "sha256": "99706a374f377482ae96bda2b7a9a33ff8d82ed4a4898de39ef9b64782e6ccaf"
+      }
+    },
+    "extra": {},
+    "native": {
+      "fsck": "clean",
+      "original_files": 104,
+      "changed_files": 1,
+      "sha256": "matched"
+    }
+  },
+  {
+    "name": "prefix-crash-MHYZJ7-mount-closed",
+    "image": "prefix-crash-MHYZJ7-mount-closed.dmg.gz",
+    "image_sha256": "4dd3cbb78566e906734adb0b0947327882cce742b917a98f72d0264ecc779f94",
+    "expected": {
+      "crash.txt": {
+        "bytes": 8197,
+        "sha256": "99706a374f377482ae96bda2b7a9a33ff8d82ed4a4898de39ef9b64782e6ccaf"
+      }
+    },
+    "extra": {},
+    "native": {
+      "fsck": "clean",
+      "original_files": 104,
+      "changed_files": 1,
+      "sha256": "matched"
+    }
+  },
+  {
+    "name": "buffered-crash-M4fp1x-durable-mount-stream-written",
+    "image": "buffered-crash-M4fp1x-durable-mount-stream-written.dmg.gz",
+    "image_sha256": "f17b3b2022e670c45b37a798d332cf2eb5f57033bd9df484436bdb8f5d9f492b",
+    "expected": {
+      "crash.txt": {
+        "bytes": 8197,
+        "sha256": "b2cab53dd5b50284acc297494bded9b33c0474d52ac34740d99857c7ab20508d"
+      }
+    },
+    "extra": {},
+    "native": {
+      "fsck": "clean",
+      "original_files": 104,
+      "changed_files": 1,
+      "sha256": "matched"
+    }
+  },
+  {
+    "name": "buffered-crash-M4fp1x-durable-mount-stream-synced",
+    "image": "buffered-crash-M4fp1x-durable-mount-stream-synced.dmg.gz",
+    "image_sha256": "6868f613f31df02e8834def770716fc6c27959438a12bd6496dffd843687f4b3",
+    "expected": {
+      "crash.txt": {
+        "bytes": 8197,
+        "sha256": "b2cab53dd5b50284acc297494bded9b33c0474d52ac34740d99857c7ab20508d"
+      }
+    },
+    "extra": {},
+    "native": {
+      "fsck": "clean",
+      "original_files": 104,
+      "changed_files": 1,
+      "sha256": "matched"
+    }
+  },
+  {
+    "name": "buffered-crash-M4fp1x-durable-mount-stream-flushed",
+    "image": "buffered-crash-M4fp1x-durable-mount-stream-flushed.dmg.gz",
+    "image_sha256": "fda1b8d53861e3de44ef5e04fd09cac96b019456c96cd0a8572f35f7c47cce9a",
+    "expected": {
+      "crash.txt": {
+        "bytes": 8197,
+        "sha256": "b2cab53dd5b50284acc297494bded9b33c0474d52ac34740d99857c7ab20508d"
+      }
+    },
+    "extra": {},
+    "native": {
+      "fsck": "clean",
+      "original_files": 104,
+      "changed_files": 1,
+      "sha256": "matched"
+    }
+  },
+  {
+    "name": "buffered-crash-M4fp1x-durable-mount-stream-frozen",
+    "image": "buffered-crash-M4fp1x-durable-mount-stream-frozen.dmg.gz",
+    "image_sha256": "920e60fcf8650b5a4764759d7f6646f4f6c005b4ca49355a53203624418ee7fa",
+    "expected": {
+      "crash.txt": {
+        "bytes": 8197,
+        "sha256": "b2cab53dd5b50284acc297494bded9b33c0474d52ac34740d99857c7ab20508d"
+      }
+    },
+    "extra": {},
+    "native": {
+      "fsck": "clean",
+      "original_files": 104,
+      "changed_files": 1,
+      "sha256": "matched"
+    }
+  },
+  {
+    "name": "buffered-crash-M4fp1x-durable-mount-wal-published",
+    "image": "buffered-crash-M4fp1x-durable-mount-wal-published.dmg.gz",
+    "image_sha256": "d969c55b03950f1d654928a21602257a97f864f55477b659f36e085770574b04",
+    "expected": {
+      "crash.txt": {
+        "bytes": 8197,
+        "sha256": "b2cab53dd5b50284acc297494bded9b33c0474d52ac34740d99857c7ab20508d"
+      }
+    },
+    "extra": {},
+    "native": {
+      "fsck": "clean",
+      "original_files": 104,
+      "changed_files": 1,
+      "sha256": "matched"
+    }
+  },
+  {
+    "name": "buffered-crash-M4fp1x-durable-prepare-dir-created",
+    "image": "buffered-crash-M4fp1x-durable-prepare-dir-created.dmg.gz",
+    "image_sha256": "6f5d36b53d1e53d1b1d9b7feb74460b12f7ece1d6f03161b5789c8e41dabfc5e",
+    "expected": {
+      "crash.txt": {
+        "bytes": 8197,
+        "sha256": "b2cab53dd5b50284acc297494bded9b33c0474d52ac34740d99857c7ab20508d"
+      }
+    },
+    "extra": {},
+    "native": {
+      "fsck": "clean",
+      "original_files": 104,
+      "changed_files": 1,
+      "sha256": "matched"
+    }
+  },
+  {
+    "name": "buffered-crash-M4fp1x-durable-state-Applying",
+    "image": "buffered-crash-M4fp1x-durable-state-Applying.dmg.gz",
+    "image_sha256": "c8b687cca2399745518cd0144d80ea48dcf36272c7ed818651569918d60d515c",
+    "expected": {
+      "crash.txt": {
+        "bytes": 8197,
+        "sha256": "b2cab53dd5b50284acc297494bded9b33c0474d52ac34740d99857c7ab20508d"
+      }
+    },
+    "extra": {},
+    "native": {
+      "fsck": "clean",
+      "original_files": 104,
+      "changed_files": 1,
+      "sha256": "matched"
+    }
+  },
+  {
+    "name": "buffered-crash-M4fp1x-durable-apply-write",
+    "image": "buffered-crash-M4fp1x-durable-apply-write.dmg.gz",
+    "image_sha256": "51dbc752bd936ff4e85d7f4801b6d51e4d6bea9103061ddd42ef504c9f04bcd8",
+    "expected": {
+      "crash.txt": {
+        "bytes": 8197,
+        "sha256": "b2cab53dd5b50284acc297494bded9b33c0474d52ac34740d99857c7ab20508d"
+      }
+    },
+    "extra": {},
+    "native": {
+      "fsck": "clean",
+      "original_files": 104,
+      "changed_files": 1,
+      "sha256": "matched"
+    }
+  },
+  {
+    "name": "buffered-crash-M4fp1x-durable-state-Committed",
+    "image": "buffered-crash-M4fp1x-durable-state-Committed.dmg.gz",
+    "image_sha256": "fd49e2dcd23a444544dc8987123822ff6538cbbdb2a1230e2879d43c67a46bf6",
+    "expected": {
+      "crash.txt": {
+        "bytes": 8197,
+        "sha256": "b2cab53dd5b50284acc297494bded9b33c0474d52ac34740d99857c7ab20508d"
+      }
+    },
+    "extra": {},
+    "native": {
+      "fsck": "clean",
+      "original_files": 104,
+      "changed_files": 1,
+      "sha256": "matched"
+    }
+  },
+  {
+    "name": "buffered-crash-M4fp1x-durable-mount-queue-retired",
+    "image": "buffered-crash-M4fp1x-durable-mount-queue-retired.dmg.gz",
+    "image_sha256": "be43b2ca984716c95a13e66c9081249951ea619d22b322e7b0127075caaf636e",
+    "expected": {
+      "crash.txt": {
+        "bytes": 8197,
+        "sha256": "b2cab53dd5b50284acc297494bded9b33c0474d52ac34740d99857c7ab20508d"
+      }
+    },
+    "extra": {},
+    "native": {
+      "fsck": "clean",
+      "original_files": 104,
+      "changed_files": 1,
+      "sha256": "matched"
+    }
+  },
+  {
+    "name": "buffered-crash-M4fp1x-durable-mount-gc-entry",
+    "image": "buffered-crash-M4fp1x-durable-mount-gc-entry.dmg.gz",
+    "image_sha256": "2197cbef048d87dd1ea06a9d05d2cf971756461e85aaca5feb1f7247ea80ec4d",
+    "expected": {
+      "crash.txt": {
+        "bytes": 8197,
+        "sha256": "b2cab53dd5b50284acc297494bded9b33c0474d52ac34740d99857c7ab20508d"
+      }
+    },
+    "extra": {},
+    "native": {
+      "fsck": "clean",
+      "original_files": 104,
+      "changed_files": 1,
+      "sha256": "matched"
+    }
+  },
+  {
+    "name": "buffered-crash-M4fp1x-durable-mount-closed",
+    "image": "buffered-crash-M4fp1x-durable-mount-closed.dmg.gz",
+    "image_sha256": "5d50cf5d36208923c53c6af7bac2baf43180d6fbf59e4cf99926e5ca3dabb9fb",
+    "expected": {
+      "crash.txt": {
+        "bytes": 8197,
+        "sha256": "b2cab53dd5b50284acc297494bded9b33c0474d52ac34740d99857c7ab20508d"
+      }
+    },
+    "extra": {},
+    "native": {
+      "fsck": "clean",
+      "original_files": 104,
+      "changed_files": 1,
+      "sha256": "matched"
+    }
+  },
+  {
+    "name": "buffered-crash-M4fp1x-grouped-mount-stream-written",
+    "image": "buffered-crash-M4fp1x-grouped-mount-stream-written.dmg.gz",
+    "image_sha256": "0bc06ab9a6e67611d862447934ab40c2dcd4c5990ada6606d2b7df256da45f9d",
+    "expected": {
+      "crash.txt": {
+        "bytes": 8197,
+        "sha256": "b2cab53dd5b50284acc297494bded9b33c0474d52ac34740d99857c7ab20508d"
+      }
+    },
+    "extra": {},
+    "native": {
+      "fsck": "clean",
+      "original_files": 104,
+      "changed_files": 1,
+      "sha256": "matched"
+    }
+  },
+  {
+    "name": "buffered-crash-M4fp1x-grouped-mount-stream-flushed",
+    "image": "buffered-crash-M4fp1x-grouped-mount-stream-flushed.dmg.gz",
+    "image_sha256": "22393a4953cf4bba0a9bde82c858838f122bde2d2619d1a38e35285f01c731ec",
+    "expected": {
+      "crash.txt": {
+        "bytes": 8197,
+        "sha256": "b2cab53dd5b50284acc297494bded9b33c0474d52ac34740d99857c7ab20508d"
+      }
+    },
+    "extra": {},
+    "native": {
+      "fsck": "clean",
+      "original_files": 104,
+      "changed_files": 1,
+      "sha256": "matched"
+    }
+  },
+  {
+    "name": "buffered-crash-M4fp1x-grouped-mount-stream-frozen",
+    "image": "buffered-crash-M4fp1x-grouped-mount-stream-frozen.dmg.gz",
+    "image_sha256": "9aea88244f0bd27c73d990cba3d8b0e9e99ef1b34ddd17bc734a7ef2f4f4a8fc",
+    "expected": {
+      "crash.txt": {
+        "bytes": 8197,
+        "sha256": "b2cab53dd5b50284acc297494bded9b33c0474d52ac34740d99857c7ab20508d"
+      }
+    },
+    "extra": {},
+    "native": {
+      "fsck": "clean",
+      "original_files": 104,
+      "changed_files": 1,
+      "sha256": "matched"
+    }
+  },
+  {
+    "name": "buffered-crash-M4fp1x-grouped-mount-wal-published",
+    "image": "buffered-crash-M4fp1x-grouped-mount-wal-published.dmg.gz",
+    "image_sha256": "96c6b4aeec9c1c922238ca65273f4cab0ecc81fa884d38f48c682ed1ee63f586",
+    "expected": {
+      "crash.txt": {
+        "bytes": 8197,
+        "sha256": "666c38332d78f3e8ab39db361c4ba2476698ec1553d7c8e26fd3caaa68f2aa7c"
+      }
+    },
+    "extra": {},
+    "native": {
+      "fsck": "clean",
+      "original_files": 104,
+      "changed_files": 1,
+      "sha256": "matched"
+    }
+  },
+  {
+    "name": "buffered-crash-M4fp1x-grouped-prepare-dir-created",
+    "image": "buffered-crash-M4fp1x-grouped-prepare-dir-created.dmg.gz",
+    "image_sha256": "edeffcf6cd7267b1c91b8f9996aa0ec2bc3ce7a1ad00d303a9c020e9fe5c16ed",
+    "expected": {
+      "crash.txt": {
+        "bytes": 8197,
+        "sha256": "b2cab53dd5b50284acc297494bded9b33c0474d52ac34740d99857c7ab20508d"
+      }
+    },
+    "extra": {},
+    "native": {
+      "fsck": "clean",
+      "original_files": 104,
+      "changed_files": 1,
+      "sha256": "matched"
+    }
+  },
+  {
+    "name": "buffered-crash-M4fp1x-grouped-state-Applying",
+    "image": "buffered-crash-M4fp1x-grouped-state-Applying.dmg.gz",
+    "image_sha256": "2a7e476fedd710998ccc883bbcf67a5fd114b6d018008baf68330b6c68830787",
+    "expected": {
+      "crash.txt": {
+        "bytes": 8197,
+        "sha256": "b2cab53dd5b50284acc297494bded9b33c0474d52ac34740d99857c7ab20508d"
+      }
+    },
+    "extra": {},
+    "native": {
+      "fsck": "clean",
+      "original_files": 104,
+      "changed_files": 1,
+      "sha256": "matched"
+    }
+  },
+  {
+    "name": "buffered-crash-M4fp1x-grouped-apply-write",
+    "image": "buffered-crash-M4fp1x-grouped-apply-write.dmg.gz",
+    "image_sha256": "2303dc3c9ccd2ee712b08557784ae064365005a79eead69eb24301bb97e9909a",
+    "expected": {
+      "crash.txt": {
+        "bytes": 8197,
+        "sha256": "b2cab53dd5b50284acc297494bded9b33c0474d52ac34740d99857c7ab20508d"
+      }
+    },
+    "extra": {},
+    "native": {
+      "fsck": "clean",
+      "original_files": 104,
+      "changed_files": 1,
+      "sha256": "matched"
+    }
+  },
+  {
+    "name": "buffered-crash-M4fp1x-grouped-state-Committed",
+    "image": "buffered-crash-M4fp1x-grouped-state-Committed.dmg.gz",
+    "image_sha256": "078d4cfcead0a67b65e08379ec42dfdc7a263031adb99b17cf721857e1c4d8ab",
+    "expected": {
+      "crash.txt": {
+        "bytes": 8197,
+        "sha256": "b2cab53dd5b50284acc297494bded9b33c0474d52ac34740d99857c7ab20508d"
+      }
+    },
+    "extra": {},
+    "native": {
+      "fsck": "clean",
+      "original_files": 104,
+      "changed_files": 1,
+      "sha256": "matched"
+    }
+  },
+  {
+    "name": "buffered-crash-M4fp1x-grouped-mount-queue-retired",
+    "image": "buffered-crash-M4fp1x-grouped-mount-queue-retired.dmg.gz",
+    "image_sha256": "beee3764a2e4098279bcdeac1b523706c6ab50eb1a613c7f41164ce8e794c714",
+    "expected": {
+      "crash.txt": {
+        "bytes": 8197,
+        "sha256": "b2cab53dd5b50284acc297494bded9b33c0474d52ac34740d99857c7ab20508d"
+      }
+    },
+    "extra": {},
+    "native": {
+      "fsck": "clean",
+      "original_files": 104,
+      "changed_files": 1,
+      "sha256": "matched"
+    }
+  },
+  {
+    "name": "buffered-crash-M4fp1x-grouped-mount-gc-entry",
+    "image": "buffered-crash-M4fp1x-grouped-mount-gc-entry.dmg.gz",
+    "image_sha256": "8f836da48fb6b5a4a550c2e72d8198312b37f472e62dd7a5cc590df5ea60c06d",
+    "expected": {
+      "crash.txt": {
+        "bytes": 8197,
+        "sha256": "b2cab53dd5b50284acc297494bded9b33c0474d52ac34740d99857c7ab20508d"
+      }
+    },
+    "extra": {},
+    "native": {
+      "fsck": "clean",
+      "original_files": 104,
+      "changed_files": 1,
+      "sha256": "matched"
+    }
+  },
+  {
+    "name": "buffered-crash-M4fp1x-grouped-mount-closed",
+    "image": "buffered-crash-M4fp1x-grouped-mount-closed.dmg.gz",
+    "image_sha256": "810cd2d3109ed3cb88177d69f10a3c72d6600868bd1d6aa2361a89c1ae623889",
+    "expected": {
+      "crash.txt": {
+        "bytes": 8197,
+        "sha256": "b2cab53dd5b50284acc297494bded9b33c0474d52ac34740d99857c7ab20508d"
+      }
+    },
+    "extra": {},
+    "native": {
+      "fsck": "clean",
+      "original_files": 104,
+      "changed_files": 1,
+      "sha256": "matched"
+    }
+  },
+  {
+    "name": "fuse",
+    "image": "fuse.dmg.gz",
+    "image_sha256": "88966dbda21f4100c86c17af513bfdc497f1381057f7c6aab6981bf827db45bb",
+    "expected": {
+      "buffered.bin": {
+        "bytes": 12550013,
+        "sha256": "a5ae50c2741e3549e096fa66a7d3a22ecb14f74f7eca82b8da68e6f9a4a3e654"
+      },
+      "\uc790\ub8cc rw/\ud55c\uae00 space.txt": {
+        "bytes": 12,
+        "sha256": "cccdeb5753fb27b6d8b0308f4106eb4271373daea05b96d032aa58aeabdec08d"
+      },
+      "old.txt": {
+        "bytes": 23,
+        "sha256": "33b43c1b0a6f7d6607e292f170cc57c1c5a6bf0b67ec61003e25b1afdc767cd6"
+      },
+      "copy-command.bin": {
+        "bytes": 190000,
+        "sha256": "444bc2ad920c4e1921ee1a12ab79d6c3c764e2e1a4a399bd08c0037a1804ad73"
+      },
+      "crash-ack.bin": {
+        "bytes": 502007,
+        "sha256": "15ae5cb294534fd20634138a44c2a5642ec3263e1ca26bdbdd9201e825ec2ffb"
+      }
+    },
+    "extra": {},
+    "native": {
+      "fsck": "clean",
+      "original_files": 104,
+      "changed_files": 5,
+      "sha256": "matched"
+    }
+  },
+  {
+    "name": "rsync",
+    "image": "rsync.dmg.gz",
+    "image_sha256": "645c3fa59ab1bbf8dee7545acff0b5df3927e0b3b9a7529bc2d32bca35564738",
+    "expected": {
+      "syncset/payload.txt": {
+        "sha256": "198153267082f552d192b9114a5cbc61fd3cb6965dd7e89fd091345da4966ab8"
+      },
+      "syncset/nested/other.bin": {
+        "sha256": "785b0751fc2c53dc14a4ce3d800e69ef9ce1009eb327ccf458afe09c242c26c9"
+      },
+      "syncset/large.bin": {
+        "sha256": "eb342089af193d0d9912b0435466f010628e7edd99e5831e1663c435f9ee2665"
+      }
+    },
+    "extra": {
+      "status": "passed",
+      "binary_sha256": "476d14b3fd89a59606ce1235d368aa4095f6a1581c8a5f90bb5671cc64c92985",
+      "runs": [
+        {
+          "label": "initial",
+          "rc": 0,
+          "stdout": "created directory /home/zooh/Documents/LAPFS/worktrees/write-io/evidence/lapfs-rsync-niktdkrf/mount/syncset\ncd+++++++++ ./\n>f+++++++++ large.bin\ncL+++++++++ link -> payload.txt\n>f+++++++++ payload.txt\ncd+++++++++ nested/\n>f+++++++++ nested/other.bin\n",
+          "stderr": ""
+        },
+        {
+          "label": "repeat",
+          "rc": 0,
+          "stdout": "",
+          "stderr": ""
+        },
+        {
+          "label": "replace",
+          "rc": 0,
+          "stdout": ">f.s....... payload.txt\n",
+          "stderr": ""
+        },
+        {
+          "label": "link-change",
+          "rc": 0,
+          "stdout": ".d..t...... ./\ncLc.t...... link -> nested/other.bin\n",
+          "stderr": ""
+        },
+        {
+          "label": "delete",
+          "rc": 0,
+          "stdout": "*deleting   orphan-dir/child.txt\n*deleting   orphan-dir/\n*deleting   orphan.txt\n*deleting   orphan-link\n",
+          "stderr": ""
+        }
+      ],
+      "payload_sha256": "198153267082f552d192b9114a5cbc61fd3cb6965dd7e89fd091345da4966ab8",
+      "mtime_ns": 946684800987654321,
+      "mode": "0o640",
+      "link": "nested/other.bin",
+      "nested_sha256": "785b0751fc2c53dc14a4ce3d800e69ef9ce1009eb327ccf458afe09c242c26c9",
+      "large_sha256": "eb342089af193d0d9912b0435466f010628e7edd99e5831e1663c435f9ee2665",
+      "large_bytes": 12550013
+    },
+    "native": {
+      "fsck": "clean",
+      "original_files": 104,
+      "changed_files": 3,
+      "sha256": "matched"
+    }
+  }
+]

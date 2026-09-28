@@ -1,0 +1,176 @@
+{
+  "environment": "DGX internal ext4 image, concurrent existing physical Corsair archive workload; not physical USB benchmark",
+  "bytes_per_file": 41943040,
+  "order": "ABBA",
+  "fsync_close_included": true,
+  "rows": [
+    {
+      "daemon_io_delta": {
+        "rchar": 545961241,
+        "wchar": 217674914,
+        "syscr": 34478,
+        "syscw": 5638,
+        "read_bytes": 40239104,
+        "write_bytes": 221913088,
+        "cancelled_write_bytes": 0
+      },
+      "run": 0,
+      "label": "old",
+      "chunk": 10240,
+      "bytes": 41943040,
+      "seconds": 2.747023500967771,
+      "MiB_s": 14.561215070023275,
+      "sha256": "8f64ef62163af95084172a31b4d14ee74bfbb382ed7de176e563827dc77dc48c",
+      "image": "/home/zooh/Documents/LAPFS/worktrees/write-io/evidence/io-comparison/throughput-dj41r2wl/0-old/native.dmg",
+      "binary_sha256": "cbde358805de6893be037eba591484f7083782b41ed98877e85411f7b7c16f8c",
+      "MB_s": 15.268540653264726
+    },
+    {
+      "daemon_io_delta": {
+        "rchar": 511089952,
+        "wchar": 213916016,
+        "syscr": 22008,
+        "syscw": 1463,
+        "read_bytes": 42835968,
+        "write_bytes": 218136576,
+        "cancelled_write_bytes": 0
+      },
+      "run": 0,
+      "label": "old",
+      "chunk": 1048576,
+      "bytes": 41943040,
+      "seconds": 1.503659683978185,
+      "MiB_s": 26.601763967078814,
+      "sha256": "8f64ef62163af95084172a31b4d14ee74bfbb382ed7de176e563827dc77dc48c",
+      "image": "/home/zooh/Documents/LAPFS/worktrees/write-io/evidence/io-comparison/throughput-dj41r2wl/0-old/native.dmg",
+      "binary_sha256": "cbde358805de6893be037eba591484f7083782b41ed98877e85411f7b7c16f8c",
+      "MB_s": 27.893971253543633
+    },
+    {
+      "daemon_io_delta": {
+        "rchar": 555179806,
+        "wchar": 175744490,
+        "syscr": 26386,
+        "syscw": 5743,
+        "read_bytes": 1974272,
+        "write_bytes": 176680960,
+        "cancelled_write_bytes": 0
+      },
+      "run": 1,
+      "label": "new",
+      "chunk": 10240,
+      "bytes": 41943040,
+      "seconds": 1.2012147930217907,
+      "MiB_s": 33.299623208415134,
+      "sha256": "8f64ef62163af95084172a31b4d14ee74bfbb382ed7de176e563827dc77dc48c",
+      "image": "/home/zooh/Documents/LAPFS/worktrees/write-io/evidence/io-comparison/throughput-dj41r2wl/1-new/native.dmg",
+      "binary_sha256": "476d14b3fd89a59606ce1235d368aa4095f6a1581c8a5f90bb5671cc64c92985",
+      "MB_s": 34.917185705387105
+    },
+    {
+      "daemon_io_delta": {
+        "rchar": 508230968,
+        "wchar": 171972983,
+        "syscr": 11618,
+        "syscw": 1451,
+        "read_bytes": 17182720,
+        "write_bytes": 172883968,
+        "cancelled_write_bytes": 0
+      },
+      "run": 1,
+      "label": "new",
+      "chunk": 1048576,
+      "bytes": 41943040,
+      "seconds": 1.6976748569868505,
+      "MiB_s": 23.561637751409442,
+      "sha256": "8f64ef62163af95084172a31b4d14ee74bfbb382ed7de176e563827dc77dc48c",
+      "image": "/home/zooh/Documents/LAPFS/worktrees/write-io/evidence/io-comparison/throughput-dj41r2wl/1-new/native.dmg",
+      "binary_sha256": "476d14b3fd89a59606ce1235d368aa4095f6a1581c8a5f90bb5671cc64c92985",
+      "MB_s": 24.706167866821907
+    },
+    {
+      "daemon_io_delta": {
+        "rchar": 539210178,
+        "wchar": 175722222,
+        "syscr": 22283,
+        "syscw": 5536,
+        "read_bytes": 450560,
+        "write_bytes": 178081792,
+        "cancelled_write_bytes": 0
+      },
+      "run": 2,
+      "label": "new",
+      "chunk": 10240,
+      "bytes": 41943040,
+      "seconds": 1.7346317049814388,
+      "MiB_s": 23.05965000243554,
+      "sha256": "8f64ef62163af95084172a31b4d14ee74bfbb382ed7de176e563827dc77dc48c",
+      "image": "/home/zooh/Documents/LAPFS/worktrees/write-io/evidence/io-comparison/throughput-dj41r2wl/2-new/native.dmg",
+      "binary_sha256": "476d14b3fd89a59606ce1235d368aa4095f6a1581c8a5f90bb5671cc64c92985",
+      "MB_s": 24.17979556095385
+    },
+    {
+      "daemon_io_delta": {
+        "rchar": 508222854,
+        "wchar": 171973162,
+        "syscr": 11618,
+        "syscw": 1453,
+        "read_bytes": 176128,
+        "write_bytes": 175636480,
+        "cancelled_write_bytes": 0
+      },
+      "run": 2,
+      "label": "new",
+      "chunk": 1048576,
+      "bytes": 41943040,
+      "seconds": 1.51633379800478,
+      "MiB_s": 26.37941596542446,
+      "sha256": "8f64ef62163af95084172a31b4d14ee74bfbb382ed7de176e563827dc77dc48c",
+      "image": "/home/zooh/Documents/LAPFS/worktrees/write-io/evidence/io-comparison/throughput-dj41r2wl/2-new/native.dmg",
+      "binary_sha256": "476d14b3fd89a59606ce1235d368aa4095f6a1581c8a5f90bb5671cc64c92985",
+      "MB_s": 27.66082247536092
+    },
+    {
+      "daemon_io_delta": {
+        "rchar": 544870975,
+        "wchar": 217673120,
+        "syscr": 34197,
+        "syscw": 5623,
+        "read_bytes": 1064960,
+        "write_bytes": 223096832,
+        "cancelled_write_bytes": 0
+      },
+      "run": 3,
+      "label": "old",
+      "chunk": 10240,
+      "bytes": 41943040,
+      "seconds": 1.8615513749537058,
+      "MiB_s": 21.487454248204536,
+      "sha256": "8f64ef62163af95084172a31b4d14ee74bfbb382ed7de176e563827dc77dc48c",
+      "image": "/home/zooh/Documents/LAPFS/worktrees/write-io/evidence/io-comparison/throughput-dj41r2wl/3-old/native.dmg",
+      "binary_sha256": "cbde358805de6893be037eba591484f7083782b41ed98877e85411f7b7c16f8c",
+      "MB_s": 22.531228825765318
+    },
+    {
+      "daemon_io_delta": {
+        "rchar": 511085896,
+        "wchar": 213916155,
+        "syscr": 22008,
+        "syscw": 1464,
+        "read_bytes": 34385920,
+        "write_bytes": 215531520,
+        "cancelled_write_bytes": 0
+      },
+      "run": 3,
+      "label": "old",
+      "chunk": 1048576,
+      "bytes": 41943040,
+      "seconds": 1.5672946579870768,
+      "MiB_s": 25.52168464057243,
+      "sha256": "8f64ef62163af95084172a31b4d14ee74bfbb382ed7de176e563827dc77dc48c",
+      "image": "/home/zooh/Documents/LAPFS/worktrees/write-io/evidence/io-comparison/throughput-dj41r2wl/3-old/native.dmg",
+      "binary_sha256": "cbde358805de6893be037eba591484f7083782b41ed98877e85411f7b7c16f8c",
+      "MB_s": 26.761425993672876
+    }
+  ]
+}

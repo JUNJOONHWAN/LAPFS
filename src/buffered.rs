@@ -921,7 +921,7 @@ impl Session {
         )?;
         self.flush()
     }
-    fn actions(&self) -> Result<(Vec<Action>, usize)> {
+    fn actions(&self) -> Result<(Vec<Action>, usize, Option<Vec<u8>>)> {
         let _profile = journal::Phase::new("actions");
         self.validate_queue()?;
         // Coalesce adjacent sequential writes; APFS metadata is updated once
@@ -945,31 +945,22 @@ impl Session {
                         _ => break,
                     }
                 }
-                let p = self.dir.join(format!("merged-{i:04}.bin"));
-                if p.exists() {
-                    ensure!(
-                        fs::symlink_metadata(&p)?.is_file(),
-                        "Unexpected merged payload"
-                    );
-                    fs::remove_file(&p)?;
-                }
-                let mut f = new_file(&p)?;
-                f.write_all(&data)?;
-                journal::durable_sync(&f)?;
+                // The frozen WAL remains authoritative until the journal commits.
+                // Passing its verified data directly avoids a second full write/fsync.
                 actions.push(Action::WriteAt {
-                    source: p,
+                    source: match &q.action { Action::WriteAt { source, .. } => source.clone(), _ => unreachable!() },
                     path: path.clone(),
                     offset: *offset,
                 });
                 // A write group is its own bounded recovery transaction. Do
                 // not multiply whole-volume metadata cost by unrelated writes.
-                return Ok((actions, j));
+                return Ok((actions, j, Some(data)));
             } else {
                 actions.push(q.action.clone());
                 i += 1;
             }
         }
-        Ok((actions, i))
+        Ok((actions, i, None))
     }
     pub fn flush(&mut self) -> Result<()> {
         self.ready()?;
@@ -986,19 +977,20 @@ impl Session {
         self.freeze_stream()?;
         self.settle_active()?;
         while !self.record.queue.is_empty() {
-            let (actions, count) = self.actions()?;
+            let (actions, count, payload) = self.actions()?;
             let name = format!("txn-{:016}", self.record.sequence);
             self.record.active = Some(name.clone());
             self.record.active_count = Some(count);
             self.save()?;
             let prepare_profile = journal::Phase::new("prepare_total");
-            apfs_batch::prepare_held(
+            apfs_batch::prepare_held_payload(
                 &mut self.image,
                 &self.dir.join(&name),
                 self.record.offset,
                 &actions,
                 self.record.cap,
                 self.record.reserve,
+                payload,
             )?;
             drop(prepare_profile);
             self.settle_active()?;

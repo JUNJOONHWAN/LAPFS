@@ -1,0 +1,108 @@
+{
+  "rust_passed": 302,
+  "binary_sha256": "476d14b3fd89a59606ce1235d368aa4095f6a1581c8a5f90bb5671cc64c92985",
+  "fuse": {
+    "status": "passed",
+    "checks": [
+      "real_rw_fuse_mount",
+      "large_copy_bounded_queue",
+      "read_your_writes_across_handles",
+      "unaligned_random_overwrite",
+      "fsync_and_close",
+      "open_unlink_rejected",
+      "mkdir_unicode",
+      "truncate_and_unaligned_append",
+      "atomic_replace",
+      "unlink",
+      "rmdir_nonempty_guard",
+      "rmdir_nested_empty",
+      "ordinary_cp_command",
+      "unsupported_sparse_explicit_error",
+      "chmod_applied",
+      "mount_still_usable_after_rejection",
+      "original_104_files_preserved",
+      "symlink_read",
+      "sparse_read_above_4GiB",
+      "exclusive_raw_reader_denied",
+      "actual_fuse_sigkill_after_ack",
+      "pending_session_blocks_raw_read",
+      "recovery_preserves_acknowledged_writes",
+      "separate_operation_errno_logs",
+      "expected_lookup_misses_not_logged"
+    ],
+    "expected": {
+      "buffered.bin": {
+        "bytes": 12550013,
+        "sha256": "a5ae50c2741e3549e096fa66a7d3a22ecb14f74f7eca82b8da68e6f9a4a3e654"
+      },
+      "\uc790\ub8cc rw/\ud55c\uae00 space.txt": {
+        "bytes": 12,
+        "sha256": "cccdeb5753fb27b6d8b0308f4106eb4271373daea05b96d032aa58aeabdec08d"
+      },
+      "old.txt": {
+        "bytes": 23,
+        "sha256": "33b43c1b0a6f7d6607e292f170cc57c1c5a6bf0b67ec61003e25b1afdc767cd6"
+      },
+      "copy-command.bin": {
+        "bytes": 190000,
+        "sha256": "444bc2ad920c4e1921ee1a12ab79d6c3c764e2e1a4a399bd08c0037a1804ad73"
+      },
+      "crash-ack.bin": {
+        "bytes": 502007,
+        "sha256": "15ae5cb294534fd20634138a44c2a5642ec3263e1ca26bdbdd9201e825ec2ffb"
+      }
+    },
+    "copy_bytes": 12550013,
+    "copy_seconds": 3.5711549160187133,
+    "spool_bytes_after_close": 611,
+    "committed_batches": 24,
+    "binary_sha256": "476d14b3fd89a59606ce1235d368aa4095f6a1581c8a5f90bb5671cc64c92985",
+    "physical_usb_writes": 0,
+    "image_sha256": "88966dbda21f4100c86c17af513bfdc497f1381057f7c6aab6981bf827db45bb"
+  },
+  "rsync": {
+    "status": "passed",
+    "binary_sha256": "476d14b3fd89a59606ce1235d368aa4095f6a1581c8a5f90bb5671cc64c92985",
+    "runs": [
+      {
+        "label": "initial",
+        "rc": 0,
+        "stdout": "created directory /home/zooh/Documents/LAPFS/worktrees/write-io/evidence/lapfs-rsync-niktdkrf/mount/syncset\ncd+++++++++ ./\n>f+++++++++ large.bin\ncL+++++++++ link -> payload.txt\n>f+++++++++ payload.txt\ncd+++++++++ nested/\n>f+++++++++ nested/other.bin\n",
+        "stderr": ""
+      },
+      {
+        "label": "repeat",
+        "rc": 0,
+        "stdout": "",
+        "stderr": ""
+      },
+      {
+        "label": "replace",
+        "rc": 0,
+        "stdout": ">f.s....... payload.txt\n",
+        "stderr": ""
+      },
+      {
+        "label": "link-change",
+        "rc": 0,
+        "stdout": ".d..t...... ./\ncLc.t...... link -> nested/other.bin\n",
+        "stderr": ""
+      },
+      {
+        "label": "delete",
+        "rc": 0,
+        "stdout": "*deleting   orphan-dir/child.txt\n*deleting   orphan-dir/\n*deleting   orphan.txt\n*deleting   orphan-link\n",
+        "stderr": ""
+      }
+    ],
+    "payload_sha256": "198153267082f552d192b9114a5cbc61fd3cb6965dd7e89fd091345da4966ab8",
+    "mtime_ns": 946684800987654321,
+    "mode": "0o640",
+    "link": "nested/other.bin",
+    "nested_sha256": "785b0751fc2c53dc14a4ce3d800e69ef9ce1009eb327ccf458afe09c242c26c9",
+    "large_sha256": "eb342089af193d0d9912b0435466f010628e7edd99e5831e1663c435f9ee2665",
+    "large_bytes": 12550013
+  },
+  "native_images": 32,
+  "physical_runtime": "beta10 remains active; beta11 activation and actual write speed validation pending"
+}

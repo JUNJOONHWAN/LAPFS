@@ -197,8 +197,18 @@ pub(crate) fn prepare_held(
     cap: u64,
     reserve: u64,
 ) -> Result<PathBuf> {
+    prepare_held_payload(target, dir, offset, actions, cap, reserve, None)
+}
+
+// Only Session supplies this already checksummed, durably queued WriteAt payload.
+// It is reconstructed from the WAL on recovery; no derived disk copy is needed.
+pub(crate) fn prepare_held_payload(
+    target: &mut Image, dir: &Path, offset: u64, actions: &[Action],
+    cap: u64, reserve: u64, payload: Option<Vec<u8>>,
+) -> Result<PathBuf> {
+    ensure!(payload.is_none() || (actions.len() == 1 && matches!(actions[0], Action::WriteAt { .. })), "Invalid in-memory write action");
     let identity = target.identity.clone();
-    let overlay = stage_overlay(target, identity, dir, offset, actions, cap, reserve)?;
+    let overlay = stage_overlay(target, identity, dir, offset, actions, cap, reserve, payload)?;
     let (_, dir) = overlay.finish()?;
     Ok(dir)
 }
@@ -211,6 +221,7 @@ fn stage_overlay<D: Device>(
     actions: &[Action],
     cap: u64,
     reserve: u64,
+    mut payload: Option<Vec<u8>>,
 ) -> Result<Overlay<D>> {
     ensure!(
         !actions.is_empty() && actions.len() <= 64,
@@ -327,20 +338,18 @@ fn stage_overlay<D: Device>(
                     );
                 }
                 let limit = if matches!(action, Action::WriteAt { .. }) { MAX_RANGE_INPUT } else { MAX_INPUT };
-                let f = std::fs::OpenOptions::new()
-                    .read(true)
-                    .custom_flags(libc::O_NONBLOCK)
-                    .open(source)?;
-                ensure!(
-                    f.metadata()?.is_file() && f.metadata()?.len() <= limit,
-                    "Input exceeds this operation batch limit"
-                );
-                let mut bytes = Vec::new();
-                f.take(limit + 1).read_to_end(&mut bytes)?;
-                ensure!(
-                    bytes.len() as u64 <= limit,
-                    "Source grew beyond batch limit"
-                );
+                let bytes = if let Some(bytes) = payload.take() {
+                    bytes
+                } else {
+                    let f = std::fs::OpenOptions::new()
+                        .read(true).custom_flags(libc::O_NONBLOCK).open(source)?;
+                    ensure!(f.metadata()?.is_file() && f.metadata()?.len() <= limit,
+                        "Input exceeds this operation batch limit");
+                    let mut bytes = Vec::new();
+                    f.take(limit + 1).read_to_end(&mut bytes)?;
+                    bytes
+                };
+                ensure!(bytes.len() as u64 <= limit, "Source grew beyond batch limit");
                 content = Some(bytes);
             }
             Action::Truncate { size, .. } => {
@@ -613,6 +622,7 @@ pub fn probe(
         actions,
         cap,
         crate::journal::DEFAULT_RESERVE,
+        None,
     ) {
         Ok(overlay) => {
             let stats = overlay.statistics();

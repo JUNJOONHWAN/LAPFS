@@ -691,6 +691,8 @@ pub struct Overlay<D: Device> {
     redo: BufWriter<File>,
     manifest: Manifest,
     latest: BTreeMap<u64, Blob>,
+    // Immutable base during preparation; latest redo always takes precedence.
+    base_window: Option<(u64, Vec<u8>)>,
     reserve: u64,
 }
 impl<D: Device> Overlay<D> {
@@ -732,6 +734,7 @@ impl<D: Device> Overlay<D> {
             undo,
             redo,
             latest: BTreeMap::new(),
+            base_window: None,
             reserve,
             manifest: Manifest {
                 identity,
@@ -743,6 +746,36 @@ impl<D: Device> Overlay<D> {
                 description,
             },
         })
+    }
+    fn base_page(&mut self, pageoff: u64) -> Result<Vec<u8>> {
+        bounds(self.base.len(), pageoff, BLOCK)?;
+        if let Some((start, bytes)) = &self.base_window {
+            if pageoff >= *start && pageoff - *start + BLOCK as u64 <= bytes.len() as u64 {
+                let at = (pageoff - *start) as usize;
+                return Ok(bytes[at..at + BLOCK].to_vec());
+            }
+        }
+        // Expand only after an adjacent request. Random metadata reads remain 4KiB.
+        let sequential = self.base_window.as_ref().is_some_and(|(start, bytes)|
+            pageoff == *start + bytes.len() as u64);
+        let start = pageoff;
+        let count = (self.base.len() - start).min(if sequential { IO_GROUP } else { BLOCK } as u64) as usize;
+        let mut bytes = vec![0; count];
+        match self.base.read(start, &mut bytes) {
+            Ok(()) => {
+                let at = (pageoff - start) as usize;
+                let page = bytes[at..at + BLOCK].to_vec();
+                self.base_window = Some((start, bytes));
+                Ok(page)
+            }
+            Err(_) => {
+                // Speculation must not turn an unrelated unreadable block into EIO.
+                self.base_window = None;
+                let mut page = vec![0; BLOCK];
+                self.base.read(pageoff, &mut page)?;
+                Ok(page)
+            }
+        }
     }
     fn space(&self, additional: u64) -> Result<()> {
         let used = self.manifest.undo_len + self.manifest.redo_len;
@@ -813,9 +846,7 @@ impl<D: Device> Device for Overlay<D> {
                 ensure!(hash(&page) == blob.sha256, "Corrupt overlay page");
                 page
             } else {
-                let mut p = vec![0; BLOCK];
-                self.base.read(pageoff, &mut p)?;
-                p
+                self.base_page(pageoff)?
             };
             out[done..done + count].copy_from_slice(&page[start..start + count]);
             done += count;
@@ -837,8 +868,7 @@ impl<D: Device> Device for Overlay<D> {
                 BLOCK as u64
             })?;
             if fresh {
-                let mut original = vec![0; BLOCK];
-                self.base.read(pageoff, &mut original)?;
+                let original = self.base_page(pageoff)?;
                 let blob = Blob {
                     offset: self.manifest.undo_len,
                     len: BLOCK,

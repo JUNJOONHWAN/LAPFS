@@ -457,3 +457,47 @@ fn buffered_overlay_reads_disk_and_pending_tail_and_keeps_flush_order() {
     assert_eq!(actual.durable,expected);
     assert!(actual.event < 20,"contiguous pages must use bounded bulk I/O");
 }
+
+#[test]
+fn preimage_windows_preserve_originals_and_fallback_on_speculative_errors() {
+    use std::{cell::Cell, rc::Rc};
+    struct ReadDisk { disk: Disk, reads: Rc<Cell<usize>>, fail_large: bool, bad_page: Option<u64> }
+    impl Device for ReadDisk {
+        fn len(&self) -> u64 { self.disk.len() }
+        fn read(&mut self, off:u64, bytes:&mut [u8]) -> Result<()> {
+            self.reads.set(self.reads.get()+1);
+            if self.fail_large && bytes.len()>BLOCK { bail!("speculative read refused"); }
+            if self.bad_page.is_some_and(|p| off<=p && off+bytes.len() as u64>p) { bail!("requested block unreadable"); }
+            self.disk.read(off,bytes)
+        }
+        fn write(&mut self,off:u64,bytes:&[u8])->Result<()> {self.disk.write(off,bytes)}
+        fn flush(&mut self)->Result<()> {self.disk.flush()}
+    }
+    for fallback in [false,true] {
+        let tmp=tempfile::tempdir().unwrap(); let path=tmp.path().join("journal");
+        let mut disk=Disk::new();disk.durable=(0..BLOCK*600).map(|i|(i%251) as u8).collect();disk.cache=disk.durable.clone();
+        let original=disk.durable.clone();let id=identity(&disk);let reads=Rc::new(Cell::new(0));
+        let base=ReadDisk{disk,reads:reads.clone(),fail_large:fallback,bad_page:None};
+        let mut o=Overlay::new(base,id,&path,16*1024*1024,0,"windows".into()).unwrap();
+        let mut expected=original.clone();
+        for page in 0..550 {
+            let data=vec![(page%255) as u8;BLOCK]; o.write((page*BLOCK) as u64,&data).unwrap();
+            expected[page*BLOCK..(page+1)*BLOCK].copy_from_slice(&data);
+        }
+        if !fallback {assert_eq!(reads.get(),4,"first page then sequential 1MiB windows");}
+        o.flush().unwrap();o.write((BLOCK*256-7) as u64,b"overlap-crosses-window").unwrap();
+        expected[BLOCK*256-7..BLOCK*256-7+b"overlap-crosses-window".len()].copy_from_slice(b"overlap-crosses-window");
+        let mut observed=vec![0;expected.len()];o.read(0,&mut observed).unwrap();assert_eq!(observed,expected);
+        let (mut d,_)=o.finish().unwrap();assert_eq!(d.disk.durable,original);
+        // The grouped journal reader is independent of the staging cache.
+        d.fail_large=false;
+        let mut j=Journal::open(&path).unwrap();j.apply(&mut d).unwrap();assert_eq!(d.disk.durable,expected);
+        // An unreadable requested page must still fail without a target write.
+        drop(j);
+        let tmp2=tempfile::tempdir().unwrap();let p2=tmp2.path().join("bad");
+        let id=identity(&d.disk);d.bad_page=Some(BLOCK as u64);
+        let mut bad=Overlay::new(d,id,&p2,1024*1024,0,"error".into()).unwrap();
+        let mut page=vec![0;BLOCK];bad.read(0,&mut page).unwrap();
+        assert!(bad.write(BLOCK as u64,&vec![1;BLOCK]).is_err());
+    }
+}

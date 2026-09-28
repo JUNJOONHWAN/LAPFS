@@ -1,3 +1,12 @@
+# 0.3.0-beta.11
+
+- 파생 merged 파일 제거 · 검증된 WAL 데이터 직접 전달.
+- 준비 단계 순차 원본 읽기 최대 1MiB 집계 · 임의 읽기 4KiB 유지.
+- 40MiB 입력당 중간 쓰기 약 40MiB 감소 · 1MiB write 읽기 호출 22,008 → 11,618.
+- Rust 302 · Linux FUSE/rsync · Mac 32개 이미지 fsck/원본·변경 SHA 통과.
+- 동시 백업 부하 비교: 큰 파일 속도 개선 미확인. beta.11 실장치 적용·성능 검증 대기.
+- [변경 전후·측정·제한](docs/WRITE_IO.md).
+
 # 0.3.0-beta.10
 
 - 8MiB 읽기 캐시·선행 읽기 · write/flush/복구 시 무효화.
