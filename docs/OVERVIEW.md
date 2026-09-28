@@ -19,3 +19,5 @@ Beta.10 adds a bounded 8MiB committed-read window, invalidated by writes, flushe
 See [beta.12 pipeline](WRITE_PIPELINE.md) for implementation, failure checks and local-image benchmarks. Physical USB throughput and comparative performance against linux-apfs-rw remain unverified.
 
 Beta.13 grouped FUSE data writes use RAM redo and durable undo, with no input WAL or disk redo copy. Original checkpoint CIB/bitmap validation permits omitting preimages only for originally free blocks; original allocated bytes retain undo protection. Interrupted volatile groups roll back instead of replaying missing input. New v3 sessions require beta.13 or later for recovery; normal safe eject is required before downgrade. Per-write durable policy retains the existing WAL path. See [write amplification](WRITE_AMPLIFICATION.md) for measurements and limits.
+
+Beta.15 candidate adds same-volume cross-directory file and directory moves. Disposable Linux FUSE and macOS APFS fsck checks passed; real Corsair activation and TB-scale catalog qualification remain pending. An interrupted move queue requires beta.15 or later for recovery. See [move validation](CROSS_DIRECTORY_MOVE.md).

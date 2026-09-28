@@ -15,6 +15,60 @@ fn fixture() -> (PathBuf, u64, PathBuf) {
 }
 #[test]
 #[ignore = "requires explicit disposable APFS fixture"]
+fn cross_directory_move_preserves_data_and_inode() {
+    let (source, offset, out) = fixture();
+    let work = tempfile::Builder::new().prefix("cross-move-").tempdir_in(out).unwrap().keep();
+    let image = work.join("native.dmg");
+    std::fs::copy(source, &image).unwrap();
+    let mut s = Session::start(&image, offset, &work.join("session"), GROUP_BYTES, 0).unwrap();
+    s.mkdir("/move-from").unwrap();
+    s.mkdir("/move-to").unwrap();
+    s.create("/move-from/data.bin").unwrap();
+    let bytes: Vec<u8> = (0..262_144).map(|n| (n % 251) as u8).collect();
+    s.write("/move-from/data.bin", 0, &bytes).unwrap();
+    s.flush().unwrap();
+    let inode = s.attr("/move-from/data.bin").unwrap().inode;
+    s.rename("/move-from/data.bin", "/move-to/data.bin", false).unwrap();
+    assert!(s.attr("/move-from/data.bin").is_err());
+    assert_eq!(s.attr("/move-to/data.bin").unwrap().inode, inode);
+    assert_eq!(s.read("/move-to/data.bin", 0, bytes.len()).unwrap(), bytes);
+    s.mkdir("/move-from/tree").unwrap();
+    s.create("/move-from/tree/child").unwrap();
+    s.write("/move-from/tree/child", 0, b"child data").unwrap();
+    s.flush().unwrap();
+    let child_ino = s.attr("/move-from/tree/child").unwrap().inode;
+    s.rename("/move-from/tree", "/move-to/tree", false).unwrap();
+    assert_eq!(s.attr("/move-to/tree/child").unwrap().inode, child_ino);
+    assert_eq!(s.read("/move-to/tree/child", 0, 32).unwrap(), b"child data");
+    assert!(s.rename("/move-to/tree", "/move-to/tree/child/loop", false).is_err());
+    s.create("/move-from/replace-src").unwrap();
+    s.write("/move-from/replace-src", 0, b"new payload").unwrap();
+    s.create("/move-to/replace-dst").unwrap();
+    s.write("/move-to/replace-dst", 0, b"old payload").unwrap();
+    s.flush().unwrap();
+    s.rename("/move-from/replace-src", "/move-to/replace-dst", true).unwrap();
+    assert_eq!(s.read("/move-to/replace-dst", 0, 32).unwrap(), b"new payload");
+    s.mkdir("/move-from/empty-dir").unwrap();
+    s.mkdir("/move-to/empty-dir").unwrap();
+    s.rename("/move-from/empty-dir", "/move-to/empty-dir", true).unwrap();
+    assert!(s.attr("/move-from/empty-dir").is_err());
+    assert!(s.attr("/move-to/empty-dir").unwrap().is_dir);
+    assert!(s.rename("/move-to/tree", "/move-to/replace-dst", true).is_err());
+    assert_eq!(s.read("/move-to/replace-dst", 0, 32).unwrap(), b"new payload");
+    s.close().unwrap();
+    drop(s);
+    assert_eq!(spark_apfs_safe::apfs_batch::read_file(&image, offset, "/move-to/data.bin").unwrap(), bytes);
+    assert_eq!(spark_apfs_safe::apfs_batch::read_file(&image, offset, "/move-to/tree/child").unwrap(), b"child data");
+    std::fs::write(work.join("expected.json"), serde_json::to_vec_pretty(&serde_json::json!({
+        "image": image,
+        "data_sha256": hash(&bytes),
+        "data_inode": inode,
+        "child_inode": child_ino
+    })).unwrap()).unwrap();
+    println!("CROSS_MOVE_NATIVE_EVIDENCE={}", work.display());
+}
+#[test]
+#[ignore = "requires explicit disposable APFS fixture"]
 fn handoff_refuses_live_writer_then_recovers_and_reopens() {
     let (source, offset, out) = fixture();
     let work = tempfile::Builder::new()
@@ -60,6 +114,49 @@ fn handoff_refuses_live_writer_then_recovers_and_reopens() {
     .unwrap();
     println!("HANDOFF_NATIVE_EVIDENCE={}", work.display());
 }
+#[test]
+#[ignore = "process helper; requires supplied fixture"]
+fn cross_directory_move_crash_worker() {
+    let image = PathBuf::from(std::env::var("LAPFS_WORKER_IMAGE").unwrap());
+    let dir = PathBuf::from(std::env::var("LAPFS_WORKER_SESSION").unwrap());
+    let offset = std::env::var("SPARK_APFS_TEST_OFFSET").unwrap().parse().unwrap();
+    let mut s = Session::start(&image, offset, &dir, GROUP_BYTES, 0).unwrap();
+    s.rename("/move-source/data", "/move-target/data", true).unwrap();
+    s.close().unwrap();
+}
+
+#[test]
+#[ignore = "requires fault-injection build and disposable APFS fixture"]
+fn cross_directory_replace_recovers_at_commit_boundaries() {
+    assert!(cfg!(feature = "fault-injection"));
+    use std::os::unix::process::ExitStatusExt;
+    let (source, offset, out) = fixture();
+    let work = tempfile::Builder::new().prefix("cross-move-crash-").tempdir_in(out).unwrap().keep();
+    let base = work.join("base.dmg");
+    std::fs::copy(source, &base).unwrap();
+    let mut s = Session::start(&base, offset, &work.join("init"), GROUP_BYTES, 0).unwrap();
+    s.mkdir("/move-source").unwrap();
+    s.mkdir("/move-target").unwrap();
+    s.create("/move-source/data").unwrap();
+    s.write("/move-source/data", 0, b"new content").unwrap();
+    s.create("/move-target/data").unwrap();
+    s.write("/move-target/data", 0, b"old content").unwrap();
+    s.close().unwrap();drop(s);
+    for point in ["state-Applying", "apply-write", "state-Committed"] {
+        let image=work.join(format!("{point}.dmg"));std::fs::copy(&base,&image).unwrap();
+        let dir=work.join(point);
+        let status=std::process::Command::new(std::env::current_exe().unwrap())
+            .args(["--ignored","--exact","cross_directory_move_crash_worker","--nocapture"])
+            .env("LAPFS_WORKER_IMAGE",&image).env("LAPFS_WORKER_SESSION",&dir)
+            .env("SPARK_APFS_KILL_AT",point).status().unwrap();
+        assert_eq!(status.signal(),Some(libc::SIGKILL),"fault not reached: {point}");
+        spark_apfs_safe::buffered::recover(&dir).unwrap();
+        assert!(spark_apfs_safe::apfs_batch::read_file(&image,offset,"/move-source/data").is_err());
+        assert_eq!(spark_apfs_safe::apfs_batch::read_file(&image,offset,"/move-target/data").unwrap(),b"new content");
+    }
+    println!("CROSS_MOVE_CRASH_EVIDENCE={}",work.display());
+}
+
 #[test]
 #[ignore = "requires explicit disposable APFS fixture"]
 fn buffered_range_queue_roundtrip() {

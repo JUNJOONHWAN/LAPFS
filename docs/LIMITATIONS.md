@@ -2,7 +2,7 @@
 
 ## Supported subset
 
-Single unencrypted APFS volume; no snapshots; supported allocator geometry; ordinary unshared files. Basic reads, directory enumeration, symlink reads and creation/removal, range reads above 4 GiB; writes through a durable queue; create/copy/range overwrite/append, mkdir, rmdir of empty directories, unlink of closed files, same-directory file rename/replace, chmod and atime/mtime, fsync, close and normal unmount.
+Single unencrypted APFS volume; no snapshots; supported allocator geometry; ordinary unshared files. Basic reads, directory enumeration, symlink reads and creation/removal, range reads above 4 GiB; writes through a durable queue; create/copy/range overwrite/append, mkdir, rmdir of empty directories, unlink of closed files, same-volume file and directory move/rename/replace, chmod and atime/mtime, fsync, close and normal unmount.
 
 New truncate size is limited to 8 MiB. Large file copy/append/range-write does not have an 8 MiB total-file limit. Input queue payload cap is 4 MiB, active undo+redo cap is 32 MiB, reserve is 1 GiB with 96 MiB working headroom. These are separate limits, not a total RAM guarantee. There may be more than one retained failed session; do not automatically delete it to free space.
 
@@ -10,7 +10,7 @@ New truncate size is limited to 8 MiB. Large file copy/append/range-write does n
 
 - Multiple volumes, snapshots, encrypted writes, pending revert, unsupported incompatible feature bits and CAB indirection.
 - Shared/cloned/hardlinked/compressed/sparse/special/immutable/append-only file mutation and unvalidated extended attributes.
-- Non-empty directory removal and directory rename; cross-directory rename; open-target replacement and open-file unlink (EBUSY).
+- Non-empty directory removal; open-target replacement and open-file unlink (EBUSY). Cross-directory moves have image/FUSE/macOS fsck evidence in beta.15, but real TB-scale Corsair application is pending.
 - Hardlinks, writable mmap, chown to a different owner, special device creation, arbitrary xattrs and ACL updates. Symlink chmod remains unsupported.
 - Complete POSIX semantics, database suitability, arbitrary application save protocols, and full `cp -a` metadata preservation. `rsync -a` was verified only for regular files, directories and symlinks owned by the mounted user; device nodes and differing uid/gid remain unqualified.
 

@@ -434,11 +434,12 @@ impl Filesystem for Host {
             if target.is_some_and(|a| self.busy(ino(&a))) {
                 return Err(std::io::Error::from_raw_os_error(libc::EBUSY).into());
             }
+            let updates = self.paths.plan_rename_tree(id, &p, &d)?;
             self.session.rename(&p, &d, flags & 1 == 0)?;
             if let Some(a) = target {
                 self.paths.remove(ino(&a));
             }
-            self.paths.rename(id, d)?;
+            self.paths.apply_rename_tree(updates);
             Ok(())
         })();
         match r {

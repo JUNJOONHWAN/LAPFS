@@ -57,6 +57,10 @@ pub enum Action {
         path: String,
         name: String,
     },
+    Move {
+        path: String,
+        destination: String,
+    },
 }
 
 pub struct Adapter<D: Device> {
@@ -293,7 +297,8 @@ fn stage_overlay<D: Device>(
             | Action::Remove { path }
             | Action::Rmdir { path }
             | Action::SetAttrs { path, .. }
-            | Action::Rename { path, .. } => path,
+            | Action::Rename { path, .. }
+            | Action::Move { path, .. } => path,
         };
         let (parent_path, name) = if matches!(action, Action::SetAttrs { .. }) && path == "/" {
             ("/".to_owned(), String::new())
@@ -331,10 +336,12 @@ fn stage_overlay<D: Device>(
                     matches!(a.mode & 0xf000, 0x4000 | 0x8000 | 0xa000),
                     "Unsupported inode type for metadata update"
                 );
-            } else if matches!(action, Action::Remove { .. } | Action::Rename { .. })
+            } else if matches!(action, Action::Remove { .. } | Action::Rename { .. } | Action::Move { .. })
                 && a.mode & 0xf000 == 0xa000
             {
                 // An APFS symlink is stored in an inode xattr and has no data extents.
+            } else if matches!(action, Action::Move { .. }) && a.is_dir {
+                // A move preserves the directory inode and descendant records.
             } else {
                 ensure!(
                     view.plain_unshared_file(path)?,
@@ -343,6 +350,7 @@ fn stage_overlay<D: Device>(
             }
         }
         let mut content = None;
+        let mut move_parent_ino = None;
         match action {
             Action::Put { source, .. } | Action::WriteAt { source, .. } => {
                 if let Some(a) = existing {
@@ -460,6 +468,25 @@ fn stage_overlay<D: Device>(
                     "Rename destination already exists"
                 );
             }
+            Action::Move { destination, .. } => {
+                let source = existing.context("Move source missing")?;
+                let (dest_parent_path, _) = path_parts(destination)?;
+                if source.is_dir {
+                    ensure!(dest_parent_path.as_str() != path.as_str() && !dest_parent_path.starts_with(&format!("{path}/")),
+                        "Cannot move directory into itself");
+                }
+                let mut prefix = String::new();
+                for part in dest_parent_path.split('/').filter(|x| !x.is_empty()) {
+                    prefix.push('/'); prefix.push_str(part);
+                    let a = view.getattr(&prefix)?.context("Move destination parent missing")?;
+                    ensure!(a.is_dir && a.mode & 0xf000 == 0x4000, "Move parent must be a directory");
+                }
+                let dest_parent = view.getattr(&dest_parent_path)?.context("Move parent missing")?;
+                ensure!(dest_parent.is_dir && dest_parent.bsd_flags & 0x00060006 == 0,
+                    "Move parent unavailable");
+                ensure!(view.getattr(destination)?.is_none(), "Move destination already exists");
+                move_parent_ino = Some(dest_parent.inode);
+            }
         }
         let mut txn = Transaction::begin(view.into_dev())?;
         match action {
@@ -550,6 +577,11 @@ fn stage_overlay<D: Device>(
             }
             Action::Rename { name: new_name, .. } => {
                 file::rename(&mut txn, &vsb, &omap, parent.inode, &name, new_name, false)?
+            }
+            Action::Move { destination, .. } => {
+                let (_, dest_name) = path_parts(destination)?;
+                file::move_entry(&mut txn, &vsb, &omap, parent.inode, &name,
+                    move_parent_ino.context("Move parent not validated")?, &dest_name, false)?;
             }
         }
         dev = txn.commit()?;

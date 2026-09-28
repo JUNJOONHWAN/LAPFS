@@ -67,16 +67,38 @@ impl InodePaths {
         }
     }
 
-    pub(crate) fn rename(&mut self, ino: u64, path: String) -> Result<()> {
-        if let Some(entry) = self.entries.get_mut(&ino) {
-            entry.path = path;
-        } else {
-            self.entries
-                .try_reserve(1)
+    // Allocate all new names before the APFS transaction is committed. After
+    // commit the caller can update every cached descendant without failing.
+    pub(crate) fn plan_rename_tree(
+        &mut self, ino: u64, old: &str, new: &str,
+    ) -> Result<Vec<(u64, String)>> {
+        if !self.entries.contains_key(&ino) {
+            self.entries.try_reserve(1)
                 .map_err(|_| std::io::Error::from_raw_os_error(libc::ENOMEM))?;
-            self.entries.insert(ino, Entry { path, lookups: 0 });
         }
-        Ok(())
+        let prefix = format!("{old}/");
+        let mut updates = Vec::new();
+        updates.try_reserve(self.entries.len() + 1)
+            .map_err(|_| std::io::Error::from_raw_os_error(libc::ENOMEM))?;
+        updates.push((ino, new.to_owned()));
+        for (&id, entry) in &self.entries {
+            if id != ino {
+                if let Some(suffix) = entry.path.strip_prefix(&prefix) {
+                    updates.push((id, format!("{new}/{suffix}")));
+                }
+            }
+        }
+        Ok(updates)
+    }
+
+    pub(crate) fn apply_rename_tree(&mut self, updates: Vec<(u64, String)>) {
+        for (ino, path) in updates {
+            if let Some(entry) = self.entries.get_mut(&ino) {
+                entry.path = path;
+            } else {
+                self.entries.insert(ino, Entry { path, lookups: 0 });
+            }
+        }
     }
 
     #[cfg(test)]
@@ -88,6 +110,21 @@ impl InodePaths {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn moving_directory_rewrites_cached_descendant_paths() {
+        let mut paths = InodePaths::new();
+        paths.remember(2, "/src".into()).unwrap();
+        paths.remember(3, "/src/deep".into()).unwrap();
+        paths.remember(4, "/src/deep/file".into()).unwrap();
+        paths.remember(5, "/src-sibling".into()).unwrap();
+        let plan = paths.plan_rename_tree(2, "/src", "/dst/src").unwrap();
+        paths.apply_rename_tree(plan);
+        assert_eq!(paths.get(2), Some("/dst/src"));
+        assert_eq!(paths.get(3), Some("/dst/src/deep"));
+        assert_eq!(paths.get(4), Some("/dst/src/deep/file"));
+        assert_eq!(paths.get(5), Some("/src-sibling"));
+    }
 
     #[test]
     fn more_than_old_hundred_thousand_inode_limit_and_forget() {

@@ -1,8 +1,8 @@
-> **beta.14** · APFS 체크섬 계산 최적화 · 실제 Corsair 쓰기·SHA 검증 통과. [변경·검증 보고서](docs/CHECKSUM_PERFORMANCE.md)
+> **beta.15 후보** · 폴더 간 파일·폴더 이동 · 시험 이미지/FUSE/Mac APFS 검사 통과 · Corsair 적용 대기. [변경·검증 보고서](docs/CROSS_DIRECTORY_MOVE.md)
 
-<p align="center"><img src="docs/assets/lapfs-banner.svg" alt="LAPFS beta.14 — Linux ARM64 APFS 읽기·쓰기, 데이터·할당표 CoW" width="100%"></p>
+<p align="center"><img src="docs/assets/lapfs-banner.svg" alt="LAPFS beta.15 — Linux ARM64 APFS 읽기·쓰기, 데이터·할당표 CoW" width="100%"></p>
 <p align="center">
-  <a href="https://github.com/JUNJOONHWAN/LAPFS/releases/tag/v0.3.0-beta.14"><img alt="Beta" src="https://img.shields.io/badge/release-0.3.0--beta.14-f5b84b"></a>
+  <a href="https://github.com/JUNJOONHWAN/LAPFS/releases/tag/v0.3.0-beta.15"><img alt="Beta" src="https://img.shields.io/badge/release-0.3.0--beta.15-f5b84b"></a>
   <img alt="Platform" src="https://img.shields.io/badge/target-DGX%20Spark%20%2F%20Linux%20ARM64-72d6c9">
   <a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/license-GPL--3.0--only-829bff"></a>
 </p>
@@ -20,7 +20,7 @@
 | 데이터 조건 | 별도 백업 필요 · 유일한 사본 사용 부적합 |
 | 미검증 | 물리 전원 차단 · USB 브리지 캐시 신뢰성 · 장기 실장치 부하 |
 
-[릴리스](https://github.com/JUNJOONHWAN/LAPFS/releases/tag/v0.3.0-beta.14) · [HTML 매뉴얼](docs/architecture.html) · [HTML 소스](docs/architecture.html) · [English overview](docs/OVERVIEW.md)
+[릴리스](https://github.com/JUNJOONHWAN/LAPFS/releases/tag/v0.3.0-beta.15) · [HTML 매뉴얼](docs/architecture.html) · [HTML 소스](docs/architecture.html) · [English overview](docs/OVERVIEW.md)
 
 [저장 위치](#저장-위치) · [중단 처리](#중단-처리) · [사양](#사양) · [설치·시험](#설치시험) · [지원 제한](#지원-제한) · [검증](#검증)
 
@@ -104,12 +104,12 @@ flowchart LR
 
 ## 사양
 
-| 항목 | beta.14 |
+| 항목 | beta.15 후보 |
 |---|---|
 | 읽기 | 일반 파일 · 디렉터리 · 심볼릭 링크 · 4 GiB 초과 범위 읽기 |
 | 파일 쓰기 | 생성 · 복사 · 범위 수정 · append · 닫힌 파일 삭제 |
 | 디렉터리 | mkdir · 빈 폴더 rmdir |
-| 이름 변경 | 같은 폴더 내 파일 rename/replace · 닫힌 대상 |
+| 이름 변경 | 같은 볼륨 내 파일·폴더 이동/rename · 닫힌 대상 교체 · Corsair 적용 대기 |
 | 메타데이터 | chmod · atime/mtime · 심볼릭 링크 생성/삭제 |
 | 쓰기 큐 | 기본 논리 입력 32 MiB × 2 · 전체 RAM 상한 아님 |
 | 배치 복구 기록 | undo + redo 상한 128 MiB |
@@ -192,7 +192,7 @@ PY
 | 256MiB × 3회 | 112–118MiB/s · SHA 일치 · 기록량 1.29–1.30배 |
 | beta.14 회귀 | Rust 312개 · Mac APFS 59개 이미지 통과 |
 
-[beta.14 변경·실장치 결과](docs/CHECKSUM_PERFORMANCE.md) · [beta.13 변경·검증 보고서](docs/WRITE_AMPLIFICATION.md)
+[beta.15 폴더 이동·검증](docs/CROSS_DIRECTORY_MOVE.md) · [beta.14 변경·실장치 결과](docs/CHECKSUM_PERFORMANCE.md) · [beta.13 변경·검증 보고서](docs/WRITE_AMPLIFICATION.md)
 
 ### beta.7 검증 이력
 
@@ -224,7 +224,7 @@ PY
 
 - 볼륨: 암호화 쓰기 · 다중 볼륨 · 스냅샷 · CAB 간접 할당 등 미지원 구조
 - 변경 대상: clone/hardlink/shared/compressed/sparse/특수/immutable/append-only 파일
-- 파일 작업: 다른 폴더 간 rename · 디렉터리 rename · 열린 파일 삭제·목적지 교체
+- 파일 작업: 열린 파일 삭제·열린 목적지 교체 · 일부 특수 inode 변경
 - 폴더 제거: 비어 있지 않은 폴더의 직접 제거 미지원 · 빈 폴더 rmdir 지원
 - 권한·메타데이터: 다른 소유자로의 chown · 임의 xattr/ACL 변경 · hardlink 생성
 - 기타: writable mmap · 8 MiB 초과 새 크기로 truncate

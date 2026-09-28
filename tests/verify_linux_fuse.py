@@ -57,6 +57,28 @@ try:
  os.replace(mp/'temp.txt',mp/'old.txt');assert (mp/'old.txt').read_bytes()==b'new atomically replaced'
  expected['old.txt']={'bytes':23,'sha256':hashlib.sha256(b'new atomically replaced').hexdigest()}
  (mp/'remove.txt').write_bytes(b'delete');(mp/'remove.txt').unlink();assert not (mp/'remove.txt').exists()
+ # POSIX same-volume move must preserve data and inode across parent folders.
+ (mp/'move-source').mkdir();(mp/'move-destination').mkdir()
+ (mp/'move-source/file').write_bytes(b'cross-directory data')
+ before_inode=(mp/'move-source/file').stat().st_ino
+ os.rename(mp/'move-source/file',mp/'move-destination/file')
+ assert (mp/'move-destination/file').read_bytes()==b'cross-directory data'
+ assert (mp/'move-destination/file').stat().st_ino==before_inode
+ (mp/'move-source/tree').mkdir();(mp/'move-source/tree/child').write_bytes(b'descendant')
+ fd=os.open(mp/'move-source/tree/child',os.O_RDONLY)
+ try:
+  os.rename(mp/'move-source/tree',mp/'move-destination/tree')
+  assert os.pread(fd,10,0)==b'descendant'
+ finally:os.close(fd)
+ assert (mp/'move-destination/tree/child').read_bytes()==b'descendant'
+ expected['move-destination/file']={'bytes':20,'sha256':hashlib.sha256(b'cross-directory data').hexdigest()}
+ expected['move-destination/tree/child']={'bytes':10,'sha256':hashlib.sha256(b'descendant').hexdigest()}
+ (mp/'move-source/replacement').write_bytes(b'new')
+ (mp/'move-destination/replacement').write_bytes(b'old')
+ os.replace(mp/'move-source/replacement',mp/'move-destination/replacement')
+ assert (mp/'move-destination/replacement').read_bytes()==b'new'
+ expected['move-destination/replacement']={'bytes':3,'sha256':hashlib.sha256(b'new').hexdigest()}
+ checks+=['cross_directory_file_move','cross_directory_directory_move','open_child_across_directory_move','cross_directory_replace']
  checks+=['mkdir_unicode','truncate_and_unaligned_append','atomic_replace','unlink']
  (mp/'temporary-empty').mkdir()
  (mp/'temporary-empty/nested').mkdir()

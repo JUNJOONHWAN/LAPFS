@@ -871,55 +871,66 @@ impl Session {
             return Ok(());
         }
         let source = self.attr(path)?;
-        if source.mode & 0xf000 == 0xa000 {
-            self.parent(path)?;
-            if source.bsd_flags & 0x00060006 != 0 {
-                return Err(fail_errno(libc::EPERM));
-            }
-        } else {
-            self.writable(path)?;
+        self.parent(path)?;
+        if source.bsd_flags & 0x00060006 != 0 {
+            return Err(fail_errno(libc::EPERM));
+        }
+        match source.mode & 0xf000 {
+            0x4000 if source.is_dir => {}
+            0xa000 => {}
+            0x8000 => self.writable(path)?,
+            _ => return Err(fail_errno(libc::EOPNOTSUPP)),
         }
         self.parent(destination)?;
         let (parent, _) = path.rsplit_once('/').context("Bad rename source")?;
         let (dest_parent, name) = destination
             .rsplit_once('/')
             .context("Bad rename destination")?;
-        if parent != dest_parent {
-            return Err(fail_errno(libc::EXDEV));
+        if source.is_dir && (destination.starts_with(&format!("{path}/")) || destination == path) {
+            return Err(fail_errno(libc::EINVAL));
         }
         let target = self.view()?.getattr(destination)?;
-        if target.is_some_and(|a| a.inode == self.attr(path).map(|a| a.inode).unwrap_or(u64::MAX)) {
+        if target.is_some_and(|a| a.inode == source.inode) {
             return Err(fail_errno(libc::EOPNOTSUPP));
         }
-        let exists = target.is_some();
-        if exists {
+        if let Some(target) = target {
             if !replace {
                 return Err(fail_errno(libc::EEXIST));
             }
-            if target.unwrap().mode & 0xf000 == 0xa000 {
-                self.parent(destination)?;
-                if target.unwrap().bsd_flags & 0x00060006 != 0 {
-                    return Err(fail_errno(libc::EPERM));
+            if source.is_dir != target.is_dir {
+                return Err(fail_errno(if source.is_dir { libc::ENOTDIR } else { libc::EISDIR }));
+            }
+            if target.bsd_flags & 0x00060006 != 0 {
+                return Err(fail_errno(libc::EPERM));
+            }
+            if target.is_dir {
+                if !self.list(destination)?.is_empty() {
+                    return Err(fail_errno(libc::ENOTEMPTY));
                 }
-            } else {
+            } else if target.mode & 0xf000 == 0x8000 {
                 self.writable(destination)?;
+            } else if target.mode & 0xf000 != 0xa000 {
+                return Err(fail_errno(libc::EOPNOTSUPP));
             }
         }
         self.flush()?;
-        // One durable queue publication, so a crash cannot acknowledge or replay
-        // only the deletion half of an atomic replace.
-        if exists {
+        // Publish replacement as one durable queue. The journal restores both
+        // catalog edits together if preparation or application is interrupted.
+        if let Some(target) = target {
             self.record.queue.push(Pending {
-                action: Action::Remove {
-                    path: destination.into(),
+                action: if target.is_dir {
+                    Action::Rmdir { path: destination.into() }
+                } else {
+                    Action::Remove { path: destination.into() }
                 },
                 payload: None,
             });
         }
         self.enqueue(
-            Action::Rename {
-                path: path.into(),
-                name: name.into(),
+            if parent == dest_parent && !source.is_dir {
+                Action::Rename { path: path.into(), name: name.into() }
+            } else {
+                Action::Move { path: path.into(), destination: destination.into() }
             },
             None,
         )?;

@@ -1,3 +1,12 @@
+# 0.3.0-beta.15 candidate
+
+- Same-volume file/directory move and rename through FUSE; replaces closed destination files or empty directories.
+- Directory inode path cache updates include known descendants and open child handles.
+- One queued journal batch protects destination removal plus move; three forced-termination recovery images passed Apple `fsck_apfs -n` and content checks.
+- Disposable FUSE workload and macOS fsck/SHA passed. Actual Corsair beta.15 activation and TB-scale catalog move qualification are **pending**. Keep beta.14 mounted until normal safe handoff.
+- Pending beta.15 `Move` journal records need beta.15 or later for recovery; normally unmount before downgrade.
+- [Change and validation report](docs/CROSS_DIRECTORY_MOVE.md).
+
 # 0.3.0-beta.14
 
 - APFS Fletcher-64: 1024개 word 단위 나머지 연산 · 결과·디스크 형식 동일.
