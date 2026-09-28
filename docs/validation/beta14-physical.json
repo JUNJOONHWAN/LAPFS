@@ -1,0 +1,69 @@
+{
+  "version": "0.3.0-beta.14",
+  "status": "mounted_rw_canary_passed",
+  "handoff": {
+    "device_sync": "completed",
+    "closed": true,
+    "pending_bytes": 0
+  },
+  "binary_sha256": "32430230ccab42b237b9f6deef20c59b2aa79d031d0c1deaca37d11d68e1e16c",
+  "canaries": [
+    {
+      "bytes": 16777216,
+      "write_size": 10240,
+      "seconds": 0.5865900320350192,
+      "MiB_s": 27.27629029851091,
+      "sha256": "341aacac661ccb210720bedaa9ead5d668fe5ea41a73532fc147c71e34040df1",
+      "write_amplification": 2.943115234375
+    },
+    {
+      "bytes": 67108864,
+      "write_size": 1048576,
+      "seconds": 0.6942144159693271,
+      "MiB_s": 92.19053728614554,
+      "sha256": "281e519df3077b557c6b03f5da83c4e8d397219259615dd7c3308f89cae8f2a6",
+      "write_amplification": 1.5927734375
+    },
+    {
+      "bytes": 268435456,
+      "write_size": 1048576,
+      "seconds": 2.1695070599671453,
+      "MiB_s": 117.99915507252454,
+      "sha256": "486cc817b95d853d3c357ff283b204c0144bd255e73fe2deb1389493b257e3c0",
+      "write_amplification": 1.2951202392578125
+    },
+    {
+      "bytes": 268435456,
+      "write_size": 1048576,
+      "seconds": 2.21185639599571,
+      "MiB_s": 115.73988278057114,
+      "sha256": "486cc817b95d853d3c357ff283b204c0144bd255e73fe2deb1389493b257e3c0",
+      "write_amplification": 1.293304443359375
+    },
+    {
+      "bytes": 268435456,
+      "write_size": 1048576,
+      "seconds": 2.2834820349817164,
+      "MiB_s": 112.10948721216883,
+      "sha256": "486cc817b95d853d3c357ff283b204c0144bd255e73fe2deb1389493b257e3c0",
+      "write_amplification": 1.297332763671875
+    }
+  ],
+  "read_canaries": [
+    {
+      "bytes": 86707079,
+      "seconds": 0.6386384280049242,
+      "MiB_s": 129.47907715360677,
+      "sha256": "39877db6ef083ae323444e5ee0e2dc51918ed390cef4d61d02dd8febbe9dd562"
+    },
+    {
+      "bytes": 86707079,
+      "seconds": 0.11770879896357656,
+      "MiB_s": 702.4990061999965,
+      "sha256": "39877db6ef083ae323444e5ee0e2dc51918ed390cef4d61d02dd8febbe9dd562"
+    }
+  ],
+  "existing_files_modified": 0,
+  "original_root_names": "unchanged",
+  "limit": "Single activation run; caches and system workload uncontrolled; no power-loss or long-run throughput claim."
+}

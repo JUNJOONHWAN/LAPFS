@@ -65,7 +65,7 @@ DGX ARM64 · 동일 4088바이트 · 100,000회 · old/new/new/old · release �
 
 ## 적용
 
-- 실제 Corsair: beta.14 교체 후 측정 필요.
+- 실제 Corsair: beta.14 쓰기 마운트 활성화 · 5개 시험 파일 fsync/close/SHA 통과.
 - 물리 장치 300–400MB/s: 미확인.
 - 새 외부 의존성·라이선스 변경 없음.
 
@@ -92,6 +92,25 @@ DGX 내부 ext4 · 1GiB APFS 시험 이미지 · 파일당 256MiB · 동일 난�
 - SHA-256: `32430230ccab42b237b9f6deef20c59b2aa79d031d0c1deaca37d11d68e1e16c`.
 - 후보 배포 위치: `/home/zooh/Documents/LAPFS/beta-0.3.0-beta.14`.
 - 활성화: 기존 beta.13 세션 식별 → 열린 사용자 파일 대기 → 정상 분리 → 새 마운트 → 16/64/256MiB 시험·SHA·기록량 측정.
-- 실제 마운트 교체·공개 릴리스: 현 단계 미실행.
+- 실제 마운트 교체 완료 · 정상 분리·장치 동기화·원래 파일 이름 불변 · 기존 파일 수정 0.
+- 공개 릴리스: 별도 배포 영수증에서 확인.
 
 [최종 바이너리 Mac 검사](validation/beta14-native-benchmark.json)
+
+## Corsair 활성화 결과
+
+2026-09-29 KST · beta.14 · 16/64/256/256/256MiB 시험 파일 · fsync/close/SHA 통과. 단위 MiB/s.
+
+| 파일 | 쓰기 단위 | 속도 | OS 기록량 / 입력 |
+|---|---:|---:|---:|
+| 16MiB | 10KiB | 27.28MiB/s | 2.94배 |
+| 64MiB | 1MiB | 92.19MiB/s | 1.59배 |
+| 256MiB 1회 | 1MiB | 118.00MiB/s | 1.295배 |
+| 256MiB 2회 | 1MiB | 115.74MiB/s | 1.293배 |
+| 256MiB 3회 | 1MiB | 112.11MiB/s | 1.297배 |
+
+기존 beta.13의 256MiB/1MiB 1회 결과는 87.61MiB/s · 1.470배. 다른 시점 시험이므로 속도 차이를 체크섬 수정 효과로 단정할 수 없음. beta.14의 3회 시험 내 속도 범위 112–118MiB/s. 300–400MB/s 목표 미달.
+
+정상 분리 `device_sync=completed`, 이전 세션 `pending_bytes=0`, 새 세션 활성, 기존 파일 수정 0. 반복 읽기 SHA 일치. 장기 쓰기·물리 전원 차단·Mac 왕복은 이번 실장치 시험 범위 밖.
+
+[실장치 결과](validation/beta14-physical.json)

@@ -1,9 +1,11 @@
-# 0.3.0-beta.14 · 후보
+# 0.3.0-beta.14
 
 - APFS Fletcher-64: 1024개 word 단위 나머지 연산 · 결과·디스크 형식 동일.
 - 체크섬·undo·flush·기록 후 재검증 유지.
 - `LAPFS_PROFILE`: `prepare_memory_total` 계측 추가.
-- 실제 Corsair 성능: 교체 후 측정 필요 · 300–400MB/s 미확인.
+- 실제 Corsair 256MiB 순차 쓰기 3회: 112–118MiB/s · 기록량 1.29–1.30배 · SHA 일치. beta.13의 1회 87.61MiB/s와 다른 시점 측정.
+- 16MiB/10KiB 27.28MiB/s · 기록량 2.94배. 작은 쓰기 병목 잔존.
+- Rust 312개 · Mac APFS 59개 이미지 · Corsair 정상 분리/쓰기 검증. 300–400MB/s와 장기 지속 속도 미달·미검증.
 - [전후 영향·검증](docs/CHECKSUM_PERFORMANCE.md).
 
 # 0.3.0-beta.13

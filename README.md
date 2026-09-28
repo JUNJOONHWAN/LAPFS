@@ -1,8 +1,8 @@
-> **beta.14 후보** · APFS 체크섬 계산 최적화 · 실제 Corsair 처리량 검증 대기. [변경·검증 보고서](docs/CHECKSUM_PERFORMANCE.md)
+> **beta.14** · APFS 체크섬 계산 최적화 · 실제 Corsair 쓰기·SHA 검증 통과. [변경·검증 보고서](docs/CHECKSUM_PERFORMANCE.md)
 
-<p align="center"><img src="docs/assets/lapfs-banner.svg" alt="LAPFS beta.13 — Linux ARM64 APFS 읽기·쓰기, 데이터·할당표 CoW" width="100%"></p>
+<p align="center"><img src="docs/assets/lapfs-banner.svg" alt="LAPFS beta.14 — Linux ARM64 APFS 읽기·쓰기, 데이터·할당표 CoW" width="100%"></p>
 <p align="center">
-  <a href="docs/CHECKSUM_PERFORMANCE.md"><img alt="Candidate" src="https://img.shields.io/badge/candidate-0.3.0--beta.14-f5b84b"></a>
+  <a href="https://github.com/JUNJOONHWAN/LAPFS/releases/tag/v0.3.0-beta.14"><img alt="Beta" src="https://img.shields.io/badge/release-0.3.0--beta.14-f5b84b"></a>
   <img alt="Platform" src="https://img.shields.io/badge/target-DGX%20Spark%20%2F%20Linux%20ARM64-72d6c9">
   <a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/license-GPL--3.0--only-829bff"></a>
 </p>
@@ -20,7 +20,7 @@
 | 데이터 조건 | 별도 백업 필요 · 유일한 사본 사용 부적합 |
 | 미검증 | 물리 전원 차단 · USB 브리지 캐시 신뢰성 · 장기 실장치 부하 |
 
-[릴리스](https://github.com/JUNJOONHWAN/LAPFS/releases/tag/v0.3.0-beta.13) · [HTML 매뉴얼 다운로드](https://github.com/JUNJOONHWAN/LAPFS/releases/download/v0.3.0-beta.13/LAPFS-beta13-architecture.html) · [HTML 소스](docs/architecture.html) · [English overview](docs/OVERVIEW.md)
+[릴리스](https://github.com/JUNJOONHWAN/LAPFS/releases/tag/v0.3.0-beta.14) · [HTML 매뉴얼](docs/architecture.html) · [HTML 소스](docs/architecture.html) · [English overview](docs/OVERVIEW.md)
 
 [저장 위치](#저장-위치) · [중단 처리](#중단-처리) · [사양](#사양) · [설치·시험](#설치시험) · [지원 제한](#지원-제한) · [검증](#검증)
 
@@ -35,7 +35,7 @@
 - 기본 FUSE 쓰기: RAM redo · 필요한 undo만 디스크 저장
 - 원본 할당표 기준 빈 블록 undo 생략 · CoW·flush·재검증 유지
 - 내부 이미지 기록량: 약 4.1배 → 1.06배 · 공간 재사용 8회 포함
-- 실제 USB 처리량: beta.13 적용 후 확인 필요
+- 실제 Corsair 256MiB 순차 쓰기: beta.14 112–118MiB/s · 1.29–1.30배 · 세 번의 활성화 시험
 - [변경 전후·기록량·검증](docs/WRITE_AMPLIFICATION.md)
 
 ## 쓰기 정책
@@ -104,7 +104,7 @@ flowchart LR
 
 ## 사양
 
-| 항목 | beta.13 |
+| 항목 | beta.14 |
 |---|---|
 | 읽기 | 일반 파일 · 디렉터리 · 심볼릭 링크 · 4 GiB 초과 범위 읽기 |
 | 파일 쓰기 | 생성 · 복사 · 범위 수정 · append · 닫힌 파일 삭제 |
@@ -117,7 +117,7 @@ flowchart LR
 | 전체 파일·디스크 staging | 불필요 |
 | 총 RAM 상한 | 미인증 |
 | 오류 로그 | 2 MiB × 4개 · 약 8 MiB |
-| beta.13 USB 지속 처리량 | 실장치 교체 후 측정 필요 |
+| beta.14 USB 짧은 순차 쓰기 | 256MiB × 3회 · 112–118MiB/s · 장기 지속 속도 미검증 |
 | macOS 역할 | 독립 검사 · macOS FUSE 드라이버 미제공 |
 
 공간 수치: 계층별 제한 · 전체 사용량 보장 아님 · 실패 세션/복구 기록 자동 삭제 없음
@@ -185,9 +185,14 @@ PY
 | Rust | 311개 통과 · 최종 Pipeline 추가 검사 |
 | Mac | 60개 이미지 fsck·파일 SHA 통과 |
 | 기록량 | 초기·재사용 공간 약 1.06배 · 내부 이미지 기준 |
-| 실장치·전원 차단 | beta.13 미검증 |
+| beta.13 Corsair 256MiB 1회 | 87.61MiB/s · 기록량 1.47배 · 전원 차단 미검증 |
 
-[beta.13 변경·검증 보고서](docs/WRITE_AMPLIFICATION.md)
+| beta.14 실장치 | 확인 값 |
+|---|---|
+| 256MiB × 3회 | 256MiB × 3회 · 112–118MiB/s · SHA 일치 · 기록량 1.29–1.30배 |
+| beta.14 회귀 | Rust 312개 · Mac APFS 59개 이미지 통과 |
+
+[beta.14 변경·실장치 결과](docs/CHECKSUM_PERFORMANCE.md) · [beta.13 변경·검증 보고서](docs/WRITE_AMPLIFICATION.md)
 
 ### beta.7 검증 이력
 
