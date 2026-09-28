@@ -94,7 +94,7 @@ finally:
 assert p.returncode==0, 'Unmount failed'
 # Kill the actual FUSE daemon after write(2) returned, before close/fsync.
 crashlog=(r/'crash-fuse.log').open('wb')
-q=subprocess.Popen([str(b),'mount-rw',str(image),'20480',str(mp),str(r/'crash-session')],stdout=crashlog,stderr=crashlog)
+q=subprocess.Popen([str(b),'mount-rw',str(image),'20480',str(mp),str(r/'crash-session'),'--durable-writes'],stdout=crashlog,stderr=crashlog)
 for _ in range(200):
  if os.path.ismount(mp):break
  assert q.poll() is None

@@ -1,0 +1,196 @@
+{
+  "scope": "local ext4 APFS image; not physical USB",
+  "bytes_per_file": 41943040,
+  "includes": [
+    "write",
+    "fsync",
+    "close",
+    "SHA256 verification"
+  ],
+  "preliminary_with_parallel_matrix": [
+    {
+      "run": 0,
+      "label": "old",
+      "chunk": 10240,
+      "bytes": 41943040,
+      "seconds": 4.141599802998826,
+      "MiB_s": 9.658103607943247,
+      "sha256": "8f64ef62163af95084172a31b4d14ee74bfbb382ed7de176e563827dc77dc48c",
+      "image": "evidence/throughput-sig6jyjk/0-old/native.dmg",
+      "binary_sha256": "6cd4bb46f1c91d0761c7adb20bc75823aac9ced65ec97cb865ac79609ef68ba8"
+    },
+    {
+      "run": 0,
+      "label": "old",
+      "chunk": 1048576,
+      "bytes": 41943040,
+      "seconds": 3.395069941994734,
+      "MiB_s": 11.781789678388323,
+      "sha256": "8f64ef62163af95084172a31b4d14ee74bfbb382ed7de176e563827dc77dc48c",
+      "image": "evidence/throughput-sig6jyjk/0-old/native.dmg",
+      "binary_sha256": "6cd4bb46f1c91d0761c7adb20bc75823aac9ced65ec97cb865ac79609ef68ba8"
+    },
+    {
+      "run": 1,
+      "label": "new",
+      "chunk": 10240,
+      "bytes": 41943040,
+      "seconds": 0.9449727219762281,
+      "MiB_s": 42.32926418907386,
+      "sha256": "8f64ef62163af95084172a31b4d14ee74bfbb382ed7de176e563827dc77dc48c",
+      "image": "evidence/throughput-sig6jyjk/1-new/native.dmg",
+      "binary_sha256": "308426f80d9977a03b8dab42f843604dc607ad6b33967f1e32ebec446080c752"
+    },
+    {
+      "run": 1,
+      "label": "new",
+      "chunk": 1048576,
+      "bytes": 41943040,
+      "seconds": 0.7813779690186493,
+      "MiB_s": 51.191614795893116,
+      "sha256": "8f64ef62163af95084172a31b4d14ee74bfbb382ed7de176e563827dc77dc48c",
+      "image": "evidence/throughput-sig6jyjk/1-new/native.dmg",
+      "binary_sha256": "308426f80d9977a03b8dab42f843604dc607ad6b33967f1e32ebec446080c752"
+    },
+    {
+      "run": 2,
+      "label": "new",
+      "chunk": 10240,
+      "bytes": 41943040,
+      "seconds": 1.4099479780416004,
+      "MiB_s": 28.369841031695003,
+      "sha256": "8f64ef62163af95084172a31b4d14ee74bfbb382ed7de176e563827dc77dc48c",
+      "image": "evidence/throughput-sig6jyjk/2-new/native.dmg",
+      "binary_sha256": "308426f80d9977a03b8dab42f843604dc607ad6b33967f1e32ebec446080c752"
+    },
+    {
+      "run": 2,
+      "label": "new",
+      "chunk": 1048576,
+      "bytes": 41943040,
+      "seconds": 1.3377282519941218,
+      "MiB_s": 29.901439205139674,
+      "sha256": "8f64ef62163af95084172a31b4d14ee74bfbb382ed7de176e563827dc77dc48c",
+      "image": "evidence/throughput-sig6jyjk/2-new/native.dmg",
+      "binary_sha256": "308426f80d9977a03b8dab42f843604dc607ad6b33967f1e32ebec446080c752"
+    },
+    {
+      "run": 3,
+      "label": "old",
+      "chunk": 10240,
+      "bytes": 41943040,
+      "seconds": 3.786489954974968,
+      "MiB_s": 10.563873264062162,
+      "sha256": "8f64ef62163af95084172a31b4d14ee74bfbb382ed7de176e563827dc77dc48c",
+      "image": "evidence/throughput-sig6jyjk/3-old/native.dmg",
+      "binary_sha256": "6cd4bb46f1c91d0761c7adb20bc75823aac9ced65ec97cb865ac79609ef68ba8"
+    },
+    {
+      "run": 3,
+      "label": "old",
+      "chunk": 1048576,
+      "bytes": 41943040,
+      "seconds": 2.4266108000301756,
+      "MiB_s": 16.483895975202365,
+      "sha256": "8f64ef62163af95084172a31b4d14ee74bfbb382ed7de176e563827dc77dc48c",
+      "image": "evidence/throughput-sig6jyjk/3-old/native.dmg",
+      "binary_sha256": "6cd4bb46f1c91d0761c7adb20bc75823aac9ced65ec97cb865ac79609ef68ba8"
+    }
+  ],
+  "final_no_parallel_LAPFS_tests": [
+    {
+      "run": 0,
+      "label": "old",
+      "chunk": 10240,
+      "bytes": 41943040,
+      "seconds": 3.465237407013774,
+      "MiB_s": 11.543220651790975,
+      "sha256": "8f64ef62163af95084172a31b4d14ee74bfbb382ed7de176e563827dc77dc48c",
+      "image": "evidence/throughput-01opvhy8/0-old/native.dmg",
+      "binary_sha256": "6cd4bb46f1c91d0761c7adb20bc75823aac9ced65ec97cb865ac79609ef68ba8"
+    },
+    {
+      "run": 0,
+      "label": "old",
+      "chunk": 1048576,
+      "bytes": 41943040,
+      "seconds": 1.58047326101223,
+      "MiB_s": 25.308874871050712,
+      "sha256": "8f64ef62163af95084172a31b4d14ee74bfbb382ed7de176e563827dc77dc48c",
+      "image": "evidence/throughput-01opvhy8/0-old/native.dmg",
+      "binary_sha256": "6cd4bb46f1c91d0761c7adb20bc75823aac9ced65ec97cb865ac79609ef68ba8"
+    },
+    {
+      "run": 1,
+      "label": "new",
+      "chunk": 10240,
+      "bytes": 41943040,
+      "seconds": 0.7399354240042157,
+      "MiB_s": 54.05877148513449,
+      "sha256": "8f64ef62163af95084172a31b4d14ee74bfbb382ed7de176e563827dc77dc48c",
+      "image": "evidence/throughput-01opvhy8/1-new/native.dmg",
+      "binary_sha256": "308426f80d9977a03b8dab42f843604dc607ad6b33967f1e32ebec446080c752"
+    },
+    {
+      "run": 1,
+      "label": "new",
+      "chunk": 1048576,
+      "bytes": 41943040,
+      "seconds": 0.6567013960448094,
+      "MiB_s": 60.910484187962105,
+      "sha256": "8f64ef62163af95084172a31b4d14ee74bfbb382ed7de176e563827dc77dc48c",
+      "image": "evidence/throughput-01opvhy8/1-new/native.dmg",
+      "binary_sha256": "308426f80d9977a03b8dab42f843604dc607ad6b33967f1e32ebec446080c752"
+    },
+    {
+      "run": 2,
+      "label": "new",
+      "chunk": 10240,
+      "bytes": 41943040,
+      "seconds": 0.7386170359677635,
+      "MiB_s": 54.15526321781965,
+      "sha256": "8f64ef62163af95084172a31b4d14ee74bfbb382ed7de176e563827dc77dc48c",
+      "image": "evidence/throughput-01opvhy8/2-new/native.dmg",
+      "binary_sha256": "308426f80d9977a03b8dab42f843604dc607ad6b33967f1e32ebec446080c752"
+    },
+    {
+      "run": 2,
+      "label": "new",
+      "chunk": 1048576,
+      "bytes": 41943040,
+      "seconds": 0.5973657909780741,
+      "MiB_s": 66.96064723510118,
+      "sha256": "8f64ef62163af95084172a31b4d14ee74bfbb382ed7de176e563827dc77dc48c",
+      "image": "evidence/throughput-01opvhy8/2-new/native.dmg",
+      "binary_sha256": "308426f80d9977a03b8dab42f843604dc607ad6b33967f1e32ebec446080c752"
+    },
+    {
+      "run": 3,
+      "label": "old",
+      "chunk": 10240,
+      "bytes": 41943040,
+      "seconds": 2.1708875349722803,
+      "MiB_s": 18.425643593052715,
+      "sha256": "8f64ef62163af95084172a31b4d14ee74bfbb382ed7de176e563827dc77dc48c",
+      "image": "evidence/throughput-01opvhy8/3-old/native.dmg",
+      "binary_sha256": "6cd4bb46f1c91d0761c7adb20bc75823aac9ced65ec97cb865ac79609ef68ba8"
+    },
+    {
+      "run": 3,
+      "label": "old",
+      "chunk": 1048576,
+      "bytes": 41943040,
+      "seconds": 1.9579174839891493,
+      "MiB_s": 20.4298701692485,
+      "sha256": "8f64ef62163af95084172a31b4d14ee74bfbb382ed7de176e563827dc77dc48c",
+      "image": "evidence/throughput-01opvhy8/3-old/native.dmg",
+      "binary_sha256": "6cd4bb46f1c91d0761c7adb20bc75823aac9ced65ec97cb865ac79609ef68ba8"
+    }
+  ],
+  "system_limitations": [
+    "other user workloads remained active",
+    "root NVMe 99 percent occupied",
+    "memory pressure and swapping observed",
+    "two runs per version/chunk; not long-duration characterization"
+  ]
+}

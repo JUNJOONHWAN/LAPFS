@@ -1,0 +1,112 @@
+{
+  "reason": "Whitespace-only trailing-space cleanup after tests; debug line locations/build ID changed",
+  "tested_binary_sha256": "308426f80d9977a03b8dab42f843604dc607ad6b33967f1e32ebec446080c752",
+  "release_binary_sha256": "37b1e1fa640e7aea24350bbee8820eed19a927b550ff2dc90bf6a165fa6d1f25",
+  "all_allocated_sections_except_build_id_identical": true,
+  "sections": {
+    ".interp": {
+      "size": 27,
+      "sha256": "be23adc91ec8582e52305c0a524ca336d671113934722eb2d35eecfcda22ec8f"
+    },
+    ".note.ABI-tag": {
+      "size": 32,
+      "sha256": "247e0b50371ed3e46c7fec01f820b663267fd74f6fbb72222f09b1a5e34bb24b"
+    },
+    ".gnu.hash": {
+      "size": 28,
+      "sha256": "48cfe1ab1829f57db09a70309886d1c9ea74792325f08c76c116fbd31f78343a"
+    },
+    ".dynsym": {
+      "size": 3456,
+      "sha256": "3d41c75070d1796e835606c151bf014e0b3db3e8a0c841e9d65a6490572655e3"
+    },
+    ".dynstr": {
+      "size": 1800,
+      "sha256": "05693e2e9b30edd65fd75438673a9c5e1e2c00466d00a649b6a837dff33fd8af"
+    },
+    ".gnu.version": {
+      "size": 288,
+      "sha256": "e0476cc95798940d632682fb4bfd09c0cc1d6ae2406c32fcd02cfa58cb587091"
+    },
+    ".gnu.version_r": {
+      "size": 240,
+      "sha256": "cff5dbfa9922381dc0c21af23a6b0f1e5e42a4b7659a8d7e33271c492d84df9e"
+    },
+    ".rela.dyn": {
+      "size": 83496,
+      "sha256": "471f7203e24c109d737b8d9bf9a249af329f97005d9eb56aca7606a9e917ea3a"
+    },
+    ".rela.plt": {
+      "size": 3240,
+      "sha256": "d46625f65ff3991f4ce330ee2c3c61364add4f0fe72a34c382012f54886e03cb"
+    },
+    ".init": {
+      "size": 24,
+      "sha256": "9cc05975195e6bd523572fccd92165d2a540a4e177b50d0126d688803a7d49f4"
+    },
+    ".plt": {
+      "size": 2192,
+      "sha256": "000acd690806d349c98a3fc2e35d98619850cc7fa02bfa2be4277a70335802e2"
+    },
+    ".text": {
+      "size": 1659244,
+      "sha256": "a1a81012356802583b9ff47877b21f38d397d80f283b50946e1ebbc42d88829e"
+    },
+    ".fini": {
+      "size": 20,
+      "sha256": "7d39706b791b17f4e655c8b38aef56b5aede4b5bb0623dcb65a38d2f90ad64cf"
+    },
+    ".rodata": {
+      "size": 216100,
+      "sha256": "6346aac633097d0227337c97f52ae52dfc5ab3828843a9d2e165f7d0dedfc902"
+    },
+    ".eh_frame_hdr": {
+      "size": 28564,
+      "sha256": "96a0997095bdd253f27f66db5a51706d309283fd5d0be86b332159a80e687b60"
+    },
+    ".eh_frame": {
+      "size": 204856,
+      "sha256": "abbef9c9c6df33a5fc8746375190f32da45ba7c35541183ec5e490db2aba6c23"
+    },
+    ".gcc_except_table": {
+      "size": 70228,
+      "sha256": "58285f129771c2f95da1b43779a5d5d9601c885bb71612871eda402cde2f6f14"
+    },
+    ".tdata": {
+      "size": 80,
+      "sha256": "a9806774b4a6abfc3ad8223b5d95c669397e972d6cc116c7efc6a93dfb0a73e2"
+    },
+    ".tbss": {
+      "size": 88,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    ".init_array": {
+      "size": 32,
+      "sha256": "6b2cd23371e7cd64d3446d9a888585dd2f0a99e54023eb63792a38ca593e53e9"
+    },
+    ".fini_array": {
+      "size": 8,
+      "sha256": "a6cee66fe7aac3998f038657801ec1fa2e7d63bb9608b1a8aa075f16477d3bb6"
+    },
+    ".data.rel.ro": {
+      "size": 59160,
+      "sha256": "8c27778d889f48603d91be1ed352f12aa1b3b17f827288441f3dc4c1f0d16758"
+    },
+    ".dynamic": {
+      "size": 512,
+      "sha256": "7f61267e48e1b2f9c8d4336273277f306bb86b49098eba183c330637440159e3"
+    },
+    ".got": {
+      "size": 1800,
+      "sha256": "0175600f432a81aa4f57544d07bf6bc96a4c3c5dc5a23dc41b9d5a970736a57f"
+    },
+    ".data": {
+      "size": 2788,
+      "sha256": "ed061638c9cffc5efe8b3da992399dab2fec94cbce628a1b181a2089e2ed72c4"
+    },
+    ".bss": {
+      "size": 312,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  }
+}

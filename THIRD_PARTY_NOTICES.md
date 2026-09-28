@@ -68,3 +68,8 @@ Original license expressions below are from locked Cargo metadata. Alternative-l
 | `zerocopy` | 0.8.59 | BSD-2-Clause OR Apache-2.0 OR MIT | [source](https://github.com/google/zerocopy) |
 | `zerocopy-derive` | 0.8.59 | BSD-2-Clause OR Apache-2.0 OR MIT | [source](https://github.com/google/zerocopy) |
 | `zmij` | 1.0.23 | MIT | [source](https://github.com/dtolnay/zmij) |
+
+| `cc` | 1.5.1 | MIT OR Apache-2.0 | [source](https://github.com/rust-lang/cc-rs) |
+| `find-msvc-tools` | 0.1.14 | MIT OR Apache-2.0 | [source](https://github.com/rust-lang/cc-rs) |
+| `sha2-asm` | 0.6.4 | MIT | [source](https://github.com/RustCrypto/asm-hashes) |
+| `shlex` | 2.0.1 | MIT OR Apache-2.0 | [source](https://github.com/comex/rust-shlex) |

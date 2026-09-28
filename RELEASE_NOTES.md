@@ -1,3 +1,13 @@
+# 0.3.0-beta.9
+
+- RAM 입력 묶음 32MiB · 1MiB 연속 journal I/O · ARM SHA-256 가속.
+- 페이지별 SHA·로그 영구 저장·APFS CoW·체크포인트 flush 순서 유지.
+- 40MiB 로컬 이미지: 10KiB write 11.54–18.43 → 54.06–54.16MiB/s. USB 실측 아님.
+- Rust 300 · Mac 복구/복사 27 · 중단 이미지 430 통과 · rsync/이전 세션 호환.
+- 정상 분리: grouped/durable 옵션 포함 프로세스 식별 수정 · EBUSY/다른 세션 거부.
+- 미동기화 RAM 입력 유실 가능. 실장치 전원 차단·장기 지속 속도·2,500MB/s 미검증.
+- [변경 전후 영향·측정 전체·제한](docs/SEQUENTIAL_IO.md).
+
 # 0.3.0-beta.8
 
 - 기본 묶음 쓰기; fsync/close/정상 분리 시 영구 저장. 갑작스러운 분리 시 마지막 미저장 입력 유실 가능.

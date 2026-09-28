@@ -6,12 +6,24 @@ use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::collections::BTreeMap;
 use std::fs::{self, File, OpenOptions};
-use std::io::{Read, Seek, SeekFrom, Write};
+use std::io::{Read, Seek, SeekFrom, Write, BufWriter};
 use std::os::fd::AsRawFd;
-use std::os::unix::fs::{DirBuilderExt, MetadataExt, OpenOptionsExt};
+use std::os::unix::fs::{DirBuilderExt, MetadataExt, OpenOptionsExt, FileExt};
 use std::path::{Path, PathBuf};
 
+// Opt-in local timing only; no payloads, paths, or external telemetry.
+pub(crate) struct Phase(&'static str, Option<std::time::Instant>);
+impl Phase {
+    pub(crate) fn new(name: &'static str) -> Self {
+        static ENABLED: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+        Self(name, (*ENABLED.get_or_init(|| std::env::var_os("LAPFS_PROFILE").is_some())).then(std::time::Instant::now))
+    }
+}
+impl Drop for Phase {
+    fn drop(&mut self) { if let Some(t) = self.1 { eprintln!("LAPFS_PROFILE {} {}", self.0, t.elapsed().as_micros()); } }
+}
 pub const BLOCK: usize = 4096;
+const IO_GROUP: usize = 1024 * 1024;
 const MAX_MANIFEST: u64 = 16 * 1024 * 1024;
 pub const DEFAULT_CAP: u64 = 128 * 1024 * 1024;
 pub const DEFAULT_RESERVE: u64 = 1024 * 1024 * 1024;
@@ -27,7 +39,14 @@ pub(crate) fn fault_point(name: &str) {
     let _ = name;
 }
 pub fn hash(b: &[u8]) -> String {
-    format!("{:x}", Sha256::digest(b))
+    let digest = Sha256::digest(b);
+    const HEX: &[u8; 16] = b"0123456789abcdef";
+    let mut text = vec![0; 64];
+    for (i, byte) in digest.iter().enumerate() {
+        text[2*i] = HEX[(byte >> 4) as usize];
+        text[2*i+1] = HEX[(byte & 15) as usize];
+    }
+    String::from_utf8(text).expect("hex is ASCII")
 }
 
 pub trait Device {
@@ -198,14 +217,12 @@ impl Device for Image {
     }
     fn read(&mut self, offset: u64, bytes: &mut [u8]) -> Result<()> {
         bounds(self.len(), offset, bytes.len())?;
-        self.file.seek(SeekFrom::Start(offset))?;
-        self.file.read_exact(bytes)?;
+        self.file.read_exact_at(bytes, offset)?;
         Ok(())
     }
     fn write(&mut self, offset: u64, bytes: &[u8]) -> Result<()> {
         bounds(self.len(), offset, bytes.len())?;
-        self.file.seek(SeekFrom::Start(offset))?;
-        self.file.write_all(bytes)?;
+        self.file.write_all_at(bytes, offset)?;
         Ok(())
     }
     fn flush(&mut self) -> Result<()> {
@@ -268,6 +285,7 @@ pub(crate) fn lock(file: &File) -> Result<()> {
     Ok(())
 }
 pub(crate) fn durable_sync(file: &File) -> Result<()> {
+    let _profile = Phase::new("durable_sync");
     file.sync_all()?;
     #[cfg(target_os = "macos")]
     if unsafe { libc::fcntl(file.as_raw_fd(), libc::F_FULLFSYNC) } != 0 {
@@ -390,6 +408,37 @@ pub struct Journal {
     pub manifest: Manifest,
     pub state: State,
 }
+
+fn read_blob_group(file: &File, blobs: &[&Blob]) -> Result<Vec<u8>> {
+    ensure!(!blobs.is_empty() && blobs.len() <= IO_GROUP / BLOCK, "Invalid I/O group");
+    let start = blobs[0].offset;
+    for (i, blob) in blobs.iter().enumerate() {
+        ensure!(blob.len == BLOCK && blob.offset == start + (i * BLOCK) as u64, "Non-contiguous journal group");
+    }
+    let mut bytes = vec![0; blobs.len() * BLOCK];
+    file.read_exact_at(&mut bytes, start)?;
+    for (blob, page) in blobs.iter().zip(bytes.chunks_exact(BLOCK)) {
+        ensure!(hash(page) == blob.sha256, "Journal blob checksum mismatch");
+    }
+    Ok(bytes)
+}
+fn verify_device_pages<D: Device>(dev: &mut D, pages: &BTreeMap<u64, Blob>, message: &str) -> Result<()> {
+    let entries: Vec<_> = pages.iter().collect();
+    let mut i = 0;
+    while i < entries.len() {
+        let start = *entries[i].0;
+        let mut end = i + 1;
+        while end < entries.len() && end - i < IO_GROUP / BLOCK && *entries[end].0 == start + ((end-i)*BLOCK) as u64 { end += 1; }
+        let mut bytes = vec![0; (end-i)*BLOCK];
+        dev.read(start, &mut bytes)?;
+        for ((_, blob), page) in entries[i..end].iter().zip(bytes.chunks_exact(BLOCK)) {
+            ensure!(hash(page) == blob.sha256, "{message}");
+        }
+        i = end;
+    }
+    Ok(())
+}
+
 impl Journal {
     pub fn open(dir: &Path) -> Result<Self> {
         let dir = fs::canonicalize(dir)?;
@@ -431,6 +480,7 @@ impl Journal {
         Ok(())
     }
     fn validate(&mut self) -> Result<()> {
+        let _profile = Phase::new("journal_validate");
         ensure!(
             self.undo.metadata()?.is_file() && self.redo.metadata()?.is_file(),
             "Journal data must be regular files"
@@ -451,7 +501,7 @@ impl Journal {
         for (target, blob) in &self.manifest.undo {
             validate_page(*target, blob, self.manifest.identity.size)?;
             offsets.push(blob.offset);
-            read_blob(&mut self.undo, blob)?;
+
         }
         offsets.sort_unstable();
         for (i, off) in offsets.iter().enumerate() {
@@ -474,13 +524,18 @@ impl Journal {
                 );
                 ensure!(blob.offset == redo_offset, "Redo offset discontinuity");
                 redo_offset += BLOCK as u64;
-                read_blob(&mut self.redo, blob)?;
+
             }
         }
         ensure!(
             redo_offset == self.manifest.redo_len,
             "Unaccounted redo bytes"
         );
+        let mut undo: Vec<_> = self.manifest.undo.values().collect();
+        undo.sort_unstable_by_key(|b| b.offset);
+        for group in undo.chunks(IO_GROUP / BLOCK) { read_blob_group(&self.undo, group)?; }
+        let redo: Vec<_> = self.manifest.ops.iter().filter_map(|op| match op { Op::Write { blob, .. } => Some(blob), _ => None }).collect();
+        for group in redo.chunks(IO_GROUP / BLOCK) { read_blob_group(&self.redo, group)?; }
         Ok(())
     }
     pub fn apply<D: Device>(&mut self, dev: &mut D) -> Result<()> {
@@ -490,47 +545,50 @@ impl Journal {
         );
         self.validate()?;
         ensure!(dev.len() == self.manifest.identity.size, "Wrong image size");
-        let mut page = vec![0; BLOCK];
-        for (target, blob) in &self.manifest.undo {
-            dev.read(*target, &mut page)?;
-            ensure!(hash(&page) == blob.sha256, "Target changed before apply");
-        }
+        let preimage_profile = Phase::new("preimage_check");
+        verify_device_pages(dev, &self.manifest.undo, "Target changed before apply")?;
+        drop(preimage_profile);
         self.set_state(State::Applying)?;
+        let apply_profile = Phase::new("apply_io");
         // From here any error retains APPLYING and the complete undo log.
-        for (step, op) in self.manifest.ops.iter().enumerate() {
-            match op {
+        // Coalesce only adjacent writes; never cross an explicit flush or
+        // reorder overlapping writes. Fault builds split at the requested
+        // logical operation so every original persistent prefix remains testable.
+        #[cfg(feature = "fault-injection")]
+        let kill_after = std::env::var("SPARK_APFS_KILL_AFTER_APPLY_OP").ok().and_then(|s| s.parse::<usize>().ok());
+        #[cfg(not(feature = "fault-injection"))]
+        let kill_after: Option<usize> = None;
+        let mut step = 0;
+        while step < self.manifest.ops.len() {
+            match &self.manifest.ops[step] {
+                Op::Flush => { dev.flush()?; step += 1; }
                 Op::Write { target, blob } => {
-                    dev.write(*target, &read_blob(&mut self.redo, blob)?)?;
-                    fault_point("apply-write");
+                    let start = *target; let redo_start = blob.offset;
+                    let mut end = step + 1;
+                    while end < self.manifest.ops.len() && end-step < IO_GROUP/BLOCK && kill_after.is_none_or(|n| end < n) {
+                        match &self.manifest.ops[end] {
+                            Op::Write { target: t, blob: b } if *t == start + ((end-step)*BLOCK) as u64 && b.offset == redo_start + ((end-step)*BLOCK) as u64 => end += 1,
+                            _ => break,
+                        }
+                    }
+                    let blobs: Vec<_> = self.manifest.ops[step..end].iter().map(|op| match op { Op::Write { blob, .. } => blob, _ => unreachable!() }).collect();
+                    dev.write(start, &read_blob_group(&self.redo, &blobs)?)?;
+                    fault_point("apply-write"); step = end;
                 }
-                Op::Flush => dev.flush()?,
             }
-            // Test-only: model every persisted prefix without running recovery.
             #[cfg(feature = "fault-injection")]
-            if std::env::var("SPARK_APFS_KILL_AFTER_APPLY_OP")
-                .ok()
-                .and_then(|s| s.parse::<usize>().ok())
-                == Some(step + 1)
-            {
-                unsafe { libc::kill(libc::getpid(), libc::SIGKILL); }
-            }
-            #[cfg(not(feature = "fault-injection"))]
-            let _ = step;
+            if kill_after == Some(step) { unsafe { libc::kill(libc::getpid(), libc::SIGKILL); } }
         }
         dev.flush()?;
+        drop(apply_profile);
+        let _verify_profile = Phase::new("readback_commit");
         let mut last = BTreeMap::new();
         for op in &self.manifest.ops {
             if let Op::Write { target, blob } = op {
                 last.insert(*target, blob.clone());
             }
         }
-        for (target, blob) in last {
-            dev.read(target, &mut page)?;
-            ensure!(
-                hash(&page) == blob.sha256,
-                "Post-write verification failed; recover required"
-            );
-        }
+        verify_device_pages(dev, &last, "Post-write verification failed; recover required")?;
         self.set_state(State::Committed)
     }
     pub fn recover<D: Device>(&mut self, dev: &mut D) -> Result<()> {
@@ -629,8 +687,8 @@ pub struct Overlay<D: Device> {
     base: D,
     dir: PathBuf,
     guard: File,
-    undo: File,
-    redo: File,
+    undo: BufWriter<File>,
+    redo: BufWriter<File>,
     manifest: Manifest,
     latest: BTreeMap<u64, Blob>,
     reserve: u64,
@@ -664,8 +722,8 @@ impl<D: Device> Overlay<D> {
         fault_point("prepare-dir-created");
         let guard = open_new(&dir.join("lock"))?;
         lock(&guard)?;
-        let undo = open_new(&dir.join("undo.bin"))?;
-        let redo = open_new(&dir.join("redo.bin"))?;
+        let undo = BufWriter::with_capacity(IO_GROUP, open_new(&dir.join("undo.bin"))?);
+        let redo = BufWriter::with_capacity(IO_GROUP, open_new(&dir.join("redo.bin"))?);
         publish(&dir, "state.json", &State::Building)?;
         Ok(Self {
             base,
@@ -710,10 +768,13 @@ impl<D: Device> Overlay<D> {
     pub fn statistics(&self) -> serde_json::Value {
         serde_json::json!({"undo_bytes":self.manifest.undo_len,"redo_bytes":self.manifest.redo_len,"journal_bytes":self.manifest.undo_len+self.manifest.redo_len,"operations":self.manifest.ops.len(),"unique_blocks":self.manifest.undo.len()})
     }
-    pub fn finish(self) -> Result<(D, PathBuf)> {
+    pub fn finish(mut self) -> Result<(D, PathBuf)> {
+        let _profile = Phase::new("prepare_finish");
         ensure!(!self.manifest.undo.is_empty(), "Empty transaction");
-        durable_sync(&self.undo)?;
-        durable_sync(&self.redo)?;
+        self.undo.flush()?;
+        self.redo.flush()?;
+        durable_sync(self.undo.get_ref())?;
+        durable_sync(self.redo.get_ref())?;
         // BTreeMap order is independent from first-touch order. Check append
         // coverage without copying or rewriting the undo data.
         let mut entries: Vec<_> = self.manifest.undo.values().cloned().collect();
@@ -742,7 +803,15 @@ impl<D: Device> Device for Overlay<D> {
             let start = (at - pageoff) as usize;
             let count = (BLOCK - start).min(out.len() - done);
             let page = if let Some(blob) = self.latest.get(&pageoff) {
-                read_blob(&mut self.redo, blob)?
+                let buffered_start = self.manifest.redo_len - self.redo.buffer().len() as u64;
+                let page = if blob.offset >= buffered_start {
+                    let start = (blob.offset - buffered_start) as usize;
+                    self.redo.buffer().get(start..start + blob.len).context("Invalid buffered redo range")?.to_vec()
+                } else {
+                    read_blob_group(self.redo.get_ref(), &[blob])?
+                };
+                ensure!(hash(&page) == blob.sha256, "Corrupt overlay page");
+                page
             } else {
                 let mut p = vec![0; BLOCK];
                 self.base.read(pageoff, &mut p)?;
@@ -775,20 +844,18 @@ impl<D: Device> Device for Overlay<D> {
                     len: BLOCK,
                     sha256: hash(&original),
                 };
-                self.undo.seek(SeekFrom::End(0))?;
                 self.undo.write_all(&original)?;
                 self.manifest.undo_len += BLOCK as u64;
                 self.manifest.undo.insert(pageoff, blob);
             }
             let mut page = vec![0; BLOCK];
-            self.read(pageoff, &mut page)?;
+            if start != 0 || count != BLOCK { self.read(pageoff, &mut page)?; }
             page[start..start + count].copy_from_slice(&input[done..done + count]);
             let blob = Blob {
                 offset: self.manifest.redo_len,
                 len: BLOCK,
                 sha256: hash(&page),
             };
-            self.redo.seek(SeekFrom::End(0))?;
             self.redo.write_all(&page)?;
             self.manifest.redo_len += BLOCK as u64;
             self.manifest.ops.push(Op::Write {

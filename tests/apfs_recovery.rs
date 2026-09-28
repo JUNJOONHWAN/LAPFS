@@ -103,7 +103,7 @@ fn run_boundaries(range: bool) {
     .unwrap();
     assert_eq!(hash(&std::fs::read(&image).unwrap()), original_hash);
     let j = Journal::open(&template).unwrap();
-    let boundaries = j.manifest.ops.len() + 1;
+    let logical_boundaries = j.manifest.ops.len() + 1;
     let writes = j
         .manifest
         .ops
@@ -111,6 +111,21 @@ fn run_boundaries(range: bool) {
         .filter(|o| matches!(o, Op::Write { .. }))
         .count();
     drop(j);
+    // Measure the production apply calls on an independent image/journal;
+    // sweep every actual combined write and flush, including torn groups.
+    let count_image = tmp.path().join("count.dmg");
+    std::fs::copy(&image, &count_image).unwrap();
+    let count_path = tmp.path().join("count-journal");
+    std::fs::create_dir(&count_path).unwrap();
+    for name in ["lock", "state.json", "manifest.json", "undo.bin", "redo.bin"] {
+        std::fs::copy(template.join(name), count_path.join(name)).unwrap();
+    }
+    let mut count = FailIo { inner: Image::open(&count_image, true).unwrap(), at: usize::MAX, n: 0 };
+    let mut counted = Journal::open(&count_path).unwrap();
+    counted.apply(&mut count).unwrap();
+    let boundaries = count.n;
+    assert!(boundaries <= logical_boundaries);
+    drop(counted); drop(count);
     for boundary in 0..boundaries {
         let path = tmp.path().join(format!("case-{boundary}"));
         std::fs::create_dir(&path).unwrap();

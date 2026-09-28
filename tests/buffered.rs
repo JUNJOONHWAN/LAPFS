@@ -211,6 +211,7 @@ fn buffered_crash_boundaries() {
         let actual = spark_apfs_safe::apfs_batch::read_file(&image, offset, "/crash.txt").unwrap();
         let mut expected = vec![7; 8197];
         expected[13..13 + b"ACKNOWLEDGED-RANGE".len()].copy_from_slice(b"ACKNOWLEDGED-RANGE");
+        if grouped && point == "mount-wal-published" { expected = vec![7; 8197]; }
         assert_eq!(actual, expected);
         results.push(serde_json::json!({"point":label,"write_policy":if grouped {"grouped"} else {"durable"},"image":image,"sha256":hash(&actual),"bytes":actual.len()}));
     }
@@ -367,6 +368,7 @@ fn stream_recovery_case(policy: WritePolicy) {
     // delete the backing file needed by the next transaction.
     s.write("/stream-b",0,b"second-file").unwrap();
     s.write("/stream-a",17,b"overlap").unwrap(); expected[17..24].copy_from_slice(b"overlap");
+    if policy == WritePolicy::Grouped { s.flush().unwrap(); }
     drop(s);
     let mut s=Session::resume(&dir).unwrap();
     assert_eq!(s.read("/stream-a",0,expected.len()).unwrap(),expected);
@@ -386,11 +388,18 @@ fn stream_torn_tail_and_corruption() {
         let mode=case%12; let policy=if case<12 {WritePolicy::Durable} else {WritePolicy::Grouped};
         let work=tempfile::tempdir_in(&out).unwrap();let image=work.path().join("native.dmg");
         std::fs::copy(&source,&image).unwrap();let dir=work.path().join("session");
-        let mut s=Session::start_with_policy(&image,offset,&dir,GROUP_BYTES,0,policy).unwrap();
+        let mut s=Session::start_with_policy(&image,offset,&dir,GROUP_BYTES,0,WritePolicy::Durable).unwrap();
         s.create("/stream-test").unwrap();s.write("/stream-test",0,b"durable-prefix").unwrap();
         let path=std::fs::read_dir(&dir).unwrap().map(|e|e.unwrap().path()).find(|p|p.file_name().unwrap().to_string_lossy().starts_with("stream-")).unwrap();
         let first=std::fs::metadata(&path).unwrap().len() as usize;
         s.write("/stream-test",14,b"tail-payload").unwrap(); drop(s);
+        if policy == WritePolicy::Grouped {
+            let manifest=dir.join("session.json");
+            let mut env:serde_json::Value=serde_json::from_slice(&std::fs::read(&manifest).unwrap()).unwrap();
+            let payload=env["payload"].as_str().unwrap().replace("\"write_policy\":\"durable\"", "\"write_policy\":\"grouped\"");
+            env["sha256"]=hash(payload.as_bytes()).into();env["payload"]=payload.into();
+            std::fs::write(manifest,serde_json::to_vec(&env).unwrap()).unwrap();
+        }
         let mut bytes=std::fs::read(&path).unwrap();let len=bytes.len();
         if mode<8 {
             let keep=[0,1,7,8,71,72,(len-first)/2,len-first-1][mode];

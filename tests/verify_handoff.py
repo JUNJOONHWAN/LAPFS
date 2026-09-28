@@ -35,7 +35,7 @@ def wait_mount(mp, present):
         time.sleep(.1)
     raise AssertionError('FUSE mount did not reach expected state')
 
-for case in ['clean','killed']:
+for case in ['clean','clean-durable','clean-default','killed']:
     path = work/case
     path.mkdir()
     image = path/'native.dmg'
@@ -44,15 +44,21 @@ for case in ['clean','killed']:
     mp.mkdir()
     session = path/'session'
     with (path/'mount.log').open('wb') as log:
-        proc = subprocess.Popen([str(exe),'mount-rw',str(image),'20480',str(mp),str(session)],stdout=log,stderr=log)
+        proc = subprocess.Popen([str(exe),'mount-rw',str(image),'20480',str(mp),str(session)]+([] if case == 'clean-default' else ['--durable-writes'] if case in ['clean-durable','killed'] else ['--grouped-writes']),stdout=log,stderr=log)
         try:
             wait_mount(mp,True)
             rejected = subprocess.run([str(exe),'handoff-ready',str(image),'20480',str(session)],capture_output=True)
             assert rejected.returncode != 0, 'Active mount was accepted'
             fd = os.open(mp/'handoff.bin',os.O_WRONLY|os.O_CREAT|os.O_EXCL,0o600)
             try:
+                helper_args=['python3',str(helper),'--binary',str(exe),str(image),'20480',str(mp),str(session)]
+                wrong=subprocess.run(helper_args[:-1]+[str(path/'wrong-session')],capture_output=True,text=True)
+                assert wrong.returncode != 0 and 'different live LAPFS writer' in wrong.stderr,wrong.stderr
+                busy=subprocess.run(helper_args,capture_output=True,text=True)
+                assert busy.returncode != 0 and 'Normal unmount refused' in busy.stderr,busy.stderr
+                wait_mount(mp,True)
                 assert os.write(fd,expected) == len(expected)
-                if case == 'clean':
+                if case != 'killed':
                     os.fsync(fd)
             finally:
                 if case == 'killed':
@@ -64,7 +70,7 @@ for case in ['clean','killed']:
             assert receipt.returncode == 0, receipt.stderr
             obj = json.loads(receipt.stdout)
             assert obj['status'] == 'ready_to_disconnect' and obj['session']['closed'] is True
-            if case == 'clean':
+            if case != 'killed':
                 assert proc.wait(timeout=15) == 0
             wait_mount(mp,False)
             digest = subprocess.run([str(exe),'digest',str(image),'20480','/handoff.bin'],capture_output=True,text=True)

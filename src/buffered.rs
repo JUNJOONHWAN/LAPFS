@@ -23,11 +23,11 @@ pub enum WritePolicy {
     Durable,
     Grouped,
 }
-pub const GROUP_BYTES: u64 = 4 * 1024 * 1024;
-const MAX_QUEUE: usize = 1024;
+pub const GROUP_BYTES: u64 = 32 * 1024 * 1024;
+const MAX_QUEUE: usize = 8192;
 const MAX_FRAME_META: usize = 32768;
 const MAX_STREAM: u64 = GROUP_BYTES + MAX_QUEUE as u64 * (MAX_FRAME_META as u64 + 136);
-pub const JOURNAL_BYTES: u64 = 32 * 1024 * 1024;
+pub const JOURNAL_BYTES: u64 = 128 * 1024 * 1024;
 #[derive(Clone, Serialize, Deserialize)]
 struct Payload {
     name: String,
@@ -71,6 +71,8 @@ pub struct Session {
     lookup_cache: apfs::LookupCache,
     // Valid only while our exclusive session has made no APFS mutation.
     write_cache: Option<(String, Attr)>,
+    stream_buffer: Vec<u8>,
+    verified_stream: Option<(String, Vec<u8>)>,
 }
 struct CachedView<'a> {
     view: FsView<Adapter<&'a mut Image>>,
@@ -126,7 +128,7 @@ impl Session {
     ) -> Result<Self> {
         ensure!(
             (4096..=GROUP_BYTES).contains(&group_bytes),
-            "Buffer threshold must be 4096..4194304 bytes"
+            "Buffer threshold must be 4096..33554432 bytes"
         );
         let mut image = Image::open(target, true)?;
         image.ensure_no_pending()?;
@@ -206,6 +208,8 @@ impl Session {
             poisoned: false,
             lookup_cache: Default::default(),
             write_cache: None,
+            stream_buffer: Vec::new(),
+            verified_stream: None,
         })
     }
     pub fn resume_target(dir: &Path, target: &Path, offset: u64) -> Result<Self> {
@@ -231,7 +235,7 @@ impl Session {
         );
         ensure!(
             (4096..=GROUP_BYTES).contains(&record.group_bytes)
-                && record.cap == JOURNAL_BYTES
+                && matches!(record.cap, 33554432 | JOURNAL_BYTES)
                 && record.queue.len() <= MAX_QUEUE,
             "Invalid mount session budget"
         );
@@ -258,6 +262,8 @@ impl Session {
             poisoned: false,
             lookup_cache: Default::default(),
             write_cache: None,
+            stream_buffer: Vec::new(),
+            verified_stream: None,
         };
         s.replay_stream()?;
         s.validate_queue()?;
@@ -378,6 +384,20 @@ impl Session {
                 && p.bytes <= GROUP_BYTES,
             "Invalid payload description"
         );
+        if let Some((name, data)) = &self.verified_stream {
+            if name == &p.name {
+                let off = p.file_offset.context("Missing verified stream offset")? as usize;
+                let bytes = data.get(off..off + p.bytes as usize).context("Invalid verified stream range")?;
+                ensure!(journal::hash(bytes) == p.sha256, "Corrupt verified stream payload");
+                return Ok(bytes.to_vec());
+            }
+        }
+        if self.record.stream.as_ref() == Some(&p.name) && !self.stream_buffer.is_empty() {
+            let off = p.file_offset.context("Missing stream offset")? as usize;
+            let bytes = self.stream_buffer.get(off..off + p.bytes as usize).context("Invalid memory stream range")?;
+            ensure!(journal::hash(bytes) == p.sha256, "Corrupt memory stream payload");
+            return Ok(bytes.to_vec());
+        }
         let mut f = OpenOptions::new()
             .read(true)
             .custom_flags(libc::O_NOFOLLOW)
@@ -445,10 +465,9 @@ impl Session {
             self.record.stream = Some(name);
             self.save()?;
         }
-        ensure!(
-            journal::free_bytes(&self.dir)? >= self.record.reserve.saturating_add(96 * 1024 * 1024),
-            "Queue low-space guard"
-        );
+        if self.record.write_policy == WritePolicy::Durable || self.stream_buffer.is_empty() {
+            ensure!(journal::free_bytes(&self.dir)? >= self.record.reserve.saturating_add(96 * 1024 * 1024), "Queue low-space guard");
+        }
         let name = self.record.stream.clone().unwrap();
         let meta = serde_json::to_vec(&(path, offset))?;
         ensure!(
@@ -464,20 +483,18 @@ impl Session {
         frame.extend_from_slice(data);
         let digest = journal::hash(&frame);
         frame.extend_from_slice(digest.as_bytes());
-        let mut file = OpenOptions::new()
-            .read(true)
-            .append(true)
-            .custom_flags(libc::O_NOFOLLOW)
-            .open(self.dir.join(&name))?;
-        ensure!(file.metadata()?.is_file(), "Invalid stream type");
-        let start = file.metadata()?.len();
-        ensure!(
-            start + frame.len() as u64 <= MAX_STREAM,
-            "Stream exceeds bound"
-        );
-        file.write_all(&frame)?;
-        journal::fault_point("mount-stream-written");
-        if self.record.write_policy == WritePolicy::Durable {
+        let start;
+        if self.record.write_policy == WritePolicy::Grouped {
+            start = self.stream_buffer.len() as u64;
+            ensure!(start + frame.len() as u64 <= MAX_STREAM, "Stream exceeds bound");
+            self.stream_buffer.extend_from_slice(&frame);
+        } else {
+            let mut file = OpenOptions::new().read(true).append(true).custom_flags(libc::O_NOFOLLOW).open(self.dir.join(&name))?;
+            ensure!(file.metadata()?.is_file(), "Invalid stream type");
+            start = file.metadata()?.len();
+            ensure!(start + frame.len() as u64 <= MAX_STREAM, "Stream exceeds bound");
+            file.write_all(&frame)?;
+            journal::fault_point("mount-stream-written");
             journal::durable_sync(&file)?;
             journal::fault_point("mount-stream-synced");
         }
@@ -500,11 +517,25 @@ impl Session {
     fn freeze_stream(&mut self) -> Result<()> {
         if let Some(name) = self.record.stream.as_ref() {
             // Persist all frames before publishing references or changing APFS.
-            let file = OpenOptions::new().read(true).write(true).custom_flags(libc::O_NOFOLLOW).open(self.dir.join(name))?;
+            let mut file = OpenOptions::new().read(true).write(true).custom_flags(libc::O_NOFOLLOW).open(self.dir.join(name))?;
+            if !self.stream_buffer.is_empty() {
+                ensure!(file.metadata()?.is_file() && file.metadata()?.len() == 0, "Memory stream backing file changed");
+                ensure!(journal::free_bytes(&self.dir)? >= self.record.reserve.saturating_add(self.stream_buffer.len() as u64), "Stream low-space guard");
+                file.write_all(&self.stream_buffer)?;
+                journal::fault_point("mount-stream-written");
+            }
             journal::durable_sync(&file)?;
             journal::fault_point("mount-stream-flushed");
+            if !self.stream_buffer.is_empty() {
+                let mut verified = vec![0; self.stream_buffer.len()];
+                file.seek(SeekFrom::Start(0))?;
+                file.read_exact(&mut verified)?;
+                ensure!(verified == self.stream_buffer, "Stream readback mismatch");
+                self.verified_stream = Some((name.clone(), verified));
+            }
             self.record.stream = None;
             self.save()?; // Queue references become durable before APFS changes.
+            self.stream_buffer.clear();
             journal::fault_point("mount-stream-frozen");
         }
         Ok(())
@@ -868,6 +899,7 @@ impl Session {
         self.flush()
     }
     fn actions(&self) -> Result<(Vec<Action>, usize)> {
+        let _profile = journal::Phase::new("actions");
         self.validate_queue()?;
         // Coalesce adjacent sequential writes; APFS metadata is updated once
         // per collected range instead of once per small application write.
@@ -925,6 +957,7 @@ impl Session {
         result
     }
     fn flush_inner(&mut self) -> Result<()> {
+        let _profile = journal::Phase::new("buffer_flush");
         self.write_cache = None;
         self.freeze_stream()?;
         self.settle_active()?;
@@ -934,6 +967,7 @@ impl Session {
             self.record.active = Some(name.clone());
             self.record.active_count = Some(count);
             self.save()?;
+            let prepare_profile = journal::Phase::new("prepare_total");
             apfs_batch::prepare_held(
                 &mut self.image,
                 &self.dir.join(&name),
@@ -942,11 +976,13 @@ impl Session {
                 self.record.cap,
                 self.record.reserve,
             )?;
+            drop(prepare_profile);
             self.settle_active()?;
         }
         Ok(())
     }
     fn settle_active(&mut self) -> Result<()> {
+        let _profile = journal::Phase::new("settle_total");
         let Some(name) = self.record.active.clone() else {
             return Ok(());
         };
@@ -1028,6 +1064,7 @@ impl Session {
         self.garbage_collect()
     }
     fn garbage_collect(&mut self) -> Result<()> {
+        let _profile = journal::Phase::new("garbage_collect");
         for name in &self.record.garbage {
             ensure!(plain_name(name), "Invalid cleanup path");
             let p = self.dir.join(name);
@@ -1059,6 +1096,9 @@ impl Session {
                 );
                 fs::remove_file(p)?;
             }
+        }
+        if self.verified_stream.as_ref().is_some_and(|(name,_)| self.record.garbage.contains(name)) {
+            self.verified_stream = None;
         }
         self.record.garbage.clear();
         self.save()?;

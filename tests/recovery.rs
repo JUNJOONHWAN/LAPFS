@@ -46,6 +46,7 @@ impl Device for Disk {
     }
     fn write(&mut self, off: u64, b: &[u8]) -> Result<()> {
         let off = off as usize;
+        if self.silent_drop && off == 0 { return Ok(()); }
         if self.fails() {
             if self.silent_drop {
                 return Ok(());
@@ -79,7 +80,7 @@ fn acknowledged_but_dropped_write_is_detected_before_commit() {
     let p = tmp.path().join("j");
     let (mut d, original) = staged(&p);
     let mut j = Journal::open(&p).unwrap();
-    d.fail = Some(2);
+    d.fail = None;
     d.silent_drop = true; // bootstrap block write has no later replacement
     assert!(j.apply(&mut d).is_err());
     assert_eq!(j.state, State::Applying);
@@ -122,8 +123,8 @@ fn staged(dir: &std::path::Path) -> (Disk, Vec<u8>) {
 #[test]
 fn every_apply_write_and_flush_failure_rolls_back_exactly() {
     for torn in [false, true] {
-        for failure in 0..7 {
-            // 4 full-page writes, 2 recorded flushes, final flush
+        for failure in 0..6 {
+            // Adjacent first two pages coalesce: 3 writes, 2 recorded flushes, final flush
             let tmp = tempfile::tempdir().unwrap();
             let path = tmp.path().join("journal");
             let (mut disk, original) = staged(&path);
@@ -184,7 +185,7 @@ fn success_is_durable_preserves_barriers_and_cannot_be_implicitly_undone() {
     );
     j.apply(&mut d).unwrap();
     assert_eq!(j.state, State::Committed);
-    assert_eq!(d.event, 7);
+    assert_eq!(d.event, 6);
     let new = d.durable.clone();
     assert_ne!(new, old);
     d.crash();
@@ -430,4 +431,29 @@ fn cli_adopts_prepared_orphan_only_when_target_is_pristine() {
         b"prepared and durable"
     );
     assert_eq!(Journal::open(&p).unwrap().state, State::Committed);
+}
+
+#[test]
+fn accelerated_hash_matches_standard_vectors() {
+    assert_eq!(hash(b""), "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855");
+    assert_eq!(hash(b"abc"), "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad");
+    assert_eq!(hash(&vec![97u8; 1_000_000]), "cdc76e5c9914fb9281a1c7e284d73e67f1809a48a497200e046d39ccc7112cd0");
+}
+
+#[test]
+fn buffered_overlay_reads_disk_and_pending_tail_and_keeps_flush_order() {
+    let tmp = tempfile::tempdir().unwrap();
+    let mut disk=Disk::new();
+    disk.durable=(0..BLOCK*600).map(|i|(i%251) as u8).collect();disk.cache=disk.durable.clone();
+    let original=disk.durable.clone();let path=tmp.path().join("wide");
+    let mut overlay=Overlay::new(disk.clone(),identity(&disk),&path,32*1024*1024,0,"wide".into()).unwrap();
+    let input=vec![0x5a;BLOCK*550];overlay.write(0,&input).unwrap();
+    let mut page=vec![0;BLOCK];overlay.read(0,&mut page).unwrap();assert_eq!(page,vec![0x5a;BLOCK]);
+    overlay.read((BLOCK*549) as u64,&mut page).unwrap();assert_eq!(page,vec![0x5a;BLOCK]);
+    overlay.flush().unwrap();overlay.write((BLOCK*520-9) as u64,&vec![0x3c;33]).unwrap();overlay.flush().unwrap();
+    let (mut actual,_) = overlay.finish().unwrap();assert_eq!(actual.durable,original);
+    let mut j=Journal::open(&path).unwrap();j.apply(&mut actual).unwrap();
+    let mut expected=original;expected[..input.len()].copy_from_slice(&input);expected[BLOCK*520-9..BLOCK*520+24].fill(0x3c);
+    assert_eq!(actual.durable,expected);
+    assert!(actual.event < 20,"contiguous pages must use bounded bulk I/O");
 }

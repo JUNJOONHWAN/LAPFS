@@ -10,6 +10,7 @@ use std::os::unix::fs::OpenOptionsExt;
 use std::path::{Path, PathBuf};
 
 pub const MAX_INPUT: u64 = 8 * 1024 * 1024;
+const MAX_RANGE_INPUT: u64 = 32 * 1024 * 1024;
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "op", rename_all = "snake_case", deny_unknown_fields)]
 pub enum Action {
@@ -325,18 +326,19 @@ fn stage_overlay<D: Device>(
                         "Put only replaces regular files"
                     );
                 }
+                let limit = if matches!(action, Action::WriteAt { .. }) { MAX_RANGE_INPUT } else { MAX_INPUT };
                 let f = std::fs::OpenOptions::new()
                     .read(true)
                     .custom_flags(libc::O_NONBLOCK)
                     .open(source)?;
                 ensure!(
-                    f.metadata()?.is_file() && f.metadata()?.len() <= MAX_INPUT,
-                    "Input exceeds 8 MiB batch limit; streaming large-file writer is not implemented"
+                    f.metadata()?.is_file() && f.metadata()?.len() <= limit,
+                    "Input exceeds this operation batch limit"
                 );
                 let mut bytes = Vec::new();
-                f.take(MAX_INPUT + 1).read_to_end(&mut bytes)?;
+                f.take(limit + 1).read_to_end(&mut bytes)?;
                 ensure!(
-                    bytes.len() as u64 <= MAX_INPUT,
+                    bytes.len() as u64 <= limit,
                     "Source grew beyond batch limit"
                 );
                 content = Some(bytes);
@@ -562,9 +564,12 @@ fn stage_overlay<D: Device>(
                     } else {
                         start + b.len() as u64
                     }
-                    && check.read_range(path, start, b.len())? == b,
-                "Staged file content mismatch"
+                    ,
+                "Staged file size mismatch"
             );
+            for (index, chunk) in b.chunks(MAX_INPUT as usize).enumerate() {
+                ensure!(check.read_range(path, start + (index as u64 * MAX_INPUT), chunk.len())? == chunk, "Staged file content mismatch");
+            }
             dev = check.into_dev();
         }
     }

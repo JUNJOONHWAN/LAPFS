@@ -38,7 +38,9 @@ def matching_mount_process(target, offset, mountpoint, session):
             args = [os.fsdecode(v) for v in (entry / "cmdline").read_bytes().split(b"\0") if v]
         except (OSError, PermissionError):
             continue
-        if len(args) == 6 and args[1:] == expected and pathlib.Path(args[0]).name == "lapfs":
+        if (len(args) in (6, 7) and args[1:6] == expected
+                and (len(args) == 6 or args[6] in ("--grouped-writes", "--durable-writes"))
+                and pathlib.Path(args[0]).name == "lapfs"):
             matches.append(int(entry.name))
     if len(matches) > 1:
         fail("More than one LAPFS writer matches this handoff")
@@ -83,7 +85,7 @@ def run():
                     argv = [os.fsdecode(v) for v in (entry / "cmdline").read_bytes().split(b"\0") if v]
                 except OSError:
                     continue
-                if len(argv) == 6 and argv[1] == "mount-rw" and argv[4] == str(args.mountpoint):
+                if len(argv) >= 6 and argv[1] == "mount-rw" and argv[4] == str(args.mountpoint):
                     fail("A different live LAPFS writer owns this mountpoint")
         unmount = subprocess.run(["fusermount3", "-u", str(args.mountpoint)], capture_output=True, text=True)
         if unmount.returncode != 0:

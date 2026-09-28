@@ -1,7 +1,7 @@
 """Disposable v1 durable queue -> v2 reader compatibility, no physical device I/O."""
 import argparse,gzip,json,os,shutil,signal,subprocess,tempfile,time
 from pathlib import Path
-p=argparse.ArgumentParser();p.add_argument('--old',required=True);p.add_argument('--binary',required=True);p.add_argument('--output',default='evidence');a=p.parse_args()
+p=argparse.ArgumentParser();p.add_argument('--old-durable-flag',action='store_true');p.add_argument('--old',required=True);p.add_argument('--binary',required=True);p.add_argument('--output',default='evidence');a=p.parse_args()
 root=Path(__file__).resolve().parents[1];out=Path(a.output).resolve();out.mkdir(exist_ok=True,parents=True);work=Path(tempfile.mkdtemp(prefix='queue-upgrade-',dir=out));image=work/'native.dmg';mp=work/'mount';mp.mkdir();session=work/'session'
 with gzip.open(root/'fixtures/block-test.dmg.gz','rb') as f,image.open('wb') as g:shutil.copyfileobj(f,g)
 def unmount():
@@ -17,7 +17,7 @@ def start(binary,sd,flags=[]):
   if os.path.ismount(mp):return q
   assert q.poll() is None;time.sleep(.05)
  raise AssertionError('mount timeout')
-q=start(a.old,session);fd=os.open(mp/'legacy.bin',os.O_WRONLY|os.O_CREAT,0o600);os.write(fd,b'legacy-durable-ack');q.kill();q.wait()
+q=start(a.old,session,['--durable-writes'] if a.old_durable_flag else []);fd=os.open(mp/'legacy.bin',os.O_WRONLY|os.O_CREAT,0o600);os.write(fd,b'legacy-durable-ack');q.kill();q.wait()
 try:os.close(fd)
 except OSError as e:
  assert e.errno==107
