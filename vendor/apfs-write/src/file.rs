@@ -351,6 +351,7 @@ const VSBI_INCOMPAT_FEATURES: usize = 0x38;
 const VSBI_LAST_MOD_TIME: usize = 0x100;
 const VSBI_NEXT_OBJ_ID: usize = 0xB0;
 const VSBI_NUM_FILES: usize = 0xB8;
+const VSBI_NUM_SYMLINKS: usize = 0xC8;
 const VSBI_NUM_SNAPSHOTS: usize = 0xD8;
 const APFS_INCOMPAT_CASE_INSENSITIVE: u64 = 0x1;
 const APFS_INCOMPAT_NORMALIZATION_INSENSITIVE: u64 = 0x8;
@@ -969,10 +970,14 @@ pub fn create_symlink<D: WritableBlockDevice>(
             dstream: None,
         }),
     );
-    let xattr = (
-        build_xattr_key(new_ino, XATTR_NAME_SYMLINK),
-        build_xattr_val_embedded(target),
-    );
+    // APFS stores the symlink payload as a NUL-terminated filesystem-owned
+    // embedded xattr. Without the trailing byte macOS readlink truncates the
+    // final character even though Linux can read the raw xattr.
+    let mut target_cstr = target.to_vec();
+    target_cstr.push(0);
+    let mut target_xattr = build_xattr_val_embedded(&target_cstr);
+    target_xattr[0] |= 0x04; // XATTR_FILE_SYSTEM_OWNED
+    let xattr = (build_xattr_key(new_ino, XATTR_NAME_SYMLINK), target_xattr);
 
     let (new_omap_tree_paddr, node_delta) = rewrite_fstree(
         txn,
@@ -1003,8 +1008,8 @@ pub fn create_symlink<D: WritableBlockDevice>(
 
     wr_u64(&mut new_vsb, VSBI_OMAP_OID, new_vomap_paddr);
     wr_u64(&mut new_vsb, VSBI_NEXT_OBJ_ID, new_ino + 1);
-    let num_files = rd_u64(&new_vsb, VSBI_NUM_FILES);
-    wr_u64(&mut new_vsb, VSBI_NUM_FILES, num_files + 1);
+    let num_symlinks = rd_u64(&new_vsb, VSBI_NUM_SYMLINKS);
+    wr_u64(&mut new_vsb, VSBI_NUM_SYMLINKS, num_symlinks + 1);
     let fs_alloc = rd_u64(&new_vsb, VSBI_FS_ALLOC_COUNT) as i64;
     wr_u64(
         &mut new_vsb,
@@ -1636,6 +1641,7 @@ pub fn unlink<D: WritableBlockDevice>(
     // blocks, so we must free the WHOLE run, not just its first block.
     let mut data_blocks: Vec<(u64, u64)> = Vec::new();
     let mut is_dir = false;
+    let mut is_symlink = false;
     let mut dir_nchildren = 0u32;
     for (k, v) in &all {
         let oid = rd_u64(k, 0) & 0x0FFF_FFFF_FFFF_FFFF;
@@ -1646,6 +1652,7 @@ pub fn unlink<D: WritableBlockDevice>(
         remove_keys.push(k.clone());
         if ty == APFS_TYPE_INODE {
             is_dir = (rd_u16(v, 80) & 0o170000) == S_IFDIR;
+            is_symlink = (rd_u16(v, 80) & 0o170000) == S_IFLNK;
             // For a directory inode, nchildren lives at INODE_NCHILDREN.
             dir_nchildren = rd_u32(v, INODE_NCHILDREN);
         }
@@ -1812,6 +1819,8 @@ pub fn unlink<D: WritableBlockDevice>(
     wr_u64(&mut new_vsb, VSBI_EXTENTREF_TREE_OID, new_extref_paddr);
     let counter_off = if is_dir {
         VSBI_NUM_DIRECTORIES
+    } else if is_symlink {
+        VSBI_NUM_SYMLINKS
     } else {
         VSBI_NUM_FILES
     };
@@ -6473,15 +6482,21 @@ pub fn set_inode_attrs<D: WritableBlockDevice>(
     let omap_tree_paddr = rd_u64(vol_omap_raw, 48);
     let mut omap_node = vec![0u8; bsz];
     txn.read_block(omap_tree_paddr, &mut omap_node)?;
-    let all = collect_fstree(txn, &omap_node, root_tree_oid, bsz)?;
-
-    // Locate DREC -> file_id.
-    let drec_key = build_drec_key(parent_ino, name, case_fold, normalize);
-    let file_id = all
-        .iter()
-        .find(|(k, _)| *k == drec_key)
-        .map(|(_, v)| rd_u64(v, 0))
-        .ok_or_else(|| TxnError::NotFound(format!("set_inode_attrs: '{name}' not found")))?;
+    // A metadata-only rsync update must not load the entire TB-scale catalog.
+    // Root has no parent DREC; all other entries use a bounded named lookup.
+    let (file_id, all) = if parent_ino == 2 && name.is_empty() {
+        let key = build_inode_key(2);
+        (2, collect_catalog_range(txn, &omap_node, root_tree_oid, &key, &key, bsz, 0)?)
+    } else {
+        let all = collect_named_records(txn, &omap_node, vsb_raw, parent_ino, &[name], bsz)?;
+        let drec_key = build_drec_key(parent_ino, name, case_fold, normalize);
+        let file_id = all
+            .iter()
+            .find(|(k, _)| *k == drec_key)
+            .map(|(_, v)| rd_u64(v, 0))
+            .ok_or_else(|| TxnError::NotFound(format!("set_inode_attrs: '{name}' not found")))?;
+        (file_id, all)
+    };
 
     // Locate existing inode value.
     let inode_key = build_inode_key(file_id);

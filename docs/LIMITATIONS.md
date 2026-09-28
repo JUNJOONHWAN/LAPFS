@@ -2,7 +2,7 @@
 
 ## Supported subset
 
-Single unencrypted APFS volume; no snapshots; supported allocator geometry; ordinary unshared files. Basic reads, directory enumeration, symlink reads, range reads above 4 GiB; writes through a durable queue; create/copy/range overwrite/append, mkdir, rmdir of empty directories, unlink of closed files, same-directory file rename/replace, fsync, close and normal unmount.
+Single unencrypted APFS volume; no snapshots; supported allocator geometry; ordinary unshared files. Basic reads, directory enumeration, symlink reads and creation/removal, range reads above 4 GiB; writes through a durable queue; create/copy/range overwrite/append, mkdir, rmdir of empty directories, unlink of closed files, same-directory file rename/replace, chmod and atime/mtime, fsync, close and normal unmount.
 
 New truncate size is limited to 8 MiB. Large file copy/append/range-write does not have an 8 MiB total-file limit. Input queue payload cap is 4 MiB, active undo+redo cap is 32 MiB, reserve is 1 GiB with 96 MiB working headroom. These are separate limits, not a total RAM guarantee. There may be more than one retained failed session; do not automatically delete it to free space.
 
@@ -11,8 +11,8 @@ New truncate size is limited to 8 MiB. Large file copy/append/range-write does n
 - Multiple volumes, snapshots, encrypted writes, pending revert, unsupported incompatible feature bits and CAB indirection.
 - Shared/cloned/hardlinked/compressed/sparse/special/immutable/append-only file mutation and unvalidated extended attributes.
 - Non-empty directory removal and directory rename; cross-directory rename; open-target replacement and open-file unlink (EBUSY).
-- New links, writable mmap, chmod/chown, explicit timestamps, xattrs and ACL updates.
-- Complete POSIX semantics, database suitability, arbitrary application save protocols, `cp -a` metadata preservation.
+- Hardlinks, writable mmap, chown to a different owner, special device creation, arbitrary xattrs and ACL updates. Symlink chmod remains unsupported.
+- Complete POSIX semantics, database suitability, arbitrary application save protocols, and full `cp -a` metadata preservation. `rsync -a` was verified only for regular files, directories and symlinks owned by the mounted user; device nodes and differing uid/gid remain unqualified.
 
 ## Still untested or unqualified
 
@@ -40,3 +40,7 @@ A prepare-only canary on a roughly 1 TB volume exceeded the 32 MiB journal cap. 
 ## beta.3 candidate
 
 The original 32 MiB limit is retained. Incremental metadata updates now pass the previously failing real-volume prepare simulation. A selected physical-volume canary later passed; see [current report](REAL_VOLUME_AFTER.md). Previous evidence above retains its original build identity.
+
+## beta.5 compatibility gate
+
+The disposable APFS test covers ordinary `rsync -a` initial transfer, identical repeat, changed-file atomic replacement, and `--delete` of a regular orphan. It checks nested directories, symlink target, permissions, nanosecond mtime, SHA and macOS readback. Linux success alone is not a release gate: Apple `fsck_apfs -n` must have no warning and original fixture files must retain their hashes. The physical Corsair beta.5 EIO and rsync gate is tracked separately in `docs/VALIDATION.md`.

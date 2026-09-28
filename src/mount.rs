@@ -1,6 +1,6 @@
 //! Linux read-only FUSE host. The underlying Reader has no writable descriptor.
 use crate::reader::{self, View};
-use anyhow::{ensure, Context, Result};
+use anyhow::{Context, Result, ensure};
 use fuser::{
     FileAttr, FileType, Filesystem, MountOption, ReplyAttr, ReplyData, ReplyDirectory, ReplyEntry,
     ReplyOpen, ReplyStatfs, Request,
@@ -14,7 +14,8 @@ use std::{
 const TTL: Duration = Duration::from_secs(1);
 struct Host {
     view: View,
-    paths: HashMap<u64, String>,
+    paths: crate::inode_paths::InodePaths,
+    opens: HashMap<u64, u64>,
     uid: u32,
     gid: u32,
 }
@@ -30,11 +31,7 @@ fn kind(a: &apfs::Attr) -> FileType {
     }
 }
 fn inode(a: &apfs::Attr) -> u64 {
-    if a.inode == 2 {
-        1
-    } else {
-        a.inode
-    }
+    if a.inode == 2 { 1 } else { a.inode }
 }
 impl Host {
     fn attr(&mut self, p: &str) -> Result<FileAttr> {
@@ -58,18 +55,20 @@ impl Host {
         })
     }
     fn path(&self, ino: u64) -> Result<String> {
-        self.paths.get(&ino).cloned().context("Unknown inode")
+        self.paths
+            .get(ino)
+            .map(str::to_owned)
+            .context("Unknown inode")
     }
     fn remember(&mut self, ino: u64, path: String) -> Result<()> {
-        ensure!(
-            self.paths.contains_key(&ino) || self.paths.len() < 100_000,
-            "FUSE inode cache limit reached; remount to clear"
-        );
-        self.paths.entry(ino).or_insert(path);
-        Ok(())
+        self.paths.remember(ino, path)
     }
 }
 impl Filesystem for Host {
+    fn forget(&mut self, _: &Request<'_>, ino: u64, nlookup: u64) {
+        self.paths
+            .forget(ino, nlookup, self.opens.get(&ino).copied().unwrap_or(0) > 0);
+    }
     fn lookup(&mut self, _: &Request<'_>, parent: u64, name: &OsStr, reply: ReplyEntry) {
         let result = (|| -> Result<FileAttr> {
             let name = name.to_str().context("Invalid UTF-8 filename")?;
@@ -86,7 +85,15 @@ impl Filesystem for Host {
             Ok(a) => reply.entry(&TTL, &a, 0),
             Err(e) => {
                 eprintln!("LAPFS lookup: {e:#}");
-                reply.error(libc::ENOENT)
+                let code = e
+                    .chain()
+                    .find_map(|cause| {
+                        cause
+                            .downcast_ref::<std::io::Error>()
+                            .and_then(|io| io.raw_os_error())
+                    })
+                    .unwrap_or(libc::ENOENT);
+                reply.error(code)
             }
         }
     }
@@ -102,7 +109,19 @@ impl Filesystem for Host {
             return;
         }
         match self.path(ino).and_then(|p| self.attr(&p)) {
-            Ok(a) if a.kind == FileType::RegularFile => reply.opened(0, 0),
+            Ok(a) if a.kind == FileType::RegularFile => {
+                let count = self.opens.get(&ino).copied().unwrap_or(0);
+                if let Some(next) = count.checked_add(1) {
+                    if self.opens.try_reserve(1).is_ok() {
+                        self.opens.insert(ino, next);
+                        reply.opened(0, 0);
+                    } else {
+                        reply.error(libc::ENOMEM);
+                    }
+                } else {
+                    reply.error(libc::EOVERFLOW);
+                }
+            }
             Ok(_) => reply.error(libc::EISDIR),
             Err(_) => reply.error(libc::EIO),
         }
@@ -132,6 +151,26 @@ impl Filesystem for Host {
                 reply.error(libc::EIO)
             }
         }
+    }
+    fn release(
+        &mut self,
+        _: &Request<'_>,
+        ino: u64,
+        _: u64,
+        _: i32,
+        _: Option<u64>,
+        _: bool,
+        reply: fuser::ReplyEmpty,
+    ) {
+        if let Some(count) = self.opens.get_mut(&ino) {
+            *count -= 1;
+            if *count == 0 {
+                self.opens.remove(&ino);
+            }
+        }
+        self.paths
+            .release_if_unreferenced(ino, self.opens.contains_key(&ino));
+        reply.ok();
     }
     fn readlink(&mut self, _: &Request<'_>, ino: u64, reply: ReplyData) {
         match self
@@ -218,7 +257,8 @@ pub fn mount(source: &Path, offset: u64, mountpoint: &Path, volume: Option<usize
     let gid = unsafe { libc::getgid() };
     let host = Host {
         view,
-        paths: HashMap::from([(1, "/".to_owned())]),
+        paths: crate::inode_paths::InodePaths::new(),
+        opens: HashMap::new(),
         uid,
         gid,
     };

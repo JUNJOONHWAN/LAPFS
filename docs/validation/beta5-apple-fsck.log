@@ -1,0 +1,17 @@
+** Checking the container superblock.
+   Checking the checkpoint with transaction ID 61.
+** Checking the space manager.
+** Checking the space manager free queue trees.
+** Checking the object map.
+** Checking volume <test-device>.
+** Checking the APFS volume superblock.
+   The volume LAPFS_BETA_QA was formatted by newfs_apfs (2811.160.7.0.4) and last modified by apfs_kext (2811.160.7.0.4).
+** Checking the object map.
+** Checking the snapshot metadata tree.
+** Checking the snapshot metadata.
+** Checking the fsroot tree.
+** Checking the extent ref tree.
+** Verifying volume object map space.
+** The volume <test-device> with UUID <fixture-volume> appears to be OK.
+** Verifying allocated space.
+** The container <test-device> appears to be OK.

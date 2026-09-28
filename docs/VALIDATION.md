@@ -1,5 +1,12 @@
 # Validation ledger
 
+## beta.5 compatibility candidate, 2026-09-28
+
+The canonical DGX ARM64 source added FUSE inode lookup/forget eviction, metadata updates and symlink writes. The reproducible `tests/verify_rsync_archive.py` disposable image `rsync -a` matrix passed initial copy, identical repeat, changed-file atomic replacement, symlink-target replacement, and `--delete` of an orphan file, link and nonempty directory. The matrix verified nested files, permissions `0640`, nanosecond mtime, the full symlink target and SHA values. On macOS, `fsck_apfs -n` reported no warnings and all 104 original fixture files plus the new files and link passed independent readback. [Matrix](validation/beta5-rsync-matrix.json) · [Apple fsck](validation/beta5-apple-fsck.log).
+
+The previous 100,000 FUSE path and 4,096 handle caps are removed. A unit test records 125,001 inode entries and reference eviction. The real Corsair beta.5 remount and full read traversal have **not yet passed**; beta.4 remains the current physical mount until an authenticated normal transition is executed. The existing research copy must finish before any transition. No beta.5 physical-write or hardware power-loss result is claimed here.
+
+
 All listed APFS fixtures are disposable synthetic images. Redacted evidence preserves check names, hashes and counts; private machine paths were replaced with placeholders. No customer/user file contents or device identifiers are included. A small-image timing is not USB throughput.
 
 | Build / layer | Verified scope | Evidence |
@@ -22,6 +29,7 @@ The GitHub release uses a new DGX-native GNU/Linux build from the canonical publ
 cargo test --locked --offline --lib --tests
 python3 -m unittest discover -s tests -p 'test_*.py'
 python3 tests/verify_linux_fuse.py --binary target/release/lapfs
+python3 tests/verify_rsync_archive.py --binary target/release/lapfs
 ```
 
 The first command explicitly skips image-dependent `#[ignore]` tests. To run the two APFS write-fault tests with the synthetic fixture:

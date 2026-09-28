@@ -5,7 +5,7 @@ use crate::{
     apfs_batch::{self, Action, Adapter},
     journal::{self, Identity, Image, Journal, State},
 };
-use anyhow::{ensure, Context, Result};
+use anyhow::{Context, Result, ensure};
 use apfs::{Attr, FsView};
 use serde::{Deserialize, Serialize};
 use std::{
@@ -513,9 +513,35 @@ impl Session {
         self.flush()
     }
     pub fn unlink(&mut self, path: &str) -> Result<()> {
-        self.writable(path)?;
+        let a = self.attr(path)?;
+        if a.mode & 0xf000 == 0xa000 {
+            self.parent(path)?;
+            if a.bsd_flags & 0x00060006 != 0 {
+                return Err(fail_errno(libc::EPERM));
+            }
+        } else {
+            self.writable(path)?;
+        }
         self.flush()?;
         self.enqueue(Action::Remove { path: path.into() }, None)?;
+        self.flush()
+    }
+    pub fn symlink(&mut self, path: &str, target: &[u8]) -> Result<()> {
+        self.parent(path)?;
+        if self.view()?.getattr(path)?.is_some() {
+            return Err(fail_errno(libc::EEXIST));
+        }
+        if target.is_empty() || target.len() > 4096 || target.contains(&0) {
+            return Err(fail_errno(libc::EINVAL));
+        }
+        self.flush()?;
+        self.enqueue(
+            Action::Symlink {
+                path: path.into(),
+                target: target.to_vec(),
+            },
+            None,
+        )?;
         self.flush()
     }
     pub fn rmdir(&mut self, path: &str) -> Result<()> {
@@ -531,11 +557,54 @@ impl Session {
         self.enqueue(Action::Rmdir { path: path.into() }, None)?;
         self.flush()
     }
+    pub fn set_attrs(
+        &mut self,
+        path: &str,
+        mode: Option<u16>,
+        atime_ns: Option<u64>,
+        mtime_ns: Option<u64>,
+    ) -> Result<()> {
+        let a = self.attr(path)?;
+        if a.bsd_flags & 0x00060006 != 0 {
+            return Err(fail_errno(libc::EPERM));
+        }
+        if !matches!(a.mode & 0xf000, 0x4000 | 0x8000 | 0xa000) {
+            return Err(fail_errno(libc::EOPNOTSUPP));
+        }
+        if mode.is_some() && a.mode & 0xf000 == 0xa000 {
+            return Err(fail_errno(libc::EOPNOTSUPP));
+        }
+        let mode = mode.filter(|m| a.mode & 0o7777 != *m);
+        let atime_ns = atime_ns.filter(|t| a.access_time != *t);
+        let mtime_ns = mtime_ns.filter(|t| a.mod_time != *t);
+        if mode.is_none() && atime_ns.is_none() && mtime_ns.is_none() {
+            return Ok(());
+        }
+        self.flush()?;
+        self.enqueue(
+            Action::SetAttrs {
+                path: path.into(),
+                mode,
+                atime_ns,
+                mtime_ns,
+            },
+            None,
+        )?;
+        self.flush()
+    }
     pub fn rename(&mut self, path: &str, destination: &str, replace: bool) -> Result<()> {
         if path == destination {
             return Ok(());
         }
-        self.writable(path)?;
+        let source = self.attr(path)?;
+        if source.mode & 0xf000 == 0xa000 {
+            self.parent(path)?;
+            if source.bsd_flags & 0x00060006 != 0 {
+                return Err(fail_errno(libc::EPERM));
+            }
+        } else {
+            self.writable(path)?;
+        }
         self.parent(destination)?;
         let (parent, _) = path.rsplit_once('/').context("Bad rename source")?;
         let (dest_parent, name) = destination
@@ -553,7 +622,14 @@ impl Session {
             if !replace {
                 return Err(fail_errno(libc::EEXIST));
             }
-            self.writable(destination)?;
+            if target.unwrap().mode & 0xf000 == 0xa000 {
+                self.parent(destination)?;
+                if target.unwrap().bsd_flags & 0x00060006 != 0 {
+                    return Err(fail_errno(libc::EPERM));
+                }
+            } else {
+                self.writable(destination)?;
+            }
         }
         self.flush()?;
         // One durable queue publication, so a crash cannot acknowledge or replay

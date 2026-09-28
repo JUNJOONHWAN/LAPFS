@@ -1,5 +1,5 @@
-use crate::journal::{Device, Image, Overlay, BLOCK};
-use anyhow::{ensure, Context, Result};
+use crate::journal::{BLOCK, Device, Image, Overlay};
+use anyhow::{Context, Result, ensure};
 use apfs::FsView;
 use apfs_core::block_device::{BlockDevice, BlockError, WritableBlockDevice};
 use apfs_core::container::Container;
@@ -36,11 +36,21 @@ pub enum Action {
     Mkdir {
         path: String,
     },
+    Symlink {
+        path: String,
+        target: Vec<u8>,
+    },
     Remove {
         path: String,
     },
     Rmdir {
         path: String,
+    },
+    SetAttrs {
+        path: String,
+        mode: Option<u16>,
+        atime_ns: Option<u64>,
+        mtime_ns: Option<u64>,
     },
     Rename {
         path: String,
@@ -253,11 +263,17 @@ fn stage_overlay<D: Device>(
             | Action::Put { path, .. }
             | Action::Append { path, .. }
             | Action::Mkdir { path }
+            | Action::Symlink { path, .. }
             | Action::Remove { path }
             | Action::Rmdir { path }
+            | Action::SetAttrs { path, .. }
             | Action::Rename { path, .. } => path,
         };
-        let (parent_path, name) = path_parts(path)?;
+        let (parent_path, name) = if matches!(action, Action::SetAttrs { .. }) && path == "/" {
+            ("/".to_owned(), String::new())
+        } else {
+            path_parts(path)?
+        };
         // Do not traverse symbolic links in intermediate directories.
         let mut prefix = String::new();
         for part in parent_path.split('/').filter(|x| !x.is_empty()) {
@@ -279,8 +295,20 @@ fn stage_overlay<D: Device>(
         if let Some(a) = existing {
             ensure!(a.bsd_flags & 0x00060006 == 0, "Immutable/append-only entry");
             if matches!(action, Action::Rmdir { .. }) {
-                ensure!(a.is_dir && a.mode & 0xf000 == 0x4000, "Rmdir requires a directory");
+                ensure!(
+                    a.is_dir && a.mode & 0xf000 == 0x4000,
+                    "Rmdir requires a directory"
+                );
                 ensure!(view.read_dir(path)?.is_empty(), "Directory not empty");
+            } else if matches!(action, Action::SetAttrs { .. }) {
+                ensure!(
+                    matches!(a.mode & 0xf000, 0x4000 | 0x8000 | 0xa000),
+                    "Unsupported inode type for metadata update"
+                );
+            } else if matches!(action, Action::Remove { .. } | Action::Rename { .. })
+                && a.mode & 0xf000 == 0xa000
+            {
+                // An APFS symlink is stored in an inode xattr and has no data extents.
             } else {
                 ensure!(
                     view.plain_unshared_file(path)?,
@@ -301,7 +329,10 @@ fn stage_overlay<D: Device>(
                     .read(true)
                     .custom_flags(libc::O_NONBLOCK)
                     .open(source)?;
-                ensure!(f.metadata()?.is_file() && f.metadata()?.len() <= MAX_INPUT, "Input exceeds 8 MiB batch limit; streaming large-file writer is not implemented");
+                ensure!(
+                    f.metadata()?.is_file() && f.metadata()?.len() <= MAX_INPUT,
+                    "Input exceeds 8 MiB batch limit; streaming large-file writer is not implemented"
+                );
                 let mut bytes = Vec::new();
                 f.take(MAX_INPUT + 1).read_to_end(&mut bytes)?;
                 ensure!(
@@ -360,6 +391,13 @@ fn stage_overlay<D: Device>(
                 content = Some(bytes);
             }
             Action::Mkdir { .. } => ensure!(existing.is_none(), "Entry already exists"),
+            Action::Symlink { target, .. } => {
+                ensure!(existing.is_none(), "Entry already exists");
+                ensure!(
+                    !target.is_empty() && target.len() <= 4096 && !target.contains(&0),
+                    "Invalid symlink target"
+                );
+            }
             Action::Remove { .. } => {
                 let a = existing.context("Entry missing")?;
                 ensure!(!a.is_dir, "Directory removal not enabled");
@@ -367,6 +405,26 @@ fn stage_overlay<D: Device>(
             Action::Rmdir { .. } => {
                 let a = existing.context("Entry missing")?;
                 ensure!(a.is_dir, "Rmdir requires a directory");
+            }
+            Action::SetAttrs {
+                mode,
+                atime_ns,
+                mtime_ns,
+                ..
+            } => {
+                let a = existing.context("Metadata target missing")?;
+                ensure!(
+                    mode.is_some() || atime_ns.is_some() || mtime_ns.is_some(),
+                    "Empty metadata update"
+                );
+                ensure!(
+                    mode.is_none_or(|m| m & !0o7777 == 0),
+                    "Invalid permission bits"
+                );
+                ensure!(
+                    mode.is_none() || a.mode & 0xf000 != 0xa000,
+                    "Symlink chmod unsupported"
+                );
             }
             Action::Rename { name: new_name, .. } => {
                 ensure!(existing.is_some(), "Entry missing");
@@ -437,14 +495,58 @@ fn stage_overlay<D: Device>(
             Action::Mkdir { .. } => {
                 file::mkdir(&mut txn, &vsb, &omap, parent.inode, &name)?;
             }
+            Action::Symlink { target, .. } => {
+                file::create_symlink(&mut txn, &vsb, &omap, parent.inode, &name, target)?;
+            }
             Action::Remove { .. } | Action::Rmdir { .. } => {
                 file::unlink(&mut txn, &vsb, &omap, parent.inode, &name)?
+            }
+            Action::SetAttrs {
+                mode,
+                atime_ns,
+                mtime_ns,
+                ..
+            } => {
+                file::set_inode_attrs(
+                    &mut txn,
+                    &vsb,
+                    &omap,
+                    parent.inode,
+                    &name,
+                    *mode,
+                    mode.map(|_| 0o7777),
+                    *mtime_ns,
+                    None,
+                    *atime_ns,
+                    None,
+                    None,
+                    None,
+                )?;
             }
             Action::Rename { name: new_name, .. } => {
                 file::rename(&mut txn, &vsb, &omap, parent.inode, &name, new_name, false)?
             }
         }
         dev = txn.commit()?;
+        if let Action::SetAttrs {
+            mode,
+            atime_ns,
+            mtime_ns,
+            ..
+        } = action
+        {
+            let mut check = FsView::open(dev)?;
+            let a = check
+                .getattr(path)?
+                .context("Staged metadata target missing")?;
+            ensure!(
+                mode.is_none_or(|m| a.mode & 0o7777 == m)
+                    && atime_ns.is_none_or(|t| a.access_time == t)
+                    && mtime_ns.is_none_or(|t| a.mod_time == t),
+                "Staged metadata mismatch"
+            );
+            dev = check.into_dev();
+        }
         if let Some(b) = content {
             let mut check = FsView::open(dev)?;
             let a = check.getattr(path)?.context("Staged output missing")?;

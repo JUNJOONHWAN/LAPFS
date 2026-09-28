@@ -73,8 +73,9 @@ try:
  fd=os.open(mp/'buffered.bin',os.O_WRONLY)
  try:expect_error(lambda:os.pwrite(fd,b'hole',len(payload)+1000),[errno.EOPNOTSUPP])
  finally:os.close(fd)
- expect_error(lambda:os.chmod(mp/'old.txt',0o644),[errno.EOPNOTSUPP])
- assert digest(mp/'buffered.bin')==expected['buffered.bin']['sha256'];checks+=['unsupported_sparse_and_chmod_explicit_error','mount_still_usable_after_rejection']
+ os.chmod(mp/'old.txt',0o640)
+ assert (mp/'old.txt').stat().st_mode & 0o777 == 0o640
+ assert digest(mp/'buffered.bin')==expected['buffered.bin']['sha256'];checks+=['unsupported_sparse_explicit_error','chmod_applied','mount_still_usable_after_rejection']
  # Existing original files, links and large sparse ranges remain readable.
  for name,v in json.loads((root/'fixtures/expected.json').read_text())['files'].items():assert digest(mp/name)==v['sha256'],name
  assert os.readlink(mp/'link')=='payload.bin'
@@ -83,7 +84,12 @@ try:
  assert not subprocess.run([str(b),'inspect',str(image),'20480'],capture_output=True).returncode==0
  checks.append('exclusive_raw_reader_denied')
 finally:
- if os.path.ismount(mp):subprocess.run(['fusermount3','-u',str(mp)],check=True)
+ if os.path.ismount(mp):
+  for retry in range(20):
+   unmount=subprocess.run(['fusermount3','-u',str(mp)],capture_output=True,text=True)
+   if unmount.returncode==0:break
+   time.sleep(.5)
+  else:raise AssertionError(unmount.stderr)
  p.wait(timeout=30)
 assert p.returncode==0, 'Unmount failed'
 # Kill the actual FUSE daemon after write(2) returned, before close/fsync.
@@ -118,7 +124,6 @@ for logfile in logdir.glob('errors.jsonl*'):
   event=json.loads(line)
   if event['pid'] in [p.pid,q.pid]:events.append(event)
 assert any(e['operation']=='write' and e['errno']==errno.EOPNOTSUPP for e in events),events
-assert any(e['operation']=='setattr' and e['errno']==errno.EOPNOTSUPP for e in events),events
 assert any(e['operation']=='unlink' and e['errno']==errno.EBUSY for e in events),events
 assert not any(e['operation']=='lookup' and e['errno']==errno.ENOENT for e in events),events
 (r/'error-events.json').write_text(json.dumps(events,indent=2))

@@ -4,6 +4,8 @@ pub mod journal;
 pub mod transfer;
 
 #[cfg(target_os = "linux")]
+pub mod inode_paths;
+#[cfg(target_os = "linux")]
 pub mod mount;
 pub mod reader;
 

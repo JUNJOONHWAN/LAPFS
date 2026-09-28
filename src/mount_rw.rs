@@ -6,6 +6,7 @@ use fuser::{
     FileAttr, FileType, Filesystem, KernelConfig, MountOption, ReplyAttr, ReplyCreate, ReplyData,
     ReplyDirectory, ReplyEmpty, ReplyEntry, ReplyOpen, ReplyStatfs, ReplyWrite, Request, TimeOrNow,
 };
+use std::os::unix::ffi::OsStrExt;
 use std::{
     collections::HashMap,
     ffi::OsStr,
@@ -31,6 +32,19 @@ fn ino(a: &apfs::Attr) -> u64 {
         a.inode
     }
 }
+fn unix_nanos(value: TimeOrNow) -> Result<u64> {
+    let time = match value {
+        TimeOrNow::Now => SystemTime::now(),
+        TimeOrNow::SpecificTime(time) => time,
+    };
+    let duration = time
+        .duration_since(UNIX_EPOCH)
+        .map_err(|_| std::io::Error::from_raw_os_error(libc::EOVERFLOW))?;
+    duration
+        .as_nanos()
+        .try_into()
+        .map_err(|_| std::io::Error::from_raw_os_error(libc::EOVERFLOW).into())
+}
 fn errno(op: &str, e: anyhow::Error) -> i32 {
     let code = e
         .chain()
@@ -54,7 +68,7 @@ fn errno(op: &str, e: anyhow::Error) -> i32 {
 struct Host {
     shutdown_failed: Arc<AtomicBool>,
     session: Session,
-    paths: HashMap<u64, String>,
+    paths: crate::inode_paths::InodePaths,
     handles: HashMap<u64, (u64, i32)>,
     next: u64,
     uid: u32,
@@ -62,7 +76,10 @@ struct Host {
 }
 impl Host {
     fn path(&self, id: u64) -> Result<String> {
-        self.paths.get(&id).cloned().context("Unknown inode")
+        self.paths
+            .get(id)
+            .map(str::to_owned)
+            .context("Unknown inode")
     }
     fn child(&self, id: u64, n: &OsStr) -> Result<String> {
         let n = n.to_str().context("Invalid UTF-8 name")?;
@@ -73,16 +90,11 @@ impl Host {
         Ok(format!("{}/{}", self.path(id)?.trim_end_matches('/'), n))
     }
     fn remember(&mut self, id: u64, p: String) -> Result<()> {
-        ensure!(
-            self.paths.contains_key(&id) || self.paths.len() < 100_000,
-            "Inode table limit"
-        );
-        self.paths.entry(id).or_insert(p);
-        Ok(())
+        self.paths.remember(id, p)
     }
     fn attr(&mut self, p: &str) -> Result<FileAttr> {
         let a = self.session.attr(p)?;
-        let a = if let Some(canonical) = self.paths.get(&ino(&a)) {
+        let a = if let Some(canonical) = self.paths.get(ino(&a)) {
             if canonical != p {
                 self.session.attr(canonical)?
             } else {
@@ -100,7 +112,7 @@ impl Host {
             ctime: UNIX_EPOCH + Duration::from_nanos(a.change_time),
             crtime: UNIX_EPOCH + Duration::from_nanos(a.create_time),
             kind: kind(&a),
-            perm: if a.is_dir { 0o700 } else { 0o600 },
+            perm: a.mode & 0o7777,
             nlink: if a.is_dir { 2 } else { 1 },
             uid: self.uid,
             gid: self.gid,
@@ -110,7 +122,9 @@ impl Host {
         })
     }
     fn handle(&mut self, id: u64, flags: i32) -> Result<u64> {
-        ensure!(self.handles.len() < 4096, "Open handle limit");
+        self.handles
+            .try_reserve(1)
+            .map_err(|_| std::io::Error::from_raw_os_error(libc::ENOMEM))?;
         let fh = self.next;
         self.next = self.next.checked_add(1).context("Handle overflow")?;
         self.handles.insert(fh, (id, flags));
@@ -127,6 +141,10 @@ impl Host {
     }
 }
 impl Filesystem for Host {
+    fn forget(&mut self, _: &Request<'_>, id: u64, nlookup: u64) {
+        let busy = self.busy(id);
+        self.paths.forget(id, nlookup, busy);
+    }
     fn init(&mut self, _: &Request<'_>, config: &mut KernelConfig) -> Result<(), i32> {
         config.set_max_write(128 * 1024).map_err(|_| libc::EINVAL)?;
         Ok(())
@@ -182,14 +200,16 @@ impl Filesystem for Host {
         _: &Request<'_>,
         parent: u64,
         name: &OsStr,
-        _mode: u32,
-        _umask: u32,
+        mode: u32,
+        umask: u32,
         flags: i32,
         reply: ReplyCreate,
     ) {
         let r = (|| {
             let p = self.child(parent, name)?;
             self.session.create(&p)?;
+            self.session
+                .set_attrs(&p, Some(((mode & !umask) as u16) & 0o7777), None, None)?;
             let a = self.attr(&p)?;
             self.remember(a.ino, p)?;
             let fh = self.handle(a.ino, flags)?;
@@ -272,7 +292,7 @@ impl Filesystem for Host {
     fn release(
         &mut self,
         _: &Request<'_>,
-        _: u64,
+        id: u64,
         fh: u64,
         _: i32,
         _: Option<u64>,
@@ -280,6 +300,8 @@ impl Filesystem for Host {
         reply: ReplyEmpty,
     ) {
         self.handles.remove(&fh);
+        let busy = self.busy(id);
+        self.paths.release_if_unreferenced(id, busy);
         self.sync_reply("release", reply)
     }
     fn setattr(
@@ -300,11 +322,8 @@ impl Filesystem for Host {
         flags: Option<u32>,
         reply: ReplyAttr,
     ) {
-        if mode.is_some()
-            || uid.is_some()
-            || gid.is_some()
-            || atime.is_some()
-            || mtime.is_some()
+        if uid.is_some_and(|v| v != self.uid)
+            || gid.is_some_and(|v| v != self.gid)
             || crtime.is_some()
             || chgtime.is_some()
             || bkuptime.is_some()
@@ -325,6 +344,10 @@ impl Filesystem for Host {
             if let Some(size) = size {
                 self.session.truncate(&p, size)?;
             }
+            let atime_ns = atime.map(unix_nanos).transpose()?;
+            let mtime_ns = mtime.map(unix_nanos).transpose()?;
+            self.session
+                .set_attrs(&p, mode.map(|m| (m as u16) & 0o7777), atime_ns, mtime_ns)?;
             self.attr(&p)
         })();
         match r {
@@ -337,13 +360,15 @@ impl Filesystem for Host {
         _: &Request<'_>,
         parent: u64,
         name: &OsStr,
-        _: u32,
-        _: u32,
+        mode: u32,
+        umask: u32,
         reply: ReplyEntry,
     ) {
         let r = (|| {
             let p = self.child(parent, name)?;
             self.session.mkdir(&p)?;
+            self.session
+                .set_attrs(&p, Some(((mode & !umask) as u16) & 0o7777), None, None)?;
             let a = self.attr(&p)?;
             self.remember(a.ino, p)?;
             Ok(a)
@@ -361,7 +386,7 @@ impl Filesystem for Host {
                 return Err(std::io::Error::from_raw_os_error(libc::EBUSY).into());
             }
             self.session.unlink(&p)?;
-            self.paths.remove(&id);
+            self.paths.remove(id);
             Ok(())
         })();
         match r {
@@ -380,7 +405,7 @@ impl Filesystem for Host {
                 return Err(std::io::Error::from_raw_os_error(libc::EBUSY).into());
             }
             self.session.rmdir(&p)?;
-            self.paths.remove(&a.ino);
+            self.paths.remove(a.ino);
             Ok(())
         })();
         match r {
@@ -411,9 +436,9 @@ impl Filesystem for Host {
             }
             self.session.rename(&p, &d, flags & 1 == 0)?;
             if let Some(a) = target {
-                self.paths.remove(&ino(&a));
+                self.paths.remove(ino(&a));
             }
-            self.paths.insert(id, d);
+            self.paths.rename(id, d)?;
             Ok(())
         })();
         match r {
@@ -426,6 +451,26 @@ impl Filesystem for Host {
         match r {
             Ok(b) => reply.data(&b),
             Err(e) => reply.error(errno("readlink", e)),
+        }
+    }
+    fn symlink(
+        &mut self,
+        _: &Request<'_>,
+        parent: u64,
+        link_name: &OsStr,
+        target: &Path,
+        reply: ReplyEntry,
+    ) {
+        let r = (|| {
+            let p = self.child(parent, link_name)?;
+            self.session.symlink(&p, target.as_os_str().as_bytes())?;
+            let a = self.attr(&p)?;
+            self.remember(a.ino, p)?;
+            Ok(a)
+        })();
+        match r {
+            Ok(a) => reply.entry(&TTL, &a, 0),
+            Err(e) => reply.error(errno("symlink", e)),
         }
     }
     fn readdir(
@@ -536,7 +581,7 @@ pub fn mount(target: &Path, offset: u64, mountpoint: &Path, session_dir: &Path) 
     let host = Host {
         shutdown_failed: shutdown_failed.clone(),
         session,
-        paths: HashMap::from([(1, "/".into())]),
+        paths: crate::inode_paths::InodePaths::new(),
         handles: HashMap::new(),
         next: 1,
         uid,

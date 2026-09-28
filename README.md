@@ -1,7 +1,7 @@
 <p align="center"><img src="docs/assets/lapfs-banner.svg" alt="LAPFS — buffered APFS access for Linux ARM64" width="100%"></p>
 
 <p align="center">
-  <a href="https://github.com/JUNJOONHWAN/LAPFS/releases"><img alt="Beta" src="https://img.shields.io/badge/release-0.3.0--beta.4-f5b84b"></a>
+  <a href="https://github.com/JUNJOONHWAN/LAPFS/releases"><img alt="Beta" src="https://img.shields.io/badge/release-0.3.0--beta.5-f5b84b"></a>
   <img alt="Platform" src="https://img.shields.io/badge/target-DGX%20Spark%20%2F%20Linux%20ARM64-72d6c9">
   <a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/license-GPL--3.0--only-829bff"></a>
 </p>
@@ -15,6 +15,8 @@ Designed for DGX Spark / GB10: readable APFS volumes, bounded durable write buff
 > [!WARNING]
 > **공개 실험 베타입니다. 중요한 데이터의 유일한 사본에 사용하지 마세요.**
 > 이미지·가상 블록 장치와 선택한 외장 APFS 장치의 단일 쓰기·해제·재마운트 검증을 통과했습니다. **케이블 분리·전원 차단 내구성, 장시간 USB 쓰기 성능은 미검증**입니다. 일부 APFS/POSIX 기능은 의도적으로 거부합니다. 상용 드라이버 또는 Apple/NVIDIA 공식 제품이 아닙니다.
+> **beta.5 검증 상태:** 합성 APFS 이미지에서 일반 `rsync -a`의 첫 복사·반복·파일/링크 교체·`--delete`와 디렉터리·심볼릭 링크·mode·mtime을 시험했습니다. macOS 독립 검사와 실제 Corsair 재마운트 결과는 [검증 문서](docs/VALIDATION.md)의 범위를 따릅니다. 기존 beta.4 물리 장치 쓰기 시험은 아래에 별도로 표시합니다.
+>
 > **beta.4 검증 상태:** beta.3의 선택 장치 쓰기 시험에 더해, beta.4의 빈 폴더 삭제는 합성 이미지의 Linux FUSE·Mac fsck/SHA로 확인했습니다. 실제 Corsair 장치에 beta.4를 재마운트한 뒤 mkdir·cd·rmdir와 비어 있지 않은 폴더의 삭제 거부를 확인했습니다. beta.2에서 실패했던 약 1 TB 볼륨에 8 MiB 시험 파일을 쓰고 fsync·정상 해제·원시 읽기·재마운트·삭제까지 확인했습니다. 이 한 장치의 시험을 전원 차단 안전성이나 범용 APFS 호환성으로 확대 해석하지 마세요.
 
 [시작하기](#빠른-시작) · [구조](#구조) · [목표와-현재-사양](#목표와-현재-사양) · [시험 결과](docs/VALIDATION.md) · [지원 제한](docs/LIMITATIONS.md) · [복구](docs/RECOVERY.md) · [English overview](docs/OVERVIEW.md)
@@ -27,7 +29,7 @@ APFS 외장 저장장치를 Linux ARM64에서 다루되, 내부 디스크에 전
 
 ```mermaid
 flowchart LR
-    App["cp / 일반 파일 I/O"] --> FUSE["읽기·쓰기 FUSE\ndirect I/O"]
+    App["cp / rsync -a / 일반 파일 I/O"] --> FUSE["읽기·쓰기 FUSE\ndirect I/O"]
     FUSE --> Queue["DGX 내부 ext4/XFS\n영구 입력 큐 · 기본 4 MiB"]
     Queue --> Trigger["4 MiB / fsync / close\n메타데이터 변경 / 정상 해제"]
     Trigger --> Journal["외부 undo + redo\nflush · 블록 재검증"]
@@ -49,11 +51,11 @@ flowchart LR
 
 ## 목표와 현재 사양
 
-| 항목 | 현재 beta.4 | 목표 / 남은 검증 |
+| 항목 | 현재 beta.5 | 목표 / 남은 검증 |
 |---|---|---|
 | 기준 실행 환경 | DGX Spark / GB10, Linux ARM64, FUSE3 | 다른 배포판·USB 브리지 조합 검증 |
 | 읽기 | 일반 파일, 디렉터리, 링크 조회, 큰 파일 범위 읽기 | 암호화·압축 스트리밍 확대 |
-| 쓰기 | 생성·복사·범위 수정·append·파일 삭제·mkdir·빈 폴더 삭제(rmdir)·같은 폴더 파일 rename/replace | 더 넓은 POSIX/APFS 기능 |
+| 쓰기 | 생성·복사·범위 수정·append·파일 삭제·mkdir·빈 폴더 삭제(rmdir)·같은 폴더 파일 rename/replace·심볼릭 링크 생성/삭제·chmod·atime/mtime | 더 넓은 POSIX/APFS 기능 |
 | 쓰기 큐 | 기본 데이터 상한 **4 MiB** | 처리량·동시 작업 성능 측정 |
 | 배치 복구 데이터 | undo + redo **32 MiB** 상한 | 대형 catalog에서 지원 범위 검증 |
 | 내부 저장공간 | **1 GiB 여유 + 96 MiB 작업 여유 검사** | 최저공간·장기 반복 부하 실측 |
@@ -76,6 +78,7 @@ cargo build --locked --offline --release --bin lapfs
 
 # 새 시험 이미지 생성 → 실제 RW FUSE 기능/오류/강제종료 복구 검증
 python3 tests/verify_linux_fuse.py --binary target/release/lapfs
+python3 tests/verify_rsync_archive.py --binary target/release/lapfs
 ```
 
 배포 바이너리는 GNU/Linux ARM64, **glibc 2.39 이상과 libgcc_s**가 필요합니다. 다른 환경은 소스 빌드를 사용하세요.
@@ -106,6 +109,7 @@ PY
 
 | 상태 | 범위 |
 |---|---|
+| ✅ | 합성 APFS: `rsync -a` 첫 복사·반복·파일/링크 교체·`--delete`, 링크·mode·mtime; Apple `fsck_apfs` 결과는 검증 문서 참조 |
 | ✅ | DGX 실제 FUSE: 큰 순차 복사, 범위 수정, 두 핸들 읽기 일관성, fsync/close, 기본 파일 작업 |
 | ✅ | 실제 FUSE 프로세스 SIGKILL 후 승인된 데이터 복구, Apple fsck 및 파일 SHA 확인 |
 | ✅ | 별도 관리자 loop 블록 장치 8/8 검사 — beta.1 결과 |
@@ -121,7 +125,7 @@ PY
 ## 현재 지원하지 않는 것
 
 - 암호화 볼륨 쓰기, 다중 볼륨 컨테이너, 스냅샷, CAB 간접 할당 구조 등 지원하지 않는 allocator layout.
-- clone/hardlink/shared/compressed/sparse/특수 파일 변경, 미검증 xattr 변경.
+- clone/hardlink/shared/compressed/sparse/특수 파일 변경, chown 및 미검증 xattr/ACL 변경. `rsync -a`는 일반 파일·디렉터리·심볼릭 링크와 현재 사용자 소유권 범위에서 검증했습니다.
 - 디렉터리 rename/delete, 다른 폴더 간 rename, 열린 파일 삭제·열린 목적지 교체.
 - `chmod/chown`, 명시적 timestamp/xattr/ACL 변경, 새 링크 생성, writable mmap.
 - 새 크기 **8 MiB 초과 truncate**. 큰 파일 복사·append·범위 쓰기의 파일 크기 제한과는 다릅니다.

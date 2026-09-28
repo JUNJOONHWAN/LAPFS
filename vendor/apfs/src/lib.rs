@@ -519,7 +519,13 @@ impl<D: BlockDevice> FsView<D> {
         }
         Ok(self
             .catalog
-            .get_xattr(&mut self.dev, ino, "com.apple.fs.symlink")?)
+            .get_xattr(&mut self.dev, ino, "com.apple.fs.symlink")?
+            .map(|mut target| {
+                if target.last() == Some(&0) {
+                    target.pop();
+                }
+                target
+            }))
     }
 }
 

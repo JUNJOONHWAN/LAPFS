@@ -1,0 +1,50 @@
+{
+  "version": "0.3.0-beta.5",
+  "fixture": "disposable 128 MiB APFS image, 104 original files",
+  "binary_sha256": "a6c8a7e492f19c1918f1634191aaca83bb2aa9f8115406ae7e3c4fcea010330a",
+  "linux_rsync_runs": [
+    {
+      "stage": "initial",
+      "exit_code": 0,
+      "stderr": ""
+    },
+    {
+      "stage": "repeat",
+      "exit_code": 0,
+      "stderr": ""
+    },
+    {
+      "stage": "replace",
+      "exit_code": 0,
+      "stderr": ""
+    },
+    {
+      "stage": "link-change",
+      "exit_code": 0,
+      "stderr": ""
+    },
+    {
+      "stage": "delete",
+      "exit_code": 0,
+      "stderr": ""
+    }
+  ],
+  "verified": {
+    "payload_sha256": "198153267082f552d192b9114a5cbc61fd3cb6965dd7e89fd091345da4966ab8",
+    "nested_sha256": "785b0751fc2c53dc14a4ce3d800e69ef9ce1009eb327ccf458afe09c242c26c9",
+    "large_sha256": "eb342089af193d0d9912b0435466f010628e7edd99e5831e1663c435f9ee2665",
+    "large_bytes": 12550013,
+    "mtime_ns": 946684800987654321,
+    "mode": "0o640",
+    "symlink_target": "nested/other.bin",
+    "deleted_orphan_file_link_directory_absent": true
+  },
+  "macos": {
+    "apple_fsck": "clean",
+    "original_files_verified": 104,
+    "rsync_file_sha256": "198153267082f552d192b9114a5cbc61fd3cb6965dd7e89fd091345da4966ab8",
+    "mtime_ns": 946684800987654321,
+    "mode": "0o640",
+    "image_sha256": "11d2504708e92a1c3577e11d73088f140a215e73e68c58475efeab25ca78b673"
+  }
+}
