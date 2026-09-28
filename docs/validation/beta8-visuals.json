@@ -1,0 +1,25 @@
+{
+  "desktop": "1440x1060",
+  "mobile": "390x844",
+  "horizontalOverflow": false,
+  "steps": 4,
+  "keyboard": "passed",
+  "urlReload": "passed",
+  "invalidUrl": "fallback0",
+  "noJavaScript": "text sequence visible",
+  "svgResults": [
+    {
+      "name": "lapfs-banner",
+      "clipped": []
+    },
+    {
+      "name": "lapfs-architecture",
+      "clipped": []
+    },
+    {
+      "name": "lapfs-checkpoint",
+      "clipped": []
+    }
+  ],
+  "consoleErrors": []
+}

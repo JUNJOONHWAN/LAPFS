@@ -1,6 +1,7 @@
-//! Durable bounded write queue shared by writable FUSE and crash-recovery CLI.
+//! Bounded write queue with grouped and per-write durable policies shared by writable FUSE and crash-recovery CLI.
 //! One Image FD stays exclusively owned throughout the session. Acknowledged
-//! data is in immutable fsynced payloads plus a checksummed durable manifest.
+//! data is durable per write only in Durable mode. Grouped mode becomes durable
+//! at flush/close/group boundaries; incomplete unsynced tail writes may be lost.
 use crate::{
     apfs_batch::{self, Action, Adapter},
     journal::{self, Device, Identity, Image, Journal, State},
@@ -10,18 +11,30 @@ use apfs::{Attr, FsView};
 use serde::{Deserialize, Serialize};
 use std::{
     fs::{self, File, OpenOptions},
-    io::{Read, Write},
+    io::{Read, Seek, SeekFrom, Write},
     os::unix::fs::{DirBuilderExt, OpenOptionsExt},
     path::{Path, PathBuf},
 };
 
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum WritePolicy {
+    #[default]
+    Durable,
+    Grouped,
+}
 pub const GROUP_BYTES: u64 = 4 * 1024 * 1024;
+const MAX_QUEUE: usize = 1024;
+const MAX_FRAME_META: usize = 32768;
+const MAX_STREAM: u64 = GROUP_BYTES + MAX_QUEUE as u64 * (MAX_FRAME_META as u64 + 136);
 pub const JOURNAL_BYTES: u64 = 32 * 1024 * 1024;
 #[derive(Clone, Serialize, Deserialize)]
 struct Payload {
     name: String,
     bytes: u64,
     sha256: String,
+    #[serde(default)]
+    file_offset: Option<u64>,
 }
 #[derive(Clone, Serialize, Deserialize)]
 struct Pending {
@@ -31,6 +44,10 @@ struct Pending {
 #[derive(Clone, Serialize, Deserialize)]
 struct Record {
     version: u32,
+    #[serde(default)]
+    stream: Option<String>,
+    #[serde(default)]
+    write_policy: WritePolicy,
     identity: Identity,
     offset: u64,
     group_bytes: u64,
@@ -52,6 +69,8 @@ pub struct Session {
     record: Record,
     poisoned: bool,
     lookup_cache: apfs::LookupCache,
+    // Valid only while our exclusive session has made no APFS mutation.
+    write_cache: Option<(String, Attr)>,
 }
 struct CachedView<'a> {
     view: FsView<Adapter<&'a mut Image>>,
@@ -99,6 +118,11 @@ impl Session {
         dir: &Path,
         group_bytes: u64,
         reserve: u64,
+    ) -> Result<Self> {
+        Self::start_with_policy(target, offset, dir, group_bytes, reserve, WritePolicy::Durable)
+    }
+    pub fn start_with_policy(
+        target: &Path, offset: u64, dir: &Path, group_bytes: u64, reserve: u64, write_policy: WritePolicy,
     ) -> Result<Self> {
         ensure!(
             (4096..=GROUP_BYTES).contains(&group_bytes),
@@ -156,7 +180,9 @@ impl Session {
         let lock = new_file(&dir.join("lock"))?;
         journal::lock(&lock)?;
         let record = Record {
-            version: 1,
+            version: 2,
+            stream: None,
+            write_policy,
             identity: image.identity.clone(),
             offset,
             group_bytes,
@@ -179,6 +205,7 @@ impl Session {
             record,
             poisoned: false,
             lookup_cache: Default::default(),
+            write_cache: None,
         })
     }
     pub fn resume_target(dir: &Path, target: &Path, offset: u64) -> Result<Self> {
@@ -199,13 +226,13 @@ impl Session {
         journal::lock(&lock)?;
         let record: Record = journal::unseal(&dir.join("session.json"))?;
         ensure!(
-            record.version == 1,
+            matches!(record.version, 1 | 2),
             "Session is closed or has an unsupported version"
         );
         ensure!(
             (4096..=GROUP_BYTES).contains(&record.group_bytes)
                 && record.cap == JOURNAL_BYTES
-                && record.queue.len() <= 64,
+                && record.queue.len() <= MAX_QUEUE,
             "Invalid mount session budget"
         );
         ensure!(
@@ -230,7 +257,9 @@ impl Session {
             record,
             poisoned: false,
             lookup_cache: Default::default(),
+            write_cache: None,
         };
+        s.replay_stream()?;
         s.validate_queue()?;
         s.settle_active()?;
         s.image.check_identity(&s.record.identity, true)?;
@@ -262,7 +291,11 @@ impl Session {
         })
     }
     pub fn attr(&mut self, path: &str) -> Result<Attr> {
+        self.ready()?;
         crate::reader::validate_path(path)?;
+        if let Some((cached, attr)) = &self.write_cache {
+            if cached == path { return Ok(*attr); }
+        }
         let mut a = self
             .view()?
             .getattr(path)?
@@ -321,10 +354,13 @@ impl Session {
         Ok(bytes)
     }
     pub fn writable(&mut self, path: &str) -> Result<()> {
+        self.ready()?;
+        if self.write_cache.as_ref().is_some_and(|(p, _)| p == path) { return Ok(()); }
         let a = self.attr(path)?;
         if a.mode & 0xf000 != 0x8000 || !self.view()?.range_writable_file(path)? {
             return Err(fail_errno(libc::EOPNOTSUPP));
         }
+        self.write_cache = Some((path.into(), a));
         Ok(())
     }
     pub fn pending_bytes(&self) -> u64 {
@@ -337,7 +373,9 @@ impl Session {
     }
     fn payload(&self, p: &Payload) -> Result<Vec<u8>> {
         ensure!(
-            plain_name(&p.name) && p.name.starts_with("payload-") && p.bytes <= GROUP_BYTES,
+            plain_name(&p.name)
+                && (p.name.starts_with("payload-") || p.name.starts_with("stream-"))
+                && p.bytes <= GROUP_BYTES,
             "Invalid payload description"
         );
         let mut f = OpenOptions::new()
@@ -345,11 +383,18 @@ impl Session {
             .custom_flags(libc::O_NOFOLLOW)
             .open(self.dir.join(&p.name))?;
         ensure!(
-            f.metadata()?.is_file() && f.metadata()?.len() == p.bytes,
+            f.metadata()?.is_file()
+                && match p.file_offset {
+                    Some(off) => off
+                        .checked_add(p.bytes)
+                        .is_some_and(|end| end <= f.metadata().map(|m| m.len()).unwrap_or(0)),
+                    None => f.metadata()?.len() == p.bytes,
+                },
             "Payload size changed"
         );
         let mut b = vec![];
-        f.read_to_end(&mut b)?;
+        f.seek(SeekFrom::Start(p.file_offset.unwrap_or(0)))?;
+        f.take(p.bytes).read_to_end(&mut b)?;
         ensure!(
             journal::hash(&b) == p.sha256,
             "Corrupt queued write; preserve recovery files"
@@ -381,10 +426,177 @@ impl Session {
         }
         Ok(())
     }
+
+    // One append per write; Durable adds a barrier per acknowledged write. A durable session
+    // references the stream before its first frame. Frames include both metadata
+    // and bytes in their checksum; only an incomplete final frame is discarded.
+    fn append_stream(&mut self, path: &str, offset: u64, data: &[u8]) -> Result<()> {
+        if self.record.stream.is_none() {
+            ensure!(
+                self.record.queue.is_empty(),
+                "Stream requires drained queue"
+            );
+            let name = format!("stream-{:016}.bin", self.record.next_blob);
+            self.record.next_blob += 1;
+            let file = new_file(&self.dir.join(&name))?;
+            journal::durable_sync(&file)?;
+            journal::sync_dir(&self.dir)?;
+            self.record.version = 2; // Older readers must refuse this format.
+            self.record.stream = Some(name);
+            self.save()?;
+        }
+        ensure!(
+            journal::free_bytes(&self.dir)? >= self.record.reserve.saturating_add(96 * 1024 * 1024),
+            "Queue low-space guard"
+        );
+        let name = self.record.stream.clone().unwrap();
+        let meta = serde_json::to_vec(&(path, offset))?;
+        ensure!(
+            meta.len() <= MAX_FRAME_META,
+            "Stream metadata exceeds bound"
+        );
+        let mut frame = Vec::with_capacity(72 + meta.len() + data.len() + 64);
+        frame.extend_from_slice(&(meta.len() as u32).to_le_bytes());
+        frame.extend_from_slice(&(data.len() as u32).to_le_bytes());
+        let header_digest = journal::hash(&frame);
+        frame.extend_from_slice(header_digest.as_bytes());
+        frame.extend_from_slice(&meta);
+        frame.extend_from_slice(data);
+        let digest = journal::hash(&frame);
+        frame.extend_from_slice(digest.as_bytes());
+        let mut file = OpenOptions::new()
+            .read(true)
+            .append(true)
+            .custom_flags(libc::O_NOFOLLOW)
+            .open(self.dir.join(&name))?;
+        ensure!(file.metadata()?.is_file(), "Invalid stream type");
+        let start = file.metadata()?.len();
+        ensure!(
+            start + frame.len() as u64 <= MAX_STREAM,
+            "Stream exceeds bound"
+        );
+        file.write_all(&frame)?;
+        journal::fault_point("mount-stream-written");
+        if self.record.write_policy == WritePolicy::Durable {
+            journal::durable_sync(&file)?;
+            journal::fault_point("mount-stream-synced");
+        }
+        self.record.queue.push(Pending {
+            action: Action::WriteAt {
+                source: self.dir.join(&name),
+                path: path.into(),
+                offset,
+            },
+            payload: Some(Payload {
+                name,
+                bytes: data.len() as u64,
+                sha256: journal::hash(data),
+                file_offset: Some(start + 72 + meta.len() as u64),
+            }),
+        });
+        journal::fault_point("mount-wal-published");
+        Ok(())
+    }
+    fn freeze_stream(&mut self) -> Result<()> {
+        if let Some(name) = self.record.stream.as_ref() {
+            // Persist all frames before publishing references or changing APFS.
+            let file = OpenOptions::new().read(true).write(true).custom_flags(libc::O_NOFOLLOW).open(self.dir.join(name))?;
+            journal::durable_sync(&file)?;
+            journal::fault_point("mount-stream-flushed");
+            self.record.stream = None;
+            self.save()?; // Queue references become durable before APFS changes.
+            journal::fault_point("mount-stream-frozen");
+        }
+        Ok(())
+    }
+    fn replay_stream(&mut self) -> Result<()> {
+        let Some(name) = self.record.stream.clone() else {
+            return Ok(());
+        };
+        ensure!(
+            self.record.version == 2
+                && !self.record.closed
+                && self.record.active.is_none()
+                && self.record.queue.is_empty(),
+            "Invalid stream state"
+        );
+        ensure!(
+            plain_name(&name) && name.starts_with("stream-"),
+            "Invalid stream path"
+        );
+        let mut file = OpenOptions::new()
+            .read(true)
+            .custom_flags(libc::O_NOFOLLOW)
+            .open(self.dir.join(&name))?;
+        ensure!(
+            file.metadata()?.is_file() && file.metadata()?.len() <= MAX_STREAM,
+            "Invalid stream size"
+        );
+        let mut bytes = Vec::new();
+        file.read_to_end(&mut bytes)?;
+        let mut pos = 0;
+        while pos < bytes.len() {
+            if bytes.len() - pos < 72 {
+                break;
+            }
+            ensure!(
+                journal::hash(&bytes[pos..pos + 8]).as_bytes() == &bytes[pos + 8..pos + 72],
+                "Corrupt stream header; preserve recovery files"
+            );
+            let meta_len = u32::from_le_bytes(bytes[pos..pos + 4].try_into().unwrap()) as usize;
+            let data_len = u32::from_le_bytes(bytes[pos + 4..pos + 8].try_into().unwrap()) as usize;
+            ensure!(
+                meta_len > 0
+                    && meta_len <= MAX_FRAME_META
+                    && data_len > 0
+                    && data_len as u64 <= self.record.group_bytes,
+                "Invalid stream frame bounds"
+            );
+            let end = pos + 72 + meta_len + data_len;
+            if end + 64 > bytes.len() {
+                break;
+            }
+            ensure!(
+                journal::hash(&bytes[pos..end]).as_bytes() == &bytes[end..end + 64],
+                "Corrupt stream frame; preserve recovery files"
+            );
+            let (path, offset): (String, u64) =
+                serde_json::from_slice(&bytes[pos + 72..pos + 72 + meta_len])?;
+            crate::reader::validate_path(&path)?;
+            ensure!(
+                offset
+                    .checked_add(data_len as u64)
+                    .is_some_and(|n| n <= i64::MAX as u64),
+                "Stream offset overflow"
+            );
+            ensure!(
+                self.record.queue.len() < MAX_QUEUE
+                    && self.pending_bytes() + data_len as u64 <= self.record.group_bytes,
+                "Stream queue exceeds bound"
+            );
+            let data = &bytes[pos + 72 + meta_len..end];
+            self.record.queue.push(Pending {
+                action: Action::WriteAt {
+                    source: self.dir.join(&name),
+                    path,
+                    offset,
+                },
+                payload: Some(Payload {
+                    name: name.clone(),
+                    bytes: data_len as u64,
+                    sha256: journal::hash(data),
+                    file_offset: Some((pos + 72 + meta_len) as u64),
+                }),
+            });
+            pos = end + 64;
+        }
+        self.freeze_stream()
+    }
     fn enqueue(&mut self, mut action: Action, data: Option<&[u8]>) -> Result<()> {
         self.ready()?;
+        self.freeze_stream()?;
         let result = (|| {
-            ensure!(self.record.queue.len() < 64, "Queue operation bound");
+            ensure!(self.record.queue.len() < MAX_QUEUE, "Queue operation bound");
             ensure!(
                 journal::free_bytes(&self.dir)?
                     >= self.record.reserve.saturating_add(96 * 1024 * 1024),
@@ -410,6 +622,7 @@ impl Session {
                     name,
                     bytes: data.len() as u64,
                     sha256: journal::hash(data),
+                    file_offset: None,
                 })
             } else {
                 None
@@ -443,18 +656,21 @@ impl Session {
             return Err(fail_errno(libc::EFBIG));
         }
         if self.pending_bytes() + data.len() as u64 > self.record.group_bytes
-            || self.record.queue.len() >= 63
+            || self.record.queue.len() >= MAX_QUEUE - 1
         {
             self.flush()?;
         }
-        self.enqueue(
-            Action::WriteAt {
-                source: PathBuf::new(),
-                path: path.into(),
-                offset,
-            },
-            Some(data),
-        )?;
+        if self.record.stream.is_none() && !self.record.queue.is_empty() {
+            self.flush()?;
+        }
+        let result = self.append_stream(path, offset, data);
+        if result.is_err() {
+            self.poisoned = true;
+        }
+        result?;
+        if let Some((cached, attr)) = &mut self.write_cache {
+            if cached == path { attr.size = attr.size.max(offset + data.len() as u64); }
+        }
         if self.pending_bytes() >= self.record.group_bytes {
             self.flush()?;
         }
@@ -709,6 +925,8 @@ impl Session {
         result
     }
     fn flush_inner(&mut self) -> Result<()> {
+        self.write_cache = None;
+        self.freeze_stream()?;
         self.settle_active()?;
         while !self.record.queue.is_empty() {
             let (actions, count) = self.actions()?;
@@ -785,14 +1003,25 @@ impl Session {
         );
         self.record.sequence += 1;
         if committed {
-            self.record.garbage.extend(
-                self.record
+            let retired: Vec<String> = self
+                .record
+                .queue
+                .iter()
+                .take(count)
+                .filter_map(|q| q.payload.as_ref().map(|p| p.name.clone()))
+                .collect();
+            self.record.queue.drain(..count);
+            for name in retired {
+                if !self
+                    .record
                     .queue
                     .iter()
-                    .take(count)
-                    .filter_map(|q| q.payload.as_ref().map(|p| p.name.clone())),
-            );
-            self.record.queue.drain(..count);
+                    .any(|q| q.payload.as_ref().is_some_and(|p| p.name == name))
+                    && !self.record.garbage.contains(&name)
+                {
+                    self.record.garbage.push(name);
+                }
+            }
         }
         self.save()?;
         journal::fault_point("mount-queue-retired");
@@ -824,7 +1053,8 @@ impl Session {
                 fs::remove_dir(&p)?;
             } else {
                 ensure!(
-                    name.starts_with("payload-") && fs::symlink_metadata(&p)?.is_file(),
+                    (name.starts_with("payload-") || name.starts_with("stream-"))
+                        && fs::symlink_metadata(&p)?.is_file(),
                     "Invalid payload cleanup"
                 );
                 fs::remove_file(p)?;
@@ -840,7 +1070,8 @@ impl Session {
             let e = e?;
             let name = e.file_name().to_string_lossy().into_owned();
             if name.starts_with("merged-")
-                || (name.starts_with("payload-")
+                || ((name.starts_with("payload-") || name.starts_with("stream-"))
+                    && self.record.stream.as_ref() != Some(&name)
                     && !self
                         .record
                         .queue
@@ -882,11 +1113,12 @@ impl Session {
         ))?;
         Ok((len / 4096, txn.sm.free_count.saturating_sub(pending)))
     }
+    pub fn write_policy(&self) -> WritePolicy { self.record.write_policy }
     pub fn is_closed(&self) -> bool {
         self.record.closed
     }
     pub fn status(&self) -> serde_json::Value {
-        serde_json::json!({"session":self.dir,"pending_bytes":self.pending_bytes(),"operations":self.record.queue.len(),"committed_batches":self.record.sequence,"group_bytes":self.record.group_bytes,"closed":self.record.closed})
+        serde_json::json!({"session":self.dir,"write_policy":self.record.write_policy,"pending_bytes":self.pending_bytes(),"operations":self.record.queue.len(),"committed_batches":self.record.sequence,"group_bytes":self.record.group_bytes,"closed":self.record.closed})
     }
 }
 /// Drains a crashed session and releases persistent ownership. The target must

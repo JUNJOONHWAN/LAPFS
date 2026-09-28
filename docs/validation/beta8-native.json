@@ -1,0 +1,559 @@
+[
+  {
+    "name": "durable-mount-stream-written",
+    "image": "durable-mount-stream-written.dmg.gz",
+    "image_sha256": "25c5e9de9a4de45e03ffd10fc10d5fcf41ac301b060ff307b20083e77a7bf782",
+    "expected": {
+      "crash.txt": {
+        "bytes": 8197,
+        "sha256": "b2cab53dd5b50284acc297494bded9b33c0474d52ac34740d99857c7ab20508d"
+      }
+    },
+    "extra": {},
+    "native": {
+      "fsck": "clean",
+      "original_files": 104,
+      "changed_files": 1,
+      "sha256": "matched"
+    }
+  },
+  {
+    "name": "durable-mount-stream-synced",
+    "image": "durable-mount-stream-synced.dmg.gz",
+    "image_sha256": "5f8c87c5bfc469d7a4b897a60ad4982f1f5b1553800fe152b19a22839ee5a965",
+    "expected": {
+      "crash.txt": {
+        "bytes": 8197,
+        "sha256": "b2cab53dd5b50284acc297494bded9b33c0474d52ac34740d99857c7ab20508d"
+      }
+    },
+    "extra": {},
+    "native": {
+      "fsck": "clean",
+      "original_files": 104,
+      "changed_files": 1,
+      "sha256": "matched"
+    }
+  },
+  {
+    "name": "durable-mount-stream-flushed",
+    "image": "durable-mount-stream-flushed.dmg.gz",
+    "image_sha256": "bfae7054a204d8ffe61295507cb8039b17c9ae1b25a750c3f5b10d836da5fad6",
+    "expected": {
+      "crash.txt": {
+        "bytes": 8197,
+        "sha256": "b2cab53dd5b50284acc297494bded9b33c0474d52ac34740d99857c7ab20508d"
+      }
+    },
+    "extra": {},
+    "native": {
+      "fsck": "clean",
+      "original_files": 104,
+      "changed_files": 1,
+      "sha256": "matched"
+    }
+  },
+  {
+    "name": "durable-mount-stream-frozen",
+    "image": "durable-mount-stream-frozen.dmg.gz",
+    "image_sha256": "63e25da8a57bd763cbd20f72ba451ecfb0f82e233056710e46520cffd59fe0b5",
+    "expected": {
+      "crash.txt": {
+        "bytes": 8197,
+        "sha256": "b2cab53dd5b50284acc297494bded9b33c0474d52ac34740d99857c7ab20508d"
+      }
+    },
+    "extra": {},
+    "native": {
+      "fsck": "clean",
+      "original_files": 104,
+      "changed_files": 1,
+      "sha256": "matched"
+    }
+  },
+  {
+    "name": "durable-mount-wal-published",
+    "image": "durable-mount-wal-published.dmg.gz",
+    "image_sha256": "45ef2b7ddb56f4dec5b2d05b1bb746374cbb3ceed5fe7ab676bbc795791a1455",
+    "expected": {
+      "crash.txt": {
+        "bytes": 8197,
+        "sha256": "b2cab53dd5b50284acc297494bded9b33c0474d52ac34740d99857c7ab20508d"
+      }
+    },
+    "extra": {},
+    "native": {
+      "fsck": "clean",
+      "original_files": 104,
+      "changed_files": 1,
+      "sha256": "matched"
+    }
+  },
+  {
+    "name": "durable-prepare-dir-created",
+    "image": "durable-prepare-dir-created.dmg.gz",
+    "image_sha256": "b604748f58c6e1fbea2a0448f76e689396d7daf50fcf7efac9572557ce1369a9",
+    "expected": {
+      "crash.txt": {
+        "bytes": 8197,
+        "sha256": "b2cab53dd5b50284acc297494bded9b33c0474d52ac34740d99857c7ab20508d"
+      }
+    },
+    "extra": {},
+    "native": {
+      "fsck": "clean",
+      "original_files": 104,
+      "changed_files": 1,
+      "sha256": "matched"
+    }
+  },
+  {
+    "name": "durable-state-Applying",
+    "image": "durable-state-Applying.dmg.gz",
+    "image_sha256": "15561048d1d31938c34a1e3395bf3a4165a27ad43e03cf27848d1cd7df628054",
+    "expected": {
+      "crash.txt": {
+        "bytes": 8197,
+        "sha256": "b2cab53dd5b50284acc297494bded9b33c0474d52ac34740d99857c7ab20508d"
+      }
+    },
+    "extra": {},
+    "native": {
+      "fsck": "clean",
+      "original_files": 104,
+      "changed_files": 1,
+      "sha256": "matched"
+    }
+  },
+  {
+    "name": "durable-apply-write",
+    "image": "durable-apply-write.dmg.gz",
+    "image_sha256": "66cc4c34a2cb20384576a997a5e6d5c9993248359164af2303a1273b1e18cdd4",
+    "expected": {
+      "crash.txt": {
+        "bytes": 8197,
+        "sha256": "b2cab53dd5b50284acc297494bded9b33c0474d52ac34740d99857c7ab20508d"
+      }
+    },
+    "extra": {},
+    "native": {
+      "fsck": "clean",
+      "original_files": 104,
+      "changed_files": 1,
+      "sha256": "matched"
+    }
+  },
+  {
+    "name": "durable-state-Committed",
+    "image": "durable-state-Committed.dmg.gz",
+    "image_sha256": "d370300a6f0168bb1fd49cb0f04cc3e5c9b22a8e6d3cb6ad94c392ee428643ca",
+    "expected": {
+      "crash.txt": {
+        "bytes": 8197,
+        "sha256": "b2cab53dd5b50284acc297494bded9b33c0474d52ac34740d99857c7ab20508d"
+      }
+    },
+    "extra": {},
+    "native": {
+      "fsck": "clean",
+      "original_files": 104,
+      "changed_files": 1,
+      "sha256": "matched"
+    }
+  },
+  {
+    "name": "durable-mount-queue-retired",
+    "image": "durable-mount-queue-retired.dmg.gz",
+    "image_sha256": "cc15fcd95b59caea73f39a365bc1464a8083ca9b9ead803ec712faf8d659a6d2",
+    "expected": {
+      "crash.txt": {
+        "bytes": 8197,
+        "sha256": "b2cab53dd5b50284acc297494bded9b33c0474d52ac34740d99857c7ab20508d"
+      }
+    },
+    "extra": {},
+    "native": {
+      "fsck": "clean",
+      "original_files": 104,
+      "changed_files": 1,
+      "sha256": "matched"
+    }
+  },
+  {
+    "name": "durable-mount-gc-entry",
+    "image": "durable-mount-gc-entry.dmg.gz",
+    "image_sha256": "258e5821de60023f8357ed8896811fe68d8b1b9a311a858b86bc9d112333b9dd",
+    "expected": {
+      "crash.txt": {
+        "bytes": 8197,
+        "sha256": "b2cab53dd5b50284acc297494bded9b33c0474d52ac34740d99857c7ab20508d"
+      }
+    },
+    "extra": {},
+    "native": {
+      "fsck": "clean",
+      "original_files": 104,
+      "changed_files": 1,
+      "sha256": "matched"
+    }
+  },
+  {
+    "name": "durable-mount-closed",
+    "image": "durable-mount-closed.dmg.gz",
+    "image_sha256": "9c6f778c1f8a9c327f865f7e54f8f0b8dead6ecfb4f4451709221cda6ca57f57",
+    "expected": {
+      "crash.txt": {
+        "bytes": 8197,
+        "sha256": "b2cab53dd5b50284acc297494bded9b33c0474d52ac34740d99857c7ab20508d"
+      }
+    },
+    "extra": {},
+    "native": {
+      "fsck": "clean",
+      "original_files": 104,
+      "changed_files": 1,
+      "sha256": "matched"
+    }
+  },
+  {
+    "name": "grouped-mount-stream-written",
+    "image": "grouped-mount-stream-written.dmg.gz",
+    "image_sha256": "17dec7ee193ae3f2a00ccc94b32bb86ef170f45a42c93fe7bccfd6a034ff6715",
+    "expected": {
+      "crash.txt": {
+        "bytes": 8197,
+        "sha256": "b2cab53dd5b50284acc297494bded9b33c0474d52ac34740d99857c7ab20508d"
+      }
+    },
+    "extra": {},
+    "native": {
+      "fsck": "clean",
+      "original_files": 104,
+      "changed_files": 1,
+      "sha256": "matched"
+    }
+  },
+  {
+    "name": "grouped-mount-stream-flushed",
+    "image": "grouped-mount-stream-flushed.dmg.gz",
+    "image_sha256": "43d0d65caa10f9d11825f47e8086e169691a643ef5383730683e3458679bd8f3",
+    "expected": {
+      "crash.txt": {
+        "bytes": 8197,
+        "sha256": "b2cab53dd5b50284acc297494bded9b33c0474d52ac34740d99857c7ab20508d"
+      }
+    },
+    "extra": {},
+    "native": {
+      "fsck": "clean",
+      "original_files": 104,
+      "changed_files": 1,
+      "sha256": "matched"
+    }
+  },
+  {
+    "name": "grouped-mount-stream-frozen",
+    "image": "grouped-mount-stream-frozen.dmg.gz",
+    "image_sha256": "54f9ded028bddf9bd8d267a95ddff9ef032652acbddf38b099dd70d6b8290d73",
+    "expected": {
+      "crash.txt": {
+        "bytes": 8197,
+        "sha256": "b2cab53dd5b50284acc297494bded9b33c0474d52ac34740d99857c7ab20508d"
+      }
+    },
+    "extra": {},
+    "native": {
+      "fsck": "clean",
+      "original_files": 104,
+      "changed_files": 1,
+      "sha256": "matched"
+    }
+  },
+  {
+    "name": "grouped-mount-wal-published",
+    "image": "grouped-mount-wal-published.dmg.gz",
+    "image_sha256": "83c7b574fefba247dedeb9af35253843c11f7b7b9d671b3b0db5528bf5137e5d",
+    "expected": {
+      "crash.txt": {
+        "bytes": 8197,
+        "sha256": "b2cab53dd5b50284acc297494bded9b33c0474d52ac34740d99857c7ab20508d"
+      }
+    },
+    "extra": {},
+    "native": {
+      "fsck": "clean",
+      "original_files": 104,
+      "changed_files": 1,
+      "sha256": "matched"
+    }
+  },
+  {
+    "name": "grouped-prepare-dir-created",
+    "image": "grouped-prepare-dir-created.dmg.gz",
+    "image_sha256": "3f632efc45565a7510213ac2ff6e24070cd30349cd52f427d783613c2c719fd1",
+    "expected": {
+      "crash.txt": {
+        "bytes": 8197,
+        "sha256": "b2cab53dd5b50284acc297494bded9b33c0474d52ac34740d99857c7ab20508d"
+      }
+    },
+    "extra": {},
+    "native": {
+      "fsck": "clean",
+      "original_files": 104,
+      "changed_files": 1,
+      "sha256": "matched"
+    }
+  },
+  {
+    "name": "grouped-state-Applying",
+    "image": "grouped-state-Applying.dmg.gz",
+    "image_sha256": "ff56e9fbc3787aa0995b8eb529e9833f5bcf287df2a8b8eb551d302e07f8aa4b",
+    "expected": {
+      "crash.txt": {
+        "bytes": 8197,
+        "sha256": "b2cab53dd5b50284acc297494bded9b33c0474d52ac34740d99857c7ab20508d"
+      }
+    },
+    "extra": {},
+    "native": {
+      "fsck": "clean",
+      "original_files": 104,
+      "changed_files": 1,
+      "sha256": "matched"
+    }
+  },
+  {
+    "name": "grouped-apply-write",
+    "image": "grouped-apply-write.dmg.gz",
+    "image_sha256": "98c87a79935cfb192542b8522b9954fa71dbd7a18f5fdd3f7a8ab2117714a966",
+    "expected": {
+      "crash.txt": {
+        "bytes": 8197,
+        "sha256": "b2cab53dd5b50284acc297494bded9b33c0474d52ac34740d99857c7ab20508d"
+      }
+    },
+    "extra": {},
+    "native": {
+      "fsck": "clean",
+      "original_files": 104,
+      "changed_files": 1,
+      "sha256": "matched"
+    }
+  },
+  {
+    "name": "grouped-state-Committed",
+    "image": "grouped-state-Committed.dmg.gz",
+    "image_sha256": "77eb72b3569bb51a989c7258b2e82265573931a74dd80ca2e8bab11d2071a732",
+    "expected": {
+      "crash.txt": {
+        "bytes": 8197,
+        "sha256": "b2cab53dd5b50284acc297494bded9b33c0474d52ac34740d99857c7ab20508d"
+      }
+    },
+    "extra": {},
+    "native": {
+      "fsck": "clean",
+      "original_files": 104,
+      "changed_files": 1,
+      "sha256": "matched"
+    }
+  },
+  {
+    "name": "grouped-mount-queue-retired",
+    "image": "grouped-mount-queue-retired.dmg.gz",
+    "image_sha256": "4f6386e23279df7c9cbe962587a25c8128c40eaa4d237a7c56d5274162df6a2a",
+    "expected": {
+      "crash.txt": {
+        "bytes": 8197,
+        "sha256": "b2cab53dd5b50284acc297494bded9b33c0474d52ac34740d99857c7ab20508d"
+      }
+    },
+    "extra": {},
+    "native": {
+      "fsck": "clean",
+      "original_files": 104,
+      "changed_files": 1,
+      "sha256": "matched"
+    }
+  },
+  {
+    "name": "grouped-mount-gc-entry",
+    "image": "grouped-mount-gc-entry.dmg.gz",
+    "image_sha256": "d53e44e354111330bf92cd95f73e8e74f706943ac0404e5ea7f26706c63bb021",
+    "expected": {
+      "crash.txt": {
+        "bytes": 8197,
+        "sha256": "b2cab53dd5b50284acc297494bded9b33c0474d52ac34740d99857c7ab20508d"
+      }
+    },
+    "extra": {},
+    "native": {
+      "fsck": "clean",
+      "original_files": 104,
+      "changed_files": 1,
+      "sha256": "matched"
+    }
+  },
+  {
+    "name": "grouped-mount-closed",
+    "image": "grouped-mount-closed.dmg.gz",
+    "image_sha256": "ac8df26d5e6f475759d5bd3dad8b31e94f4e53c01ea47f15f27626c0af2e2463",
+    "expected": {
+      "crash.txt": {
+        "bytes": 8197,
+        "sha256": "b2cab53dd5b50284acc297494bded9b33c0474d52ac34740d99857c7ab20508d"
+      }
+    },
+    "extra": {},
+    "native": {
+      "fsck": "clean",
+      "original_files": 104,
+      "changed_files": 1,
+      "sha256": "matched"
+    }
+  },
+  {
+    "name": "fuse",
+    "image": "fuse.dmg.gz",
+    "image_sha256": "1b06298833031ff7325aac2002fe39986b82973391ce2243ba8b3d684bdabe32",
+    "expected": {
+      "buffered.bin": {
+        "bytes": 12550013,
+        "sha256": "a5ae50c2741e3549e096fa66a7d3a22ecb14f74f7eca82b8da68e6f9a4a3e654"
+      },
+      "\uc790\ub8cc rw/\ud55c\uae00 space.txt": {
+        "bytes": 12,
+        "sha256": "cccdeb5753fb27b6d8b0308f4106eb4271373daea05b96d032aa58aeabdec08d"
+      },
+      "old.txt": {
+        "bytes": 23,
+        "sha256": "33b43c1b0a6f7d6607e292f170cc57c1c5a6bf0b67ec61003e25b1afdc767cd6"
+      },
+      "copy-command.bin": {
+        "bytes": 190000,
+        "sha256": "444bc2ad920c4e1921ee1a12ab79d6c3c764e2e1a4a399bd08c0037a1804ad73"
+      },
+      "crash-ack.bin": {
+        "bytes": 502007,
+        "sha256": "15ae5cb294534fd20634138a44c2a5642ec3263e1ca26bdbdd9201e825ec2ffb"
+      }
+    },
+    "extra": {},
+    "native": {
+      "fsck": "clean",
+      "original_files": 104,
+      "changed_files": 5,
+      "sha256": "matched"
+    }
+  },
+  {
+    "name": "rsync",
+    "image": "rsync.dmg.gz",
+    "image_sha256": "befc51d2a6c40d23edf1fa2f3477315e884b6da72e2f92ef32e566a88d09aed9",
+    "expected": {
+      "syncset/payload.txt": {
+        "sha256": "198153267082f552d192b9114a5cbc61fd3cb6965dd7e89fd091345da4966ab8"
+      },
+      "syncset/nested/other.bin": {
+        "sha256": "785b0751fc2c53dc14a4ce3d800e69ef9ce1009eb327ccf458afe09c242c26c9"
+      },
+      "syncset/large.bin": {
+        "sha256": "eb342089af193d0d9912b0435466f010628e7edd99e5831e1663c435f9ee2665"
+      }
+    },
+    "extra": {
+      "status": "passed",
+      "binary_sha256": "6cd4bb46f1c91d0761c7adb20bc75823aac9ced65ec97cb865ac79609ef68ba8",
+      "runs": [
+        {
+          "label": "initial",
+          "rc": 0,
+          "stdout": "created directory /home/zooh/Documents/LAPFS/worktrees/buffered-throughput/evidence/lapfs-rsync-iqplcuz8/mount/syncset\ncd+++++++++ ./\n>f+++++++++ large.bin\ncL+++++++++ link -> payload.txt\n>f+++++++++ payload.txt\ncd+++++++++ nested/\n>f+++++++++ nested/other.bin\n",
+          "stderr": ""
+        },
+        {
+          "label": "repeat",
+          "rc": 0,
+          "stdout": "",
+          "stderr": ""
+        },
+        {
+          "label": "replace",
+          "rc": 0,
+          "stdout": ">f.s....... payload.txt\n",
+          "stderr": ""
+        },
+        {
+          "label": "link-change",
+          "rc": 0,
+          "stdout": ".d..t...... ./\ncLc.t...... link -> nested/other.bin\n",
+          "stderr": ""
+        },
+        {
+          "label": "delete",
+          "rc": 0,
+          "stdout": "*deleting   orphan-dir/child.txt\n*deleting   orphan-dir/\n*deleting   orphan.txt\n*deleting   orphan-link\n",
+          "stderr": ""
+        }
+      ],
+      "payload_sha256": "198153267082f552d192b9114a5cbc61fd3cb6965dd7e89fd091345da4966ab8",
+      "mtime_ns": 946684800987654321,
+      "mode": "0o640",
+      "link": "nested/other.bin",
+      "nested_sha256": "785b0751fc2c53dc14a4ce3d800e69ef9ce1009eb327ccf458afe09c242c26c9",
+      "large_sha256": "eb342089af193d0d9912b0435466f010628e7edd99e5831e1663c435f9ee2665",
+      "large_bytes": 12550013
+    },
+    "native": {
+      "fsck": "clean",
+      "original_files": 104,
+      "changed_files": 3,
+      "sha256": "matched"
+    }
+  },
+  {
+    "name": "benchmark-1-new",
+    "image": "benchmark-1-new.dmg.gz",
+    "image_sha256": "750ddd0ad83c48fcce7716da5fe8e4914b2c15fb082da49bf7f996b222c16f38",
+    "expected": {
+      "bench-10240.bin": {
+        "bytes": 16777216,
+        "sha256": "341aacac661ccb210720bedaa9ead5d668fe5ea41a73532fc147c71e34040df1"
+      },
+      "bench-1048576.bin": {
+        "bytes": 16777216,
+        "sha256": "341aacac661ccb210720bedaa9ead5d668fe5ea41a73532fc147c71e34040df1"
+      }
+    },
+    "extra": {},
+    "native": {
+      "fsck": "clean",
+      "original_files": 104,
+      "changed_files": 2,
+      "sha256": "matched"
+    }
+  },
+  {
+    "name": "benchmark-2-new",
+    "image": "benchmark-2-new.dmg.gz",
+    "image_sha256": "a90fd5039639f49695dfbafbe83588604bd93ab8dd07e24768ceee4ef72ab25f",
+    "expected": {
+      "bench-10240.bin": {
+        "bytes": 16777216,
+        "sha256": "341aacac661ccb210720bedaa9ead5d668fe5ea41a73532fc147c71e34040df1"
+      },
+      "bench-1048576.bin": {
+        "bytes": 16777216,
+        "sha256": "341aacac661ccb210720bedaa9ead5d668fe5ea41a73532fc147c71e34040df1"
+      }
+    },
+    "extra": {},
+    "native": {
+      "fsck": "clean",
+      "original_files": 104,
+      "changed_files": 2,
+      "sha256": "matched"
+    }
+  }
+]

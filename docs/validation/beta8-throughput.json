@@ -1,0 +1,94 @@
+{
+  "scope": "16MiB files on local ext4 APFS images; not physical USB",
+  "policy_comparison": "beta7 durable vs beta8 grouped",
+  "rows": [
+    {
+      "run": 0,
+      "label": "old",
+      "chunk": 10240,
+      "bytes": 16777216,
+      "seconds": 4.298276680987328,
+      "MiB_s": 3.7224220745893786,
+      "sha256": "341aacac661ccb210720bedaa9ead5d668fe5ea41a73532fc147c71e34040df1",
+      "image": "0-old/native.dmg",
+      "binary_sha256": "dccc7cead3774b9b1d247c3ac2e1334fdfa114e44e70dab087f158da52fb3b32"
+    },
+    {
+      "run": 0,
+      "label": "old",
+      "chunk": 1048576,
+      "bytes": 16777216,
+      "seconds": 0.9031675890437327,
+      "MiB_s": 17.71542756194416,
+      "sha256": "341aacac661ccb210720bedaa9ead5d668fe5ea41a73532fc147c71e34040df1",
+      "image": "0-old/native.dmg",
+      "binary_sha256": "dccc7cead3774b9b1d247c3ac2e1334fdfa114e44e70dab087f158da52fb3b32"
+    },
+    {
+      "run": 1,
+      "label": "new",
+      "chunk": 10240,
+      "bytes": 16777216,
+      "seconds": 0.7768506670254283,
+      "MiB_s": 20.59597896885925,
+      "sha256": "341aacac661ccb210720bedaa9ead5d668fe5ea41a73532fc147c71e34040df1",
+      "image": "1-new/native.dmg",
+      "binary_sha256": "6cd4bb46f1c91d0761c7adb20bc75823aac9ced65ec97cb865ac79609ef68ba8"
+    },
+    {
+      "run": 1,
+      "label": "new",
+      "chunk": 1048576,
+      "bytes": 16777216,
+      "seconds": 0.6884486519847997,
+      "MiB_s": 23.24065847739254,
+      "sha256": "341aacac661ccb210720bedaa9ead5d668fe5ea41a73532fc147c71e34040df1",
+      "image": "1-new/native.dmg",
+      "binary_sha256": "6cd4bb46f1c91d0761c7adb20bc75823aac9ced65ec97cb865ac79609ef68ba8"
+    },
+    {
+      "run": 2,
+      "label": "new",
+      "chunk": 10240,
+      "bytes": 16777216,
+      "seconds": 0.7905298189725727,
+      "MiB_s": 20.23959073522958,
+      "sha256": "341aacac661ccb210720bedaa9ead5d668fe5ea41a73532fc147c71e34040df1",
+      "image": "2-new/native.dmg",
+      "binary_sha256": "6cd4bb46f1c91d0761c7adb20bc75823aac9ced65ec97cb865ac79609ef68ba8"
+    },
+    {
+      "run": 2,
+      "label": "new",
+      "chunk": 1048576,
+      "bytes": 16777216,
+      "seconds": 0.7158139459788799,
+      "MiB_s": 22.35217697263484,
+      "sha256": "341aacac661ccb210720bedaa9ead5d668fe5ea41a73532fc147c71e34040df1",
+      "image": "2-new/native.dmg",
+      "binary_sha256": "6cd4bb46f1c91d0761c7adb20bc75823aac9ced65ec97cb865ac79609ef68ba8"
+    },
+    {
+      "run": 3,
+      "label": "old",
+      "chunk": 10240,
+      "bytes": 16777216,
+      "seconds": 4.1919429110130295,
+      "MiB_s": 3.8168458730592354,
+      "sha256": "341aacac661ccb210720bedaa9ead5d668fe5ea41a73532fc147c71e34040df1",
+      "image": "3-old/native.dmg",
+      "binary_sha256": "dccc7cead3774b9b1d247c3ac2e1334fdfa114e44e70dab087f158da52fb3b32"
+    },
+    {
+      "run": 3,
+      "label": "old",
+      "chunk": 1048576,
+      "bytes": 16777216,
+      "seconds": 0.8806253569782712,
+      "MiB_s": 18.16890675837624,
+      "sha256": "341aacac661ccb210720bedaa9ead5d668fe5ea41a73532fc147c71e34040df1",
+      "image": "3-old/native.dmg",
+      "binary_sha256": "dccc7cead3774b9b1d247c3ac2e1334fdfa114e44e70dab087f158da52fb3b32"
+    }
+  ]
+}

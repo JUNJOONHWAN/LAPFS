@@ -1,3 +1,13 @@
+# 0.3.0-beta.8
+
+- 기본 묶음 쓰기; fsync/close/정상 분리 시 영구 저장. 갑작스러운 분리 시 마지막 미저장 입력 유실 가능.
+- `--durable-writes`: 매 write의 로컬 영구 저장 옵션.
+- 연속 checksum 로그·작업 수 경계 개선·쓰기 속성 캐시.
+- 10KiB 쓰기 시험: beta.7 3.72–3.82 → beta.8 20.24–20.60MiB/s. 로컬 APFS 이미지 기준; USB 수치 아님.
+- Rust 298 통과; Mac 27개 이미지 fsck/원본104·변경 파일 SHA 통과.
+- v1 복구 호환; v2 세션은 beta.8 이상 필요. 이전 버전으로 내리기 전 beta.8 정상 분리 필수.
+- [변경 영향·시험·제한](docs/BUFFERED_THROUGHPUT.md)
+
 # LAPFS v0.3.0-beta.7 — native data and allocator CoW
 
 - Copy touched file data blocks and update extent references rather than overwriting previous-checkpoint data.

@@ -35,7 +35,7 @@ A sudo RW mount exposes the invoking SUDO_UID/SUDO_GID with private projected pe
 sudo lapfs mount-recover /var/lib/lapfs/devices/UUID/session-01
 ```
 
-Recovery validates identity and recorded checksums, handles interrupted application, and replays acknowledged queued input. Committed work is retired without duplicate application. If recovery refuses, preserve its error and all state; do not attempt native repair on the only copy.
+Recovery validates identity and recorded checksums, handles interrupted application, and replays complete recoverable log frames. In beta.8 grouped mode, unsynced input may be lost; only --durable-writes promises local durability for each acknowledged write. Committed work is retired without duplicate application. If recovery refuses, preserve its error and all state; do not attempt native repair on the only copy.
 
 A cleanly closed session cannot be reused for a new mount: choose a new session directory. Until recovery completes, do not attach the volume to macOS as an independent writer. Offline `prepare/apply/recover/cleanup` commands have separate transaction semantics; see `lapfs help`.
 
@@ -56,7 +56,7 @@ sudo tail -n 30 /var/log/lapfs/errors.jsonl
 
 Diagnostic rotation never deletes recovery journals.
 
-## Mac/Linux physical handoff (beta.6)
+## Mac/Linux physical handoff
 
 On DGX, finish application I/O and close files, then run the packaged helper with the **exact current** target, mountpoint and session. It performs only a normal FUSE unmount, waits for the writer to exit, completes any recoverable queue, requires an empty queue and absent ownership marker, issues a final device flush, and reopens/parses the APFS source read-only. Only a JSON `status: ready_to_disconnect` receipt permits normal physical removal. It does not power off a separate whole-disk device or certify a USB bridge cache.
 
@@ -70,4 +70,4 @@ If the FUSE process already died, its stale mount entry is removed with the same
 
 On Mac, use Finder Eject or a normal `diskutil unmountDisk` before removing the drive. On return to DGX, the next mount uses a new session; LAPFS verifies the current APFS/device identity. If the drive was unplugged unexpectedly while DGX had a writer, reconnect it to the **same DGX with the same local recovery directory** and run recovery/handoff there before allowing Mac to write. Do not claim that Mac can recover DGX-only journals.
 
-Abrupt physical removal during a transaction can leave in-place APFS data/metadata updates incomplete. The present external journal protects recovery **when the device returns to DGX**; it cannot guarantee a mountable, unchanged volume if the device goes directly to Mac. True Mac-first recovery after any cut requires a separate native APFS CoW/commit redesign and hardware power-cut testing. See [handoff impact and results](HANDOFF_AFTER.md).
+Beta.7 and later use native data/allocator CoW and ordered checkpoint publication for supported mutations. Beta.8 changes input buffering; it retains that APFS ordering. Image interruption tests are not real hardware power-loss qualification. Preserve recovery logs and never replay an old session over a disk modified by another host. See [native CoW validation](NATIVE_COW_IMPACT.md) and [beta.8 write policy](BUFFERED_THROUGHPUT.md).

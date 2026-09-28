@@ -1,6 +1,6 @@
 use spark_apfs_safe::buffered::handoff_ready;
 use spark_apfs_safe::{
-    buffered::{Session, GROUP_BYTES},
+    buffered::{Session, WritePolicy, GROUP_BYTES},
     journal::hash,
 };
 use std::path::PathBuf;
@@ -148,7 +148,8 @@ fn buffered_crash_worker() {
         .unwrap()
         .parse()
         .unwrap();
-    let mut s = Session::start(&image, offset, &dir, GROUP_BYTES, 0).unwrap();
+    let policy=if std::env::var("LAPFS_WORKER_GROUPED").as_deref()==Ok("1") { WritePolicy::Grouped } else { WritePolicy::Durable };
+    let mut s = Session::start_with_policy(&image, offset, &dir, GROUP_BYTES, 0, policy).unwrap();
     s.write("/crash.txt", 13, b"ACKNOWLEDGED-RANGE").unwrap();
     s.flush().unwrap();
     s.close().unwrap();
@@ -171,6 +172,10 @@ fn buffered_crash_boundaries() {
     s.close().unwrap();
     drop(s);
     let points = [
+        "mount-stream-written",
+        "mount-stream-synced",
+        "mount-stream-flushed",
+        "mount-stream-frozen",
         "mount-wal-published",
         "prepare-dir-created",
         "state-Applying",
@@ -181,10 +186,13 @@ fn buffered_crash_boundaries() {
         "mount-closed",
     ];
     let mut results = vec![];
+    for grouped in [false,true] {
     for point in points {
-        let image = work.join(format!("{point}.dmg"));
+        if grouped && point=="mount-stream-synced" {continue;}
+        let label=format!("{}-{point}",if grouped {"grouped"} else {"durable"});
+        let image = work.join(format!("{label}.dmg"));
         std::fs::copy(&base, &image).unwrap();
-        let session = work.join(point);
+        let session = work.join(&label);
         let status = std::process::Command::new(std::env::current_exe().unwrap())
             .args([
                 "--ignored",
@@ -192,6 +200,7 @@ fn buffered_crash_boundaries() {
                 "buffered_crash_worker",
                 "--nocapture",
             ])
+            .env("LAPFS_WORKER_GROUPED",if grouped {"1"} else {"0"})
             .env("LAPFS_WORKER_IMAGE", &image)
             .env("LAPFS_WORKER_SESSION", &session)
             .env("SPARK_APFS_KILL_AT", point)
@@ -203,7 +212,8 @@ fn buffered_crash_boundaries() {
         let mut expected = vec![7; 8197];
         expected[13..13 + b"ACKNOWLEDGED-RANGE".len()].copy_from_slice(b"ACKNOWLEDGED-RANGE");
         assert_eq!(actual, expected);
-        results.push(serde_json::json!({"point":point,"image":image,"sha256":hash(&actual),"bytes":actual.len()}));
+        results.push(serde_json::json!({"point":label,"write_policy":if grouped {"grouped"} else {"durable"},"image":image,"sha256":hash(&actual),"bytes":actual.len()}));
+    }
     }
     std::fs::write(
         work.join("results.json"),
@@ -241,7 +251,7 @@ fn buffered_guards_keep_target_unchanged() {
             p.file_name()
                 .unwrap()
                 .to_string_lossy()
-                .starts_with("payload-")
+                .starts_with("stream-")
         })
         .unwrap();
     let original = std::fs::read(&payload).unwrap();
@@ -330,4 +340,71 @@ fn buffered_prefix_retirement_crash_boundaries() {
     )
     .unwrap();
     println!("PREFIX_CRASH_EVIDENCE={}", work.display());
+}
+
+#[test]
+#[ignore = "requires disposable fixture"]
+fn stream_small_writes_recovery_and_shared_payload_retirement() {
+    stream_recovery_case(WritePolicy::Durable);
+    stream_recovery_case(WritePolicy::Grouped);
+}
+fn stream_recovery_case(policy: WritePolicy) {
+    let (source, offset, out) = fixture();
+    let work = tempfile::tempdir_in(out).unwrap();
+    let image = work.path().join("native.dmg");
+    std::fs::copy(source, &image).unwrap();
+    let dir = work.path().join("session");
+    let mut s = Session::start_with_policy(&image, offset, &dir, GROUP_BYTES, 0, policy).unwrap();
+    s.create("/stream-a").unwrap(); s.create("/stream-b").unwrap();
+    let before = s.status()["committed_batches"].as_u64().unwrap();
+    let mut expected = Vec::new();
+    for i in 0..400 {
+        let data=vec![(i%251) as u8; 10240];
+        s.write("/stream-a", expected.len() as u64, &data).unwrap(); expected.extend(data);
+    }
+    assert_eq!(s.status()["committed_batches"].as_u64().unwrap(),before);
+    // Non-adjacent writes share a stream: retiring the first range must not
+    // delete the backing file needed by the next transaction.
+    s.write("/stream-b",0,b"second-file").unwrap();
+    s.write("/stream-a",17,b"overlap").unwrap(); expected[17..24].copy_from_slice(b"overlap");
+    drop(s);
+    let mut s=Session::resume(&dir).unwrap();
+    assert_eq!(s.read("/stream-a",0,expected.len()).unwrap(),expected);
+    // Append after recovery must drain the frozen prior queue first.
+    s.write("/stream-b",11,b"-resumed").unwrap();
+    s.close().unwrap();drop(s);
+    assert_eq!(spark_apfs_safe::apfs_batch::read_file(&image,offset,"/stream-a").unwrap(),expected);
+    assert_eq!(spark_apfs_safe::apfs_batch::read_file(&image,offset,"/stream-b").unwrap(),b"second-file-resumed");
+}
+
+#[test]
+#[ignore = "requires disposable fixture"]
+fn stream_torn_tail_and_corruption() {
+    let (source, offset, out)=fixture();
+    // Header/data/digest cut positions, followed by intact and corrupt frames.
+    for case in 0..24 {
+        let mode=case%12; let policy=if case<12 {WritePolicy::Durable} else {WritePolicy::Grouped};
+        let work=tempfile::tempdir_in(&out).unwrap();let image=work.path().join("native.dmg");
+        std::fs::copy(&source,&image).unwrap();let dir=work.path().join("session");
+        let mut s=Session::start_with_policy(&image,offset,&dir,GROUP_BYTES,0,policy).unwrap();
+        s.create("/stream-test").unwrap();s.write("/stream-test",0,b"durable-prefix").unwrap();
+        let path=std::fs::read_dir(&dir).unwrap().map(|e|e.unwrap().path()).find(|p|p.file_name().unwrap().to_string_lossy().starts_with("stream-")).unwrap();
+        let first=std::fs::metadata(&path).unwrap().len() as usize;
+        s.write("/stream-test",14,b"tail-payload").unwrap(); drop(s);
+        let mut bytes=std::fs::read(&path).unwrap();let len=bytes.len();
+        if mode<8 {
+            let keep=[0,1,7,8,71,72,(len-first)/2,len-first-1][mode];
+            bytes.truncate(first+keep);
+        } else if mode>8 {
+            let ix=match mode {9=>first,10=>first+73,_=>len-1};bytes[ix]^=1;
+        }
+        std::fs::write(&path,&bytes).unwrap();
+        let before=hash(&std::fs::read(&image).unwrap());
+        let result=Session::resume(&dir);
+        if mode>8 { assert!(result.is_err());assert_eq!(hash(&std::fs::read(&image).unwrap()),before);continue; }
+        let mut s=result.unwrap();
+        let expected=if mode==8 {b"durable-prefixtail-payload".as_slice()} else {b"durable-prefix".as_slice()};
+        assert_eq!(s.read("/stream-test",0,100).unwrap(),expected);
+        s.close().unwrap();
+    }
 }

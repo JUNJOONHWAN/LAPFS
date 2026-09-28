@@ -1,6 +1,6 @@
 //! Buffered writable FUSE beta. The kernel never acknowledges volatile writeback;
 //! direct I/O requests are acknowledged only after Session's durable WAL publish.
-use crate::buffered::{Session, GROUP_BYTES};
+use crate::buffered::{Session, WritePolicy, GROUP_BYTES};
 use anyhow::{ensure, Context, Result};
 use fuser::{
     FileAttr, FileType, Filesystem, KernelConfig, MountOption, ReplyAttr, ReplyCreate, ReplyData,
@@ -525,6 +525,9 @@ impl Filesystem for Host {
     }
 }
 pub fn mount(target: &Path, offset: u64, mountpoint: &Path, session_dir: &Path) -> Result<()> {
+    mount_with_policy(target, offset, mountpoint, session_dir, None)
+}
+pub fn mount_with_policy(target: &Path, offset: u64, mountpoint: &Path, session_dir: &Path, policy: Option<WritePolicy>) -> Result<()> {
     crate::error_log::event(
         "info",
         "mount-rw",
@@ -547,18 +550,21 @@ pub fn mount(target: &Path, offset: u64, mountpoint: &Path, session_dir: &Path) 
             !s.is_closed(),
             "Closed session: choose a new session directory"
         );
+        ensure!(policy.is_none_or(|p| p == s.write_policy()), "Requested write policy differs from persisted session");
         s
     } else {
-        Session::start(
+        Session::start_with_policy(
             target,
             offset,
             session_dir,
             GROUP_BYTES,
             crate::journal::DEFAULT_RESERVE,
+            policy.unwrap_or(WritePolicy::Grouped),
         )?
     };
     // Requesting a different target must never silently resume the old one.
     session.matches_target(target, offset)?;
+    crate::error_log::event("info", "write-policy", None, &format!("policy={:?}", session.write_policy()));
     session.flush()?;
     let shutdown_failed = Arc::new(AtomicBool::new(false));
     let root = unsafe { libc::geteuid() } == 0;

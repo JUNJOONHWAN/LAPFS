@@ -2,7 +2,7 @@
 
 LAPFS is an experimental Linux APFS reader and buffered writable FUSE host for DGX Spark / GB10. Its public name and CLI are LAPFS/lapfs; the internal Rust crate name remains `spark-apfs-safe` for source compatibility, and is not a safety certification.
 
-- Accepted writes first enter a persistent, checksummed input queue on local ext4/XFS.
+- Beta.8 default: grouped writes into a checksummed local input log. A normal write acknowledgement does not promise power-loss durability; fsync, close and normal unmount persist and apply the group. `--durable-writes` retains per-write local durability. Unflushed grouped input may be lost after sudden removal or host power failure.
 - Default 4 MiB grouping; fsync/close/metadata changes/unmount drain the queue.
 - A bounded external undo/redo journal protects supported APFS mutations and enables readback verification and recovery.
 - Full-device and full-file staging are not required. Catalog memory and long-term performance remain unqualified.

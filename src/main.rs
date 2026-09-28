@@ -31,7 +31,7 @@ fn run() -> Result<()> {
     };
     match a.get(1).map(String::as_str).unwrap_or("help") {
         "help" | "--help" | "-h" => println!(
-            r#"LAPFS 0.3.0-beta.7 — APFS 읽기 및 영구 버퍼 기반 쓰기 마운트
+            r#"LAPFS 0.3.0-beta.8 — APFS 읽기 및 영구 버퍼 기반 쓰기 마운트
 
 읽기: TARGET은 이미지 또는 Linux APFS 파티션(/dev/sda2 등)
 probe TARGET OFFSET_BYTES BATCH_JSON SCRATCH_PARENT CAP_MIB
@@ -41,7 +41,7 @@ read TARGET OFFSET_BYTES APFS_PATH [VOLUME_INDEX]
 digest TARGET OFFSET_BYTES APFS_PATH [VOLUME_INDEX]
 export TARGET OFFSET_BYTES APFS_PATH LOCAL_DESTINATION [VOLUME_INDEX]
 mount-ro TARGET OFFSET_BYTES EMPTY_MOUNTPOINT [VOLUME_INDEX]
-mount-rw TARGET OFFSET_BYTES EMPTY_MOUNTPOINT SESSION_DIR
+mount-rw TARGET OFFSET_BYTES EMPTY_MOUNTPOINT SESSION_DIR [--grouped-writes|--durable-writes]
 mount-recover SESSION_DIR
 handoff-ready TARGET OFFSET_BYTES SESSION_DIR
 
@@ -59,7 +59,7 @@ Linux 장치 등록 (sudo 필요, 실제 장치에는 쓰지 않음):
 device-enroll /dev/disk/by-id/DEVICE-partN EXPECTED_CONTAINER_UUID
 등록 결과의 target 경로를 배치 쓰기에 사용. 저널/job도 같은 등록 폴더 아래에 생성.
 APFS 파티션은 OFFSET_BYTES=0. 전체 GPT 이미지는 APFS 파티션의 바이트 오프셋 지정.
-mount-ro는 전경 실행; 해제는 fusermount3 -u MOUNTPOINT. mount-rw는 영구 대기열에 모아서 쓰는 제한된 베타. fsync/close/4MiB 시 APFS 반영.
+mount-ro는 전경 실행; 해제는 fusermount3 -u MOUNTPOINT. mount-rw 기본값: 묶음 쓰기; 갑작스러운 분리 시 미동기화 데이터 유실 가능. --durable-writes: 매 쓰기 영구 저장. fsync/close/4MiB 시 APFS 반영.
 암호화 읽기 및 압축 파일 스트리밍은 미지원. 쓰기는 단일 볼륨/스냅샷 없음 등 조건 검사.
 import는 4 MiB 단위로 기록·검증·복구하며 기존 목적 파일을 덮어쓰지 않음.
 PREPARED는 반영 완료가 아님. COMMITTED 이후에만 해당 배치 반영 완료.
@@ -130,11 +130,17 @@ PREPARED는 반영 완료가 아님. COMMITTED 이후에만 해당 배치 반영
         ),
         "mount-rw" => {
             #[cfg(target_os = "linux")]
-            spark_apfs_safe::mount_rw::mount(
+            spark_apfs_safe::mount_rw::mount_with_policy(
                 Path::new(arg(2)?),
                 arg(3)?.parse()?,
                 Path::new(arg(4)?),
                 Path::new(arg(5)?),
+                match a.get(6).map(String::as_str) {
+                    None => None,
+                    Some("--grouped-writes") if a.len() == 7 => Some(spark_apfs_safe::buffered::WritePolicy::Grouped),
+                    Some("--durable-writes") if a.len() == 7 => Some(spark_apfs_safe::buffered::WritePolicy::Durable),
+                    _ => bail!("Unknown mount write policy or extra arguments"),
+                },
             )?;
             #[cfg(not(target_os = "linux"))]
             bail!("mount-rw requires the Linux build");
