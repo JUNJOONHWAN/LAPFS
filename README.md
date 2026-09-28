@@ -189,7 +189,7 @@ PY
 
 | beta.14 실장치 | 확인 값 |
 |---|---|
-| 256MiB × 3회 | 256MiB × 3회 · 112–118MiB/s · SHA 일치 · 기록량 1.29–1.30배 |
+| 256MiB × 3회 | 112–118MiB/s · SHA 일치 · 기록량 1.29–1.30배 |
 | beta.14 회귀 | Rust 312개 · Mac APFS 59개 이미지 통과 |
 
 [beta.14 변경·실장치 결과](docs/CHECKSUM_PERFORMANCE.md) · [beta.13 변경·검증 보고서](docs/WRITE_AMPLIFICATION.md)
