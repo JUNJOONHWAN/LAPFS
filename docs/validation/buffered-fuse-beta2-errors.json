@@ -1,0 +1,72 @@
+[
+  {
+    "errno": null,
+    "level": "info",
+    "message": "LAPFS diagnostic logging initialized",
+    "message_truncated": false,
+    "operation": "process-start",
+    "pid": 1084948,
+    "time_unix_ms": 1790562251889,
+    "timezone": "UTC"
+  },
+  {
+    "errno": null,
+    "level": "info",
+    "message": "target=<linux-workspace>/rw-qa-xjrprtdw/native.dmg mountpoint=<linux-workspace>/rw-qa-xjrprtdw/mount recovery_session=<linux-workspace>/rw-qa-xjrprtdw/session",
+    "message_truncated": false,
+    "operation": "mount-rw",
+    "pid": 1084948,
+    "time_unix_ms": 1790562251890,
+    "timezone": "UTC"
+  },
+  {
+    "errno": 16,
+    "level": "error",
+    "message": "Resource busy (os error 16)",
+    "message_truncated": false,
+    "operation": "unlink",
+    "pid": 1084948,
+    "time_unix_ms": 1790562252877,
+    "timezone": "UTC"
+  },
+  {
+    "errno": 95,
+    "level": "error",
+    "message": "Not supported (os error 95)",
+    "message_truncated": false,
+    "operation": "write",
+    "pid": 1084948,
+    "time_unix_ms": 1790562253211,
+    "timezone": "UTC"
+  },
+  {
+    "errno": 95,
+    "level": "error",
+    "message": "Unsupported metadata change",
+    "message_truncated": false,
+    "operation": "setattr",
+    "pid": 1084948,
+    "time_unix_ms": 1790562253212,
+    "timezone": "UTC"
+  },
+  {
+    "errno": null,
+    "level": "info",
+    "message": "LAPFS diagnostic logging initialized",
+    "message_truncated": false,
+    "operation": "process-start",
+    "pid": 1085001,
+    "time_unix_ms": 1790562253411,
+    "timezone": "UTC"
+  },
+  {
+    "errno": null,
+    "level": "info",
+    "message": "target=<linux-workspace>/rw-qa-xjrprtdw/native.dmg mountpoint=<linux-workspace>/rw-qa-xjrprtdw/mount recovery_session=<linux-workspace>/rw-qa-xjrprtdw/crash-session",
+    "message_truncated": false,
+    "operation": "mount-rw",
+    "pid": 1085001,
+    "time_unix_ms": 1790562253411,
+    "timezone": "UTC"
+  }
+]

@@ -1,0 +1,58 @@
+{
+  "status": "passed",
+  "checks": [
+    "real_rw_fuse_mount",
+    "large_copy_bounded_queue",
+    "read_your_writes_across_handles",
+    "unaligned_random_overwrite",
+    "fsync_and_close",
+    "open_unlink_rejected",
+    "mkdir_unicode",
+    "truncate_and_unaligned_append",
+    "atomic_replace",
+    "unlink",
+    "ordinary_cp_command",
+    "unsupported_sparse_and_chmod_explicit_error",
+    "mount_still_usable_after_rejection",
+    "original_104_files_preserved",
+    "symlink_read",
+    "sparse_read_above_4GiB",
+    "exclusive_raw_reader_denied",
+    "actual_fuse_sigkill_after_ack",
+    "pending_session_blocks_raw_read",
+    "recovery_preserves_acknowledged_writes",
+    "separate_operation_errno_logs",
+    "expected_lookup_misses_not_logged"
+  ],
+  "expected": {
+    "buffered.bin": {
+      "bytes": 12550013,
+      "sha256": "a5ae50c2741e3549e096fa66a7d3a22ecb14f74f7eca82b8da68e6f9a4a3e654"
+    },
+    "\uc790\ub8cc rw/\ud55c\uae00 space.txt": {
+      "bytes": 12,
+      "sha256": "cccdeb5753fb27b6d8b0308f4106eb4271373daea05b96d032aa58aeabdec08d"
+    },
+    "old.txt": {
+      "bytes": 23,
+      "sha256": "33b43c1b0a6f7d6607e292f170cc57c1c5a6bf0b67ec61003e25b1afdc767cd6"
+    },
+    "copy-command.bin": {
+      "bytes": 190000,
+      "sha256": "444bc2ad920c4e1921ee1a12ab79d6c3c764e2e1a4a399bd08c0037a1804ad73"
+    },
+    "crash-ack.bin": {
+      "bytes": 502007,
+      "sha256": "15ae5cb294534fd20634138a44c2a5642ec3263e1ca26bdbdd9201e825ec2ffb"
+    }
+  },
+  "copy_bytes": 12550013,
+  "copy_seconds": 0.8315247599966824,
+  "spool_bytes_after_close": 531,
+  "committed_batches": 20,
+  "binary_sha256": "1dfcdb04dc38ae4ede2808e91a1aaf6c73d3bb2ee3c244179599d89b06823b4c",
+  "physical_usb_writes": 0,
+  "image_sha256": "fdccfdb85681649fc2e68c2ed57e40652c2a9ea325cef71b8a1b7f4d0d3201a2",
+  "apple_fsck": "clean",
+  "native_file_hashes": "original104_and_all_changed_match"
+}

@@ -1,0 +1,91 @@
+warning: method `for_each_leaf` is never used
+  --> vendor/apfs-core/src/catalog.rs:98:8
+   |
+58 | impl Catalog {
+   | ------------ method in this implementation
+...
+98 |     fn for_each_leaf<D: BlockDevice>(
+   |        ^^^^^^^^^^^^^
+   |
+   = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: `apfs-core` (lib) generated 1 warning
+   Compiling spark-apfs-safe v0.3.0-beta.1 (<workspace>)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 1.23s
+     Running unittests src/lib.rs (spark-apfs-safe/target/debug/deps/spark_apfs_safe-dfba1484184b42b9)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/main.rs (spark-apfs-safe/target/debug/deps/lapfs-63b5a91efd62d2c3)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/compat.rs (spark-apfs-safe/target/debug/deps/spark_apfs_safe-785bb5f420dd2a62)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/apfs_recovery.rs (spark-apfs-safe/target/debug/deps/apfs_recovery-2d0b221b5ed59268)
+
+running 2 tests
+test real_apfs_every_apply_boundary_restores_entire_image ... ignored, requires explicitly supplied disposable Mac APFS fixture
+test real_apfs_range_write_every_boundary_restores_entire_image ... ignored, requires explicitly supplied disposable Mac APFS fixture
+
+test result: ok. 0 passed; 0 failed; 2 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/buffered.rs (spark-apfs-safe/target/debug/deps/buffered-2bf1a56f78efde6f)
+
+running 4 tests
+test buffered_crash_boundaries ... ignored, requires fault-injection build and disposable fixture
+test buffered_crash_worker ... ignored, process helper; requires supplied fixture
+test buffered_guards_keep_target_unchanged ... ignored, requires disposable fixture
+test buffered_range_queue_roundtrip ... ignored, requires explicit disposable APFS fixture
+
+test result: ok. 0 passed; 0 failed; 4 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/format_fields.rs (spark-apfs-safe/target/debug/deps/format_fields-da726f9fe875264b)
+
+running 1 test
+test container_uuid_uses_hex_48_not_decimal_48 ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/reader.rs (spark-apfs-safe/target/debug/deps/reader-136d7baec72e58ab)
+
+running 3 tests
+test pending_write_blocks_read_intake ... ok
+test malformed_paths_and_container_are_rejected ... ok
+test read_only_handle_rejects_mutation_bounds_and_special_files ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.04s
+
+     Running tests/recovery.rs (spark-apfs-safe/target/debug/deps/recovery-1d4dda759eefcbbe)
+
+running 13 tests
+test image_aliases_cannot_bypass_persistent_ownership ... ok
+test page_read_your_writes_and_original_preservation ... ok
+test undo_preflight_rejects_late_corruption_before_recovery ... ok
+test locks_and_inode_binding_prevent_parallel_or_replaced_images ... ok
+test success_is_durable_preserves_barriers_and_cannot_be_implicitly_undone ... ok
+test acknowledged_but_dropped_write_is_detected_before_commit ... ok
+test wrong_base_budget_and_space_rejections_leave_target_untouched ... ok
+test persistent_ownership_and_terminal_cleanup ... ok
+test cli_adopts_prepared_orphan_only_when_target_is_pristine ... ok
+test corrupt_undo_redo_and_metadata_each_block_all_target_writes ... ok
+test rollback_can_itself_crash_at_every_write_and_flush ... ok
+test every_apply_write_and_flush_failure_rolls_back_exactly ... ok
+test seeded_random_overlaps_flushes_and_crashes_256_workloads ... ok
+
+test result: ok. 13 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 28.83s
+
+   Doc-tests spark_apfs_safe
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+

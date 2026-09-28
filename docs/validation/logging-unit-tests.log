@@ -1,0 +1,21 @@
+warning: method `for_each_leaf` is never used
+  --> vendor/apfs-core/src/catalog.rs:98:8
+   |
+58 | impl Catalog {
+   | ------------ method in this implementation
+...
+98 |     fn for_each_leaf<D: BlockDevice>(
+   |        ^^^^^^^^^^^^^
+   |
+   = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: `apfs-core` (lib) generated 1 warning
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.09s
+     Running unittests src/lib.rs (target/debug/deps/spark_apfs_safe-216addc7dde864bb)
+
+running 2 tests
+test error_log::tests::rejects_links_and_preserves_error_classification ... ok
+test error_log::tests::rotation_and_concurrent_records ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.58s
+

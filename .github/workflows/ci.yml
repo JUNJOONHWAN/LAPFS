@@ -1,0 +1,19 @@
+name: Core checks
+on:
+  push:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  core:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Toolchain
+        run: rustup toolchain install 1.92.0 --profile minimal && rustup default 1.92.0
+      - name: Locked offline core tests
+        run: cargo test --locked --offline --lib --tests
+      - name: Partition parser regression
+        run: python3 -m unittest discover -s tests -p 'test_*.py'
+# FUSE, administrator loop, and native Apple checks are explicit release gates,
+# not implied by this core-only CI workflow.

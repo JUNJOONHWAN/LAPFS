@@ -1,0 +1,26 @@
+warning: method `for_each_leaf` is never used
+  --> vendor/apfs-core/src/catalog.rs:98:8
+   |
+58 | impl Catalog {
+   | ------------ method in this implementation
+...
+98 |     fn for_each_leaf<D: BlockDevice>(
+   |        ^^^^^^^^^^^^^
+   |
+   = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: `apfs-core` (lib) generated 1 warning
+   Compiling spark-apfs-safe v0.3.0-beta.1 (<workspace>)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.68s
+     Running tests/apfs_recovery.rs (spark-apfs-safe/target/debug/deps/apfs_recovery-2d0b221b5ed59268)
+
+running 2 tests
+test real_apfs_every_apply_boundary_restores_entire_image has been running for over 60 seconds
+test real_apfs_range_write_every_boundary_restores_entire_image has been running for over 60 seconds
+APFS fault sweep (range=false): 25 boundaries (22 writes), full-image SHA-256 restored for every case
+test real_apfs_every_apply_boundary_restores_entire_image ... ok
+APFS fault sweep (range=true): 26 boundaries (23 writes), full-image SHA-256 restored for every case
+test real_apfs_range_write_every_boundary_restores_entire_image ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 70.10s
+

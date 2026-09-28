@@ -1,0 +1,17 @@
+** Checking the container superblock.
+   Checking the checkpoint with transaction ID 33.
+** Checking the space manager.
+** Checking the space manager free queue trees.
+** Checking the object map.
+** Checking volume /dev/rdisk5s1.
+** Checking the APFS volume superblock.
+   The volume LAPFS_BETA_QA was formatted by newfs_apfs (2811.160.7.0.4) and last modified by apfs_kext (2811.160.7.0.4).
+** Checking the object map.
+** Checking the snapshot metadata tree.
+** Checking the snapshot metadata.
+** Checking the fsroot tree.
+** Checking the extent ref tree.
+** Verifying volume object map space.
+** The volume /dev/rdisk5s1 with UUID D721B205-AD1A-463C-9B4A-8D2492321E3D appears to be OK.
+** Verifying allocated space.
+** The container /dev/disk5 appears to be OK.

@@ -1,0 +1,8 @@
+/target/
+/dist/
+/bin/
+/evidence/*
+!/evidence/.gitkeep
+__pycache__/
+*.pyc
+.DS_Store

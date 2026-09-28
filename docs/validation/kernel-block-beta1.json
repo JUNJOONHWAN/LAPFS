@@ -1,0 +1,27 @@
+{
+  "status": "passed",
+  "checks": [
+    "raw_block_ioctl_inspect",
+    "raw_block_read_export_no_changes",
+    "raw_block_write_resume_readback",
+    "pending_raw_read_denied",
+    "prepared_cancel_releases_owner",
+    "uuid_and_external_spool_denied",
+    "registered_block_buffered_rw_fuse_as_invoking_user",
+    "registered_block_rw_unmount_native_readback"
+  ],
+  "source_bytes": 15060014,
+  "import_sha256": "4debd244c119930b635c8fa58994eb1bd308e4fd89382fa30ccea9271e657e3c",
+  "loop_device": "/dev/loop12",
+  "physical_usb_writes": 0,
+  "image": "<loop-qa>/disposable.dmg",
+  "binary_sha256": "ae3e89625a28e33ee0184bb139e9754ce1f4255796246646bf25a1c0ab65a7b8",
+  "rw_mount_sha256": "2fdf0a9303c9749a825d9de846b514273ad19e9da60f53f55483e32fdf274d64",
+  "apple_fsck": "clean",
+  "output": "<loop-qa>",
+  "native_mac_rw_mount": "sha256 matched",
+  "native_mac_original_files_verified": 104,
+  "native_mac_import": "sha256 matched",
+  "cancelled_directory_absent": true,
+  "transferred_image_sha256": "5f6ff183565c3bc4f980209fbcefe67f997bcd05def934f1a89bcf4317265ddd"
+}

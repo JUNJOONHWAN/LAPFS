@@ -1,0 +1,169 @@
+   Compiling proc-macro2 v1.0.107
+   Compiling quote v1.0.47
+   Compiling unicode-ident v1.0.26
+   Compiling libc v0.2.189
+   Compiling version_check v0.9.5
+   Compiling cfg-if v1.0.5
+   Compiling thiserror v2.0.21
+   Compiling typenum v1.20.1
+   Compiling once_cell v1.21.4
+   Compiling bitflags v2.13.2
+   Compiling cfg_aliases v0.2.2
+   Compiling serde_core v1.0.229
+   Compiling tinyvec v1.13.3
+   Compiling zerocopy v0.8.59
+   Compiling getrandom v0.4.3
+   Compiling zmij v1.0.23
+   Compiling rustix v1.1.5
+   Compiling pin-project-lite v0.2.17
+   Compiling fuser v0.16.0 (<canonical-source>/vendor/fuser)
+   Compiling memchr v2.8.3
+   Compiling anyhow v1.0.104
+   Compiling nix v0.29.0
+   Compiling serde_json v1.0.151
+   Compiling serde v1.0.229
+   Compiling linux-raw-sys v0.12.1
+   Compiling tracing-core v0.1.36
+   Compiling generic-array v0.14.7
+   Compiling unicode-normalization v0.1.25
+   Compiling fastrand v2.5.0
+   Compiling itoa v1.0.18
+   Compiling log v0.4.34
+   Compiling smallvec v1.16.2
+   Compiling syn v3.0.6
+   Compiling syn v2.0.119
+   Compiling crypto-common v0.1.7
+   Compiling block-buffer v0.10.4
+   Compiling digest v0.10.7
+   Compiling cpufeatures v0.2.17
+   Compiling page_size v0.6.0
+   Compiling sha2 v0.10.9
+   Compiling tempfile v3.27.0
+   Compiling thiserror-impl v2.0.21
+   Compiling serde_derive v1.0.229
+   Compiling apfs-core v0.0.0 (<canonical-source>/vendor/apfs-core)
+   Compiling tracing-attributes v0.1.31
+   Compiling zerocopy-derive v0.8.59
+warning: method `for_each_leaf` is never used
+  --> vendor/apfs-core/src/catalog.rs:98:8
+   |
+58 | impl Catalog {
+   | ------------ method in this implementation
+...
+98 |     fn for_each_leaf<D: BlockDevice>(
+   |        ^^^^^^^^^^^^^
+   |
+   = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: `apfs-core` (lib) generated 1 warning
+   Compiling tracing v0.1.44
+   Compiling apfs-write v0.0.0 (<canonical-source>/vendor/apfs-write)
+   Compiling apfs v0.0.0 (<canonical-source>/vendor/apfs)
+warning: struct `cuse_init_in` is never constructed
+   --> vendor/fuser/src/ll/fuse_abi.rs:810:12
+    |
+810 | pub struct cuse_init_in {
+    |            ^^^^^^^^^^^^
+    |
+    = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: struct `cuse_init_out` is never constructed
+   --> vendor/fuser/src/ll/fuse_abi.rs:819:12
+    |
+819 | pub struct cuse_init_out {
+    |            ^^^^^^^^^^^^^
+
+warning: struct `fuse_ioctl_iovec` is never constructed
+   --> vendor/fuser/src/ll/fuse_abi.rs:864:12
+    |
+864 | pub struct fuse_ioctl_iovec {
+    |            ^^^^^^^^^^^^^^^^
+
+warning: struct `fuse_notify_retrieve_out` is never constructed
+   --> vendor/fuser/src/ll/fuse_abi.rs:992:12
+    |
+992 | pub struct fuse_notify_retrieve_out {
+    |            ^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: struct `fuse_notify_retrieve_in` is never constructed
+    --> vendor/fuser/src/ll/fuse_abi.rs:1002:12
+     |
+1002 | pub struct fuse_notify_retrieve_in {
+     |            ^^^^^^^^^^^^^^^^^^^^^^^
+
+   Compiling spark-apfs-safe v0.3.0-beta.2 (<canonical-source>)
+warning: `fuser` (lib) generated 5 warnings
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 7.06s
+     Running unittests src/lib.rs (target/debug/deps/spark_apfs_safe-ecb26b5a9b8e5d56)
+
+running 2 tests
+test error_log::tests::rejects_links_and_preserves_error_classification ... ok
+test error_log::tests::rotation_and_concurrent_records ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.07s
+
+     Running unittests src/main.rs (target/debug/deps/lapfs-d09adbdc859d494e)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/compat.rs (target/debug/deps/spark_apfs_safe-e07b09dead7d764a)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/apfs_recovery.rs (target/debug/deps/apfs_recovery-cf27eff0d997c147)
+
+running 2 tests
+test real_apfs_every_apply_boundary_restores_entire_image ... ignored, requires explicitly supplied disposable Mac APFS fixture
+test real_apfs_range_write_every_boundary_restores_entire_image ... ignored, requires explicitly supplied disposable Mac APFS fixture
+
+test result: ok. 0 passed; 0 failed; 2 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/buffered.rs (target/debug/deps/buffered-f7f7e6823fff52f4)
+
+running 4 tests
+test buffered_crash_boundaries ... ignored, requires fault-injection build and disposable fixture
+test buffered_crash_worker ... ignored, process helper; requires supplied fixture
+test buffered_guards_keep_target_unchanged ... ignored, requires disposable fixture
+test buffered_range_queue_roundtrip ... ignored, requires explicit disposable APFS fixture
+
+test result: ok. 0 passed; 0 failed; 4 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/format_fields.rs (target/debug/deps/format_fields-dd09feddd107d015)
+
+running 1 test
+test container_uuid_uses_hex_48_not_decimal_48 ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/reader.rs (target/debug/deps/reader-c849ed3c428a73c5)
+
+running 3 tests
+test pending_write_blocks_read_intake ... ok
+test malformed_paths_and_container_are_rejected ... ok
+test read_only_handle_rejects_mutation_bounds_and_special_files ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/recovery.rs (target/debug/deps/recovery-1e43cadeb632c690)
+
+running 13 tests
+test image_aliases_cannot_bypass_persistent_ownership ... ok
+test locks_and_inode_binding_prevent_parallel_or_replaced_images ... ok
+test undo_preflight_rejects_late_corruption_before_recovery ... ok
+test persistent_ownership_and_terminal_cleanup ... ok
+test page_read_your_writes_and_original_preservation ... ok
+test cli_adopts_prepared_orphan_only_when_target_is_pristine ... ok
+test wrong_base_budget_and_space_rejections_leave_target_untouched ... ok
+test acknowledged_but_dropped_write_is_detected_before_commit ... ok
+test success_is_durable_preserves_barriers_and_cannot_be_implicitly_undone ... ok
+test corrupt_undo_redo_and_metadata_each_block_all_target_writes ... ok
+test rollback_can_itself_crash_at_every_write_and_flush ... ok
+test every_apply_write_and_flush_failure_rolls_back_exactly ... ok
+test seeded_random_overlaps_flushes_and_crashes_256_workloads ... ok
+
+test result: ok. 13 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 13.44s
+

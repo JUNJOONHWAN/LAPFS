@@ -1,0 +1,52 @@
+[package]
+name = "spark-apfs-safe"
+version = "0.3.0-beta.2"
+edition = "2021"
+license = "GPL-3.0-only"
+
+[workspace]
+members = ["vendor/apfs-core", "vendor/apfs", "vendor/apfs-write"]
+resolver = "2"
+exclude = ["vendor/fuser"]
+
+[workspace.package]
+edition = "2021"
+license = "GPL-3.0-only"
+
+[workspace.lints.clippy]
+unwrap_used = "warn"
+
+[workspace.dependencies]
+thiserror = "2"
+tracing = "0.1"
+tempfile = "3"
+unicode-normalization = "0.1"
+
+[features]
+fault-injection = []
+
+[dependencies]
+anyhow = "1"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+sha2 = "0.10"
+libc = "0.2"
+apfs-core = { path = "vendor/apfs-core" }
+apfs = { path = "vendor/apfs" }
+apfs-write = { path = "vendor/apfs-write", features = ["write"] }
+
+tempfile = "3"
+
+[[bin]]
+name = "lapfs"
+path = "src/main.rs"
+
+[[bin]]
+name = "spark-apfs-safe"
+path = "src/compat.rs"
+
+[target.'cfg(target_os = "linux")'.dependencies]
+fuser = { version = "=0.16.0", default-features = false, features = ["abi-7-31"] }
+
+[patch.crates-io]
+fuser = { path = "vendor/fuser" }

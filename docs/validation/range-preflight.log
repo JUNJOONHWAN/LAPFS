@@ -1,0 +1,49 @@
+   Compiling apfs-core v0.0.0 (<workspace>/vendor/apfs-core)
+warning: unused import: `crate::nx::NX_MAGIC`
+   --> vendor/apfs-core/src/volume.rs:351:13
+    |
+351 |         use crate::nx::NX_MAGIC;
+    |             ^^^^^^^^^^^^^^^^^^^
+    |
+    = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused import: `ObjPhys`
+    --> vendor/apfs-core/src/catalog.rs:1748:26
+     |
+1748 |         use crate::obj::{ObjPhys, OBJECT_TYPE_OMAP};
+     |                          ^^^^^^^
+
+warning: constant `BTREE_INFO` is never used
+   --> vendor/apfs-core/src/container.rs:554:15
+    |
+554 |         const BTREE_INFO: usize = 40;
+    |               ^^^^^^^^^^
+    |
+    = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: struct `BoundedMemDev` is never constructed
+    --> vendor/apfs-core/src/catalog.rs:1282:12
+     |
+1282 |     struct BoundedMemDev {
+     |            ^^^^^^^^^^^^^
+
+warning: associated items `new` and `fill_block` are never used
+    --> vendor/apfs-core/src/catalog.rs:1287:12
+     |
+1286 |     impl BoundedMemDev {
+     |     ------------------ associated items in this implementation
+1287 |         fn new(block_size: usize) -> Self {
+     |            ^^^
+...
+1293 |         fn fill_block(&mut self, paddr: u64, byte: u8) {
+     |            ^^^^^^^^^^
+
+warning: `apfs-core` (lib test) generated 5 warnings (run `cargo fix --lib -p apfs-core --tests` to apply 2 suggestions)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.47s
+     Running unittests src/lib.rs (spark-apfs-safe/target/debug/deps/apfs_core-dfdb8a0fae5224f0)
+
+running 1 test
+test catalog::tests::writable_range_preflight_rejects_immutable_sparse_preallocated_shared ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 136 filtered out; finished in 0.00s
+
