@@ -10,7 +10,7 @@ New truncate size is limited to 8 MiB. Large file copy/append/range-write does n
 
 - Multiple volumes, snapshots, encrypted writes, pending revert, unsupported incompatible feature bits and CAB indirection.
 - Shared/cloned/hardlinked/compressed/sparse/special/immutable/append-only file mutation and unvalidated extended attributes.
-- Non-empty directory removal; open-target replacement and open-file unlink (EBUSY). Cross-directory moves and grouped delete batching have image/FUSE/macOS fsck evidence in beta.16, but real TB-scale Corsair application is pending.
+- Non-empty directory removal; open-target replacement and open-file unlink (EBUSY). Cross-directory moves and grouped delete batching have image/FUSE/macOS fsck evidence in beta.16, but Corsair read-only probe and bounded move/delete canaries passed; Mac roundtrip and TB-scale workload remain pending.
 - Hardlinks, writable mmap, chown to a different owner, special device creation, arbitrary xattrs and ACL updates. Symlink chmod remains unsupported.
 - Complete POSIX semantics, database suitability, arbitrary application save protocols, and full `cp -a` metadata preservation. `rsync -a` was verified only for regular files, directories and symlinks owned by the mounted user; device nodes and differing uid/gid remain unqualified.
 
