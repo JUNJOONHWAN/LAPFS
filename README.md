@@ -1,8 +1,8 @@
-> **beta.15 후보** · 폴더 간 파일·폴더 이동 · 시험 이미지/FUSE/Mac APFS 검사 통과 · Corsair 적용 대기. [변경·검증 보고서](docs/CROSS_DIRECTORY_MOVE.md)
+> **beta.16 후보** · 폴더 간 이동·연속 삭제 개선 · 시험 이미지/FUSE/Mac APFS 검사 통과 · Corsair 적용 대기. [변경·검증 보고서](docs/BETA16_MOVE_DELETE.md)
 
-<p align="center"><img src="docs/assets/lapfs-banner.svg" alt="LAPFS beta.15 — Linux ARM64 APFS 읽기·쓰기, 데이터·할당표 CoW" width="100%"></p>
+<p align="center"><img src="docs/assets/lapfs-banner.svg" alt="LAPFS beta.16 — Linux ARM64 APFS 읽기·쓰기, 데이터·할당표 CoW" width="100%"></p>
 <p align="center">
-  <a href="https://github.com/JUNJOONHWAN/LAPFS/releases/tag/v0.3.0-beta.15"><img alt="Beta" src="https://img.shields.io/badge/release-0.3.0--beta.15-f5b84b"></a>
+  <a href="https://github.com/JUNJOONHWAN/LAPFS/releases/tag/v0.3.0-beta.16"><img alt="Beta" src="https://img.shields.io/badge/release-0.3.0--beta.16-f5b84b"></a>
   <img alt="Platform" src="https://img.shields.io/badge/target-DGX%20Spark%20%2F%20Linux%20ARM64-72d6c9">
   <a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/license-GPL--3.0--only-829bff"></a>
 </p>
@@ -20,7 +20,7 @@
 | 데이터 조건 | 별도 백업 필요 · 유일한 사본 사용 부적합 |
 | 미검증 | 물리 전원 차단 · USB 브리지 캐시 신뢰성 · 장기 실장치 부하 |
 
-[릴리스](https://github.com/JUNJOONHWAN/LAPFS/releases/tag/v0.3.0-beta.15) · [HTML 매뉴얼](docs/architecture.html) · [HTML 소스](docs/architecture.html) · [English overview](docs/OVERVIEW.md)
+[릴리스](https://github.com/JUNJOONHWAN/LAPFS/releases/tag/v0.3.0-beta.16) · [HTML 매뉴얼](docs/architecture.html) · [HTML 소스](docs/architecture.html) · [English overview](docs/OVERVIEW.md)
 
 [저장 위치](#저장-위치) · [중단 처리](#중단-처리) · [사양](#사양) · [설치·시험](#설치시험) · [지원 제한](#지원-제한) · [검증](#검증)
 
@@ -104,12 +104,12 @@ flowchart LR
 
 ## 사양
 
-| 항목 | beta.15 후보 |
+| 항목 | beta.16 후보 |
 |---|---|
 | 읽기 | 일반 파일 · 디렉터리 · 심볼릭 링크 · 4 GiB 초과 범위 읽기 |
-| 파일 쓰기 | 생성 · 복사 · 범위 수정 · append · 닫힌 파일 삭제 |
+| 파일 쓰기 | 생성 · 복사 · 범위 수정 · append · 닫힌 파일 삭제 · grouped 모드 연속 삭제 8개 묶음 |
 | 디렉터리 | mkdir · 빈 폴더 rmdir |
-| 이름 변경 | 같은 볼륨 내 파일·폴더 이동/rename · 닫힌 대상 교체 · Corsair 적용 대기 |
+| 이름 변경 | 같은 볼륨 내 파일·폴더 이동/rename · 닫힌 대상 교체 · Corsair 재검증 대기 |
 | 메타데이터 | chmod · atime/mtime · 심볼릭 링크 생성/삭제 |
 | 쓰기 큐 | 기본 논리 입력 32 MiB × 2 · 전체 RAM 상한 아님 |
 | 배치 복구 기록 | undo + redo 상한 128 MiB |
@@ -192,7 +192,7 @@ PY
 | 256MiB × 3회 | 112–118MiB/s · SHA 일치 · 기록량 1.29–1.30배 |
 | beta.14 회귀 | Rust 312개 · Mac APFS 59개 이미지 통과 |
 
-[beta.15 폴더 이동·검증](docs/CROSS_DIRECTORY_MOVE.md) · [beta.14 변경·실장치 결과](docs/CHECKSUM_PERFORMANCE.md) · [beta.13 변경·검증 보고서](docs/WRITE_AMPLIFICATION.md)
+[beta.16 이동·삭제·검증](docs/BETA16_MOVE_DELETE.md) · [beta.15 실패 경계](docs/CROSS_DIRECTORY_MOVE.md) · [beta.14 변경·실장치 결과](docs/CHECKSUM_PERFORMANCE.md) · [beta.13 변경·검증 보고서](docs/WRITE_AMPLIFICATION.md)
 
 ### beta.7 검증 이력
 

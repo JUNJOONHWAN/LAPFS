@@ -1,3 +1,10 @@
+# 0.3.0-beta.16 candidate
+
+- 다른 폴더로 이동 시 전체 FSTREE 재작성 대신 변경된 catalog 경로만 CoW. 3,000개 파일 시험 이미지에서 읽기 전용 probe 23개 저널 작업/172,032바이트; 적용 후 Mac fsck 통과.
+- grouped FUSE의 연속 파일 삭제를 최대 8개씩 한 APFS 트랜잭션으로 반영. 100개 빈 파일 최적화 빌드 1.646–2.008초(beta.15) → 0.331–0.420초(beta.16 후보), 같은 DGX 이미지에서 각 2회. 데이터 파일 8개와 강제 종료 3지점 복구 후 Mac fsck 통과.
+- beta.15의 실제 Corsair 읽기 전용 이동 probe는 15,926개 catalog 페이지 재작성 중 작업 한도 초과. 원본 쓰기 0, beta.14 복귀. beta.16의 실제 Corsair probe/활성화는 아직 완료되지 않음.
+- [전후 영향·검증·제한](docs/BETA16_MOVE_DELETE.md).
+
 # 0.3.0-beta.15 candidate
 
 - Same-volume file/directory move and rename through FUSE; replaces closed destination files or empty directories.

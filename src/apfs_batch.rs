@@ -44,6 +44,9 @@ pub enum Action {
     Remove {
         path: String,
     },
+    RemoveBatch {
+        paths: Vec<String>,
+    },
     Rmdir {
         path: String,
     },
@@ -287,6 +290,37 @@ fn stage_overlay<D: Device>(
             u64le(&vsb, 160) == 0 && u64le(&vsb, 168) == 0,
             "Pending APFS revert; preparation blocked"
         );
+        if let Action::RemoveBatch { paths } = action {
+            ensure!((2..=8).contains(&paths.len()), "Remove batch size must be 2..8");
+            let mut names = Vec::with_capacity(paths.len());
+            let mut unique = std::collections::HashSet::new();
+            for path in paths {
+                ensure!(unique.insert(path.as_str()), "Duplicate remove path");
+                let (parent_path, name) = path_parts(path)?;
+                let mut prefix = String::new();
+                for part in parent_path.split('/').filter(|x| !x.is_empty()) {
+                    prefix.push('/'); prefix.push_str(part);
+                    let a = view.getattr(&prefix)?.context("Remove parent missing")?;
+                    ensure!(a.is_dir && a.mode & 0xf000 == 0x4000,
+                        "Remove parent must be a real directory");
+                }
+                let parent = view.getattr(&parent_path)?.context("Remove parent missing")?;
+                ensure!(parent.is_dir && parent.bsd_flags & 0x00060006 == 0,
+                    "Remove parent unavailable");
+                let a = view.getattr(path)?.context("Remove entry missing")?;
+                ensure!(!a.is_dir && a.bsd_flags & 0x00060006 == 0,
+                    "Remove entry unavailable");
+                if a.mode & 0xf000 != 0xa000 {
+                    ensure!(view.plain_unshared_file(path)?,
+                        "Only plain unshared files may be removed");
+                }
+                names.push((parent.inode, name));
+            }
+            let mut txn = Transaction::begin(view.into_dev())?;
+            file::unlink_batch(&mut txn, &vsb, &omap, &names)?;
+            dev = txn.commit()?;
+            continue;
+        }
         let path = match action {
             Action::WriteAt { path, .. }
             | Action::Truncate { path, .. }
@@ -299,6 +333,7 @@ fn stage_overlay<D: Device>(
             | Action::SetAttrs { path, .. }
             | Action::Rename { path, .. }
             | Action::Move { path, .. } => path,
+            Action::RemoveBatch { .. } => unreachable!("handled above"),
         };
         let (parent_path, name) = if matches!(action, Action::SetAttrs { .. }) && path == "/" {
             ("/".to_owned(), String::new())
@@ -431,6 +466,7 @@ fn stage_overlay<D: Device>(
                     "Invalid symlink target"
                 );
             }
+            Action::RemoveBatch { .. } => unreachable!("handled above"),
             Action::Remove { .. } => {
                 let a = existing.context("Entry missing")?;
                 ensure!(!a.is_dir, "Directory removal not enabled");
@@ -550,6 +586,7 @@ fn stage_overlay<D: Device>(
             Action::Symlink { target, .. } => {
                 file::create_symlink(&mut txn, &vsb, &omap, parent.inode, &name, target)?;
             }
+            Action::RemoveBatch { .. } => unreachable!("handled above"),
             Action::Remove { .. } | Action::Rmdir { .. } => {
                 file::unlink(&mut txn, &vsb, &omap, parent.inode, &name)?
             }

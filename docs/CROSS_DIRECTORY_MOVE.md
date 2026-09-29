@@ -36,3 +36,9 @@
 
 - 현재 APFS `move_entry`는 카탈로그를 수집·재작성한다. 실제 TB급 볼륨에서 이동 시간 및 저널 cap을 시험해야 한다.
 - 물리 전원 차단, 거짓 장치 flush, 여러 APFS 형식/USB 브리지 조합은 이 시험으로 검증되지 않는다.
+
+## 실장치 후속 결과 (2026-09-29)
+
+- beta.15 읽기 전용 Corsair probe: `Batch operation limit reached` · 메타데이터 페이지 15,926개 시도 · 원본 쓰기 0.
+- beta.15 활성화 실패 뒤 beta.14 정상 재마운트. 이 문서의 시험 이미지 성공은 실장치 성공을 뜻하지 않는다.
+- 개선 후보: [beta.16 이동·삭제 성능](BETA16_MOVE_DELETE.md).

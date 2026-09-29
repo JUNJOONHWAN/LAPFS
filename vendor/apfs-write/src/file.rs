@@ -1638,6 +1638,108 @@ pub fn write_range_plain<D: WritableBlockDevice>(
 /// from the catalog, removes the matching extent-ref records and frees the data
 /// block(s), decrements the parent's nchildren, and updates the VSB counters
 /// (num_files/num_directories and fs_alloc_count). [the APFS specification]
+/// Remove a bounded set of regular files/symlinks in one catalog CoW.
+/// Callers validate each path, parent, and unsupported inode before entering.
+/// The APFS mutation is one transaction, so partial deletion cannot commit.
+pub fn unlink_batch<D: WritableBlockDevice>(
+    txn: &mut Transaction<D>,
+    vsb_raw: &[u8],
+    vol_omap_raw: &[u8],
+    entries: &[(u64, String)],
+) -> Result<(), TxnError> {
+    if !(2..=8).contains(&entries.len()) || rd_u64(vsb_raw, VSBI_NUM_SNAPSHOTS) != 0 {
+        return Err(TxnError::InvalidArgument("unlink_batch requires 2..8 entries and no snapshots".into()));
+    }
+    let bsz = txn.nx.block_size as usize;
+    let new_xid = txn.xid;
+    let now = now_ns();
+    let case_fold = rd_u64(vsb_raw, VSBI_INCOMPAT_FEATURES)
+        & APFS_INCOMPAT_CASE_INSENSITIVE != 0;
+    let omap_tree_paddr = rd_u64(vol_omap_raw, 48);
+    let mut omap_node = vec![0u8; bsz];
+    txn.read_block(omap_tree_paddr, &mut omap_node)?;
+    let mut remove_keys = Vec::new();
+    let mut parent_patches = Vec::new();
+    let mut data_blocks = Vec::new();
+    let mut files = 0u64;
+    let mut symlinks = 0u64;
+    let mut seen = std::collections::HashSet::new();
+    let mut seen_inodes = std::collections::HashSet::new();
+    for (parent_ino, name) in entries {
+        let drec_key = build_drec_key(*parent_ino, name, case_fold, true);
+        if !seen.insert(drec_key.clone()) {
+            return Err(TxnError::InvalidArgument("duplicate unlink_batch name".into()));
+        }
+        let all = collect_named_records(txn, &omap_node, vsb_raw, *parent_ino, &[name], bsz)?;
+        let val = all.iter().find(|(k, _)| *k == drec_key)
+            .ok_or_else(|| TxnError::SpacemanParse("unlink_batch: drec missing".into()))?;
+        let file_id = rd_u64(&val.1, 0) & 0x0FFF_FFFF_FFFF_FFFF;
+        if !seen_inodes.insert(file_id) {
+            return Err(TxnError::InvalidArgument("unlink_batch: shared inode".into()));
+        }
+        remove_keys.push(drec_key);
+        parent_patches.push((*parent_ino, -1));
+        let mut found_inode = false;
+        for (k, v) in &all {
+            let oid = rd_u64(k, 0) & 0x0FFF_FFFF_FFFF_FFFF;
+            if oid != file_id { continue; }
+            remove_keys.push(k.clone());
+            match rd_u64(k, 0) >> 60 {
+                APFS_TYPE_INODE => {
+                    found_inode = true;
+                    match rd_u16(v, 80) & 0o170000 {
+                        S_IFREG => files += 1,
+                        S_IFLNK => symlinks += 1,
+                        _ => return Err(TxnError::InvalidArgument("unlink_batch: unsupported inode".into())),
+                    }
+                }
+                APFS_TYPE_FILE_EXTENT => {
+                    let len_bytes = rd_u64(v, 0) & 0x00FF_FFFF_FFFF_FFFF;
+                    data_blocks.push((rd_u64(v, 8), len_bytes / bsz as u64));
+                }
+                _ => {}
+            }
+        }
+        if !found_inode {
+            return Err(TxnError::SpacemanParse("unlink_batch: inode missing".into()));
+        }
+    }
+    let (new_extref_paddr, extref_old_padrs, extref_node_delta, freed_count) =
+        free_blocks_owned_by_live_extref(txn, vsb_raw, new_xid, &data_blocks, bsz)?;
+    let (new_omap_tree_paddr, node_delta) = rewrite_catalog_cow(
+        txn, vsb_raw, &omap_node, new_xid, &[], &remove_keys,
+        &parent_patches, &[], now, bsz,
+    )?;
+    let new_vomap_paddr = txn.alloc_block()?;
+    let mut new_vomap = vol_omap_raw.to_vec();
+    new_vomap.resize(bsz, 0);
+    wr_u64(&mut new_vomap, 8, new_vomap_paddr);
+    wr_u64(&mut new_vomap, 16, new_xid);
+    wr_u64(&mut new_vomap, 48, new_omap_tree_paddr);
+    update_checksum_in_place(&mut new_vomap);
+    txn.stage_raw(new_vomap_paddr, new_vomap);
+    let frm_correction = free_replaced_metadata(
+        txn, vsb_raw, vol_omap_raw, &omap_node, &extref_old_padrs, false, bsz,
+    )?;
+    let vsb_oid = rd_u64(vsb_raw, 8);
+    let mut new_vsb = vsb_raw.to_vec();
+    new_vsb.resize(bsz, 0);
+    wr_u64(&mut new_vsb, VSBI_OMAP_OID, new_vomap_paddr);
+    wr_u64(&mut new_vsb, VSBI_EXTENTREF_TREE_OID, new_extref_paddr);
+    let new_file_count = rd_u64(&new_vsb, VSBI_NUM_FILES).saturating_sub(files);
+    let new_symlink_count = rd_u64(&new_vsb, VSBI_NUM_SYMLINKS).saturating_sub(symlinks);
+    wr_u64(&mut new_vsb, VSBI_NUM_FILES, new_file_count);
+    wr_u64(&mut new_vsb, VSBI_NUM_SYMLINKS, new_symlink_count);
+    let fs_alloc = rd_u64(&new_vsb, VSBI_FS_ALLOC_COUNT) as i64;
+    let alloc_delta = -(freed_count as i64) + node_delta + extref_node_delta + frm_correction;
+    wr_u64(&mut new_vsb, VSBI_FS_ALLOC_COUNT,
+        (fs_alloc + alloc_delta).max(0) as u64);
+    wr_u64(&mut new_vsb, VSBI_LAST_MOD_TIME, now);
+    let body = new_vsb.get(32..bsz).unwrap_or(&[]).to_vec();
+    txn.stage_virtual(vsb_oid, OBJECT_TYPE_FS, 0, &body)?;
+    Ok(())
+}
+
 pub fn unlink<D: WritableBlockDevice>(
     txn: &mut Transaction<D>,
     vsb_raw: &[u8],
@@ -5292,7 +5394,7 @@ fn rewrite_catalog_cow<D: WritableBlockDevice>(
     xid: u64,
     new_records: &[CatRec],
     remove_keys: &[Vec<u8>],
-    parent_patch: Option<(u64, i64)>,
+    parent_patches: &[(u64, i64)],
     updates: &[CatRec],
     now: u64,
     bsz: usize,
@@ -5338,7 +5440,7 @@ fn rewrite_catalog_cow<D: WritableBlockDevice>(
         original_nodes: rd_u64(&raw, bti + 32),
     };
     let mut edits = Vec::new();
-    if let Some((p, d)) = parent_patch {
+    for &(p, d) in parent_patches {
         edits.push(CatalogEdit::Parent(build_inode_key(p), d, now));
     }
     for (k, v) in updates {
@@ -5405,8 +5507,9 @@ fn rewrite_fstree_impl<D: WritableBlockDevice>(
     bsz: usize,
 ) -> Result<(u64, i64), TxnError> {
     if rd_u64(vsb_raw, VSBI_NUM_SNAPSHOTS) == 0 {
+        let parent_patches: Vec<_> = parent_patch.into_iter().collect();
         return rewrite_catalog_cow(txn, vsb_raw, omap_node, new_xid, &new_records,
-            remove_keys, parent_patch, update_records, now, bsz);
+            remove_keys, &parent_patches, update_records, now, bsz);
     }
     let root_tree_oid = rd_u64(vsb_raw, VSBI_ROOT_TREE_OID);
     let mut recs = collect_fstree(txn, omap_node, root_tree_oid, bsz)?;
@@ -6125,7 +6228,135 @@ pub fn set_volume_label<D: WritableBlockDevice>(
 /// this is identical to a same-directory rename (nchildren net zero).
 ///
 /// [the APFS specification 1.3]
+// Cross-directory move on a snapshot-free volume. The previous move_entry
+// rebuilt every FSTREE page, which exceeded the bounded journal on Corsair.
+// CatalogCow copies only changed paths and supports a multi-level volume omap.
 #[allow(clippy::too_many_arguments)]
+fn move_entry_catalog_cow<D: WritableBlockDevice>(
+    txn: &mut Transaction<D>,
+    vsb_raw: &[u8],
+    vol_omap_raw: &[u8],
+    old_parent_ino: u64,
+    old_name: &str,
+    new_parent_ino: u64,
+    new_name: &str,
+    replace_if_exists: bool,
+) -> Result<(), TxnError> {
+    let bsz = txn.nx.block_size as usize;
+    let new_xid = txn.xid;
+    let now = now_ns();
+    let root_tree_oid = rd_u64(vsb_raw, VSBI_ROOT_TREE_OID);
+    let case_fold = rd_u64(vsb_raw, VSBI_INCOMPAT_FEATURES)
+        & APFS_INCOMPAT_CASE_INSENSITIVE != 0;
+    let omap_tree_paddr = rd_u64(vol_omap_raw, 48);
+    let mut omap_node = vec![0u8; bsz];
+    txn.read_block(omap_tree_paddr, &mut omap_node)?;
+
+    let old_drec_key = build_drec_key(old_parent_ino, old_name, case_fold, true);
+    let new_drec_key = build_drec_key(new_parent_ino, new_name, case_fold, true);
+    let source = collect_named_records(
+        txn, &omap_node, vsb_raw, old_parent_ino, &[old_name], bsz,
+    )?;
+    let drec_val = source.iter().find(|(k, _)| *k == old_drec_key)
+        .map(|(_, v)| v.clone())
+        .ok_or_else(|| TxnError::SpacemanParse("move_entry: old name not found".into()))?;
+    let file_id = rd_u64(&drec_val, 0);
+    let inode_key = build_inode_key(file_id);
+    let old_inode_val = source.iter().find(|(k, _)| *k == inode_key)
+        .map(|(_, v)| v.clone())
+        .ok_or_else(|| TxnError::SpacemanParse("move_entry: inode not found".into()))?;
+
+    // A directory cannot become its own ancestor. Resolve just the inode at
+    // each step; the whole catalog is neither read nor rewritten.
+    if (rd_u16(&old_inode_val, 80) & 0o170000) == S_IFDIR {
+        let mut cur = new_parent_ino;
+        let mut root_reached = false;
+        for _ in 0..1024 {
+            if cur == file_id {
+                return Err(TxnError::InvalidArgument(format!(
+                    "cannot move directory ino {file_id} into its own descendant {new_parent_ino}"
+                )));
+            }
+            if cur <= 2 {
+                root_reached = true;
+                break;
+            }
+            let key = build_inode_key(cur);
+            let recs = collect_catalog_range(
+                txn, &omap_node, root_tree_oid, &key, &key, bsz, 0,
+            )?;
+            let v = recs.iter().find(|(k, _)| *k == key)
+                .ok_or_else(|| TxnError::SpacemanParse("move_entry: ancestor inode missing".into()))?;
+            cur = rd_u64(&v.1, 0);
+        }
+        if !root_reached {
+            return Err(TxnError::SpacemanParse("move_entry: ancestor depth exceeded".into()));
+        }
+    }
+
+    let target = collect_named_records(
+        txn, &omap_node, vsb_raw, new_parent_ino, &[new_name], bsz,
+    )?;
+    let target_replace = collect_replace_target(
+        &target, &new_drec_key, file_id, replace_if_exists, bsz,
+    )?;
+    let target_data_blocks = target_replace.as_ref()
+        .map(|tr| tr.data_blocks.clone()).unwrap_or_default();
+    let (new_extref_paddr, extref_old_padrs, extref_node_delta, freed_count) =
+        free_blocks_owned_by_live_extref(txn, vsb_raw, new_xid, &target_data_blocks, bsz)?;
+
+    let mut new_inode_val = rebuild_inode_with_name(&old_inode_val, new_name, now);
+    wr_u64(&mut new_inode_val, 0, new_parent_ino);
+    wr_u64(&mut new_inode_val, INODE_MOD_TIME, now);
+    let new_drec = (new_drec_key, build_drec_val(
+        file_id, rd_u64(&drec_val, 8), rd_u16(&drec_val, 16),
+    ));
+    let mut remove_keys = vec![old_drec_key];
+    if let Some(ref tr) = target_replace {
+        remove_keys.extend(tr.remove_keys.iter().cloned());
+    }
+    let parent_patches = if old_parent_ino == new_parent_ino {
+        vec![(old_parent_ino, if target_replace.is_some() { -1 } else { 0 })]
+    } else {
+        vec![(old_parent_ino, -1),
+             (new_parent_ino, if target_replace.is_some() { 0 } else { 1 })]
+    };
+    let (new_omap_tree_paddr, node_delta) = rewrite_catalog_cow(
+        txn, vsb_raw, &omap_node, new_xid, &[new_drec], &remove_keys,
+        &parent_patches, &[(inode_key, new_inode_val)], now, bsz,
+    )?;
+
+    let new_vomap_paddr = txn.alloc_block()?;
+    let mut new_vomap = vol_omap_raw.to_vec();
+    new_vomap.resize(bsz, 0);
+    wr_u64(&mut new_vomap, 8, new_vomap_paddr);
+    wr_u64(&mut new_vomap, 16, new_xid);
+    wr_u64(&mut new_vomap, 48, new_omap_tree_paddr);
+    update_checksum_in_place(&mut new_vomap);
+    txn.stage_raw(new_vomap_paddr, new_vomap);
+
+    let frm_correction = free_replaced_metadata(
+        txn, vsb_raw, vol_omap_raw, &omap_node, &extref_old_padrs, false, bsz,
+    )?;
+    let vsb_oid = rd_u64(vsb_raw, 8);
+    let mut new_vsb = vsb_raw.to_vec();
+    new_vsb.resize(bsz, 0);
+    wr_u64(&mut new_vsb, VSBI_OMAP_OID, new_vomap_paddr);
+    wr_u64(&mut new_vsb, VSBI_EXTENTREF_TREE_OID, new_extref_paddr);
+    if target_replace.is_some() {
+        let count = rd_u64(&new_vsb, VSBI_NUM_FILES);
+        wr_u64(&mut new_vsb, VSBI_NUM_FILES, count.saturating_sub(1));
+    }
+    let fs_alloc = rd_u64(&new_vsb, VSBI_FS_ALLOC_COUNT) as i64;
+    let alloc_delta = -(freed_count as i64) + node_delta + extref_node_delta + frm_correction;
+    wr_u64(&mut new_vsb, VSBI_FS_ALLOC_COUNT,
+        (fs_alloc + alloc_delta).max(0) as u64);
+    wr_u64(&mut new_vsb, VSBI_LAST_MOD_TIME, now);
+    let body = new_vsb.get(32..bsz).unwrap_or(&[]).to_vec();
+    txn.stage_virtual(vsb_oid, OBJECT_TYPE_FS, 0, &body)?;
+    Ok(())
+}
+
 pub fn move_entry<D: WritableBlockDevice>(
     txn: &mut Transaction<D>,
     vsb_raw: &[u8],
@@ -6136,6 +6367,12 @@ pub fn move_entry<D: WritableBlockDevice>(
     new_name: &str,
     replace_if_exists: bool,
 ) -> Result<(), TxnError> {
+    if rd_u64(vsb_raw, VSBI_NUM_SNAPSHOTS) == 0 {
+        return move_entry_catalog_cow(
+            txn, vsb_raw, vol_omap_raw, old_parent_ino, old_name,
+            new_parent_ino, new_name, replace_if_exists,
+        );
+    }
     let bsz = txn.nx.block_size as usize;
     let new_xid = txn.xid;
     let now = now_ns();

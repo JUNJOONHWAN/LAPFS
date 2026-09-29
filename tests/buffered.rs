@@ -542,3 +542,88 @@ fn read_ahead_invalidation_and_boundaries() {
     assert_eq!(s.read("/renamed-cache",0,100).unwrap(),b"replacement");
     s.close().unwrap();
 }
+
+#[test]
+#[ignore = "requires disposable APFS fixture"]
+fn grouped_delete_batch_preserves_remaining_and_recreate() {
+    let (source, offset, out) = fixture();
+    let work = tempfile::Builder::new().prefix("delete-batch-").tempdir_in(out).unwrap().keep();
+    let image = work.join("native.dmg");
+    std::fs::copy(source, &image).unwrap();
+    let mut s = Session::start_with_policy(
+        &image, offset, &work.join("session"), GROUP_BYTES, 0, WritePolicy::Grouped,
+    ).unwrap();
+    s.mkdir("/batch").unwrap();
+    for i in 0..16 {
+        let p = format!("/batch/item-{i:02}");
+        s.create(&p).unwrap();
+        s.write(&p, 0, format!("payload-{i}").as_bytes()).unwrap();
+    }
+    s.flush().unwrap();
+    for i in 0..13 {
+        let p = format!("/batch/item-{i:02}");
+        s.unlink(&p).unwrap();
+        assert!(s.attr(&p).is_err());
+    }
+    assert_eq!(s.list("/batch").unwrap().len(), 3);
+    s.create("/batch/item-00").unwrap();
+    s.write("/batch/item-00", 0, b"recreated").unwrap();
+    s.close().unwrap();
+    drop(s);
+    assert_eq!(spark_apfs_safe::apfs_batch::read_file(&image, offset, "/batch/item-00").unwrap(), b"recreated");
+    for i in 1..13 {
+        assert!(spark_apfs_safe::apfs_batch::read_file(&image, offset, &format!("/batch/item-{i:02}")).is_err());
+    }
+    for i in 13..16 {
+        assert_eq!(spark_apfs_safe::apfs_batch::read_file(&image, offset, &format!("/batch/item-{i:02}")).unwrap(), format!("payload-{i}").as_bytes());
+    }
+    println!("DELETE_BATCH_NATIVE_EVIDENCE={}", work.display());
+}
+
+#[test]
+#[ignore = "process helper; requires supplied fixture"]
+fn grouped_delete_batch_crash_worker() {
+    let image = PathBuf::from(std::env::var("LAPFS_WORKER_IMAGE").unwrap());
+    let dir = PathBuf::from(std::env::var("LAPFS_WORKER_SESSION").unwrap());
+    let offset = std::env::var("SPARK_APFS_TEST_OFFSET").unwrap().parse().unwrap();
+    let mut s = Session::start_with_policy(
+        &image, offset, &dir, GROUP_BYTES, 0, WritePolicy::Grouped,
+    ).unwrap();
+    for i in 0..3 {
+        s.unlink(&format!("/delete-{i}")).unwrap();
+    }
+    s.flush().unwrap();
+    s.close().unwrap();
+}
+
+#[test]
+#[ignore = "requires fault-injection build and disposable APFS fixture"]
+fn grouped_delete_batch_recovers_at_commit_boundaries() {
+    assert!(cfg!(feature = "fault-injection"));
+    use std::os::unix::process::ExitStatusExt;
+    let (source, offset, out) = fixture();
+    let work = tempfile::Builder::new().prefix("delete-batch-crash-").tempdir_in(out).unwrap().keep();
+    let base = work.join("base.dmg");
+    std::fs::copy(source, &base).unwrap();
+    let mut s = Session::start(&base, offset, &work.join("init"), GROUP_BYTES, 0).unwrap();
+    for i in 0..3 {
+        let p = format!("/delete-{i}");
+        s.create(&p).unwrap();
+        s.write(&p, 0, format!("delete-data-{i}").as_bytes()).unwrap();
+    }
+    s.close().unwrap(); drop(s);
+    for point in ["state-Applying", "apply-write", "state-Committed"] {
+        let image = work.join(format!("{point}.dmg")); std::fs::copy(&base, &image).unwrap();
+        let dir = work.join(point);
+        let status = std::process::Command::new(std::env::current_exe().unwrap())
+            .args(["--ignored", "--exact", "grouped_delete_batch_crash_worker", "--nocapture"])
+            .env("LAPFS_WORKER_IMAGE", &image).env("LAPFS_WORKER_SESSION", &dir)
+            .env("SPARK_APFS_KILL_AT", point).status().unwrap();
+        assert_eq!(status.signal(), Some(libc::SIGKILL), "fault not reached: {point}");
+        spark_apfs_safe::buffered::recover(&dir).unwrap();
+        for i in 0..3 {
+            assert!(spark_apfs_safe::apfs_batch::read_file(&image, offset, &format!("/delete-{i}")).is_err());
+        }
+    }
+    println!("DELETE_BATCH_CRASH_EVIDENCE={}", work.display());
+}

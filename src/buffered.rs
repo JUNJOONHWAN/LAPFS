@@ -307,9 +307,18 @@ impl Session {
             cache: &mut self.lookup_cache,
         })
     }
+    fn pending_removed(&self, path: &str) -> bool {
+        self.record.queue.iter().any(|q| matches!(
+            &q.action,
+            Action::Remove { path: p } | Action::Rmdir { path: p } if p == path
+        ))
+    }
     pub fn attr(&mut self, path: &str) -> Result<Attr> {
         self.ready()?;
         crate::reader::validate_path(path)?;
+        if self.pending_removed(path) {
+            return Err(fail_errno(libc::ENOENT));
+        }
         if let Some((cached, attr)) = &self.write_cache {
             if cached == path { return Ok(*attr); }
         }
@@ -332,11 +341,21 @@ impl Session {
         Ok(a)
     }
     pub fn list(&mut self, path: &str) -> Result<Vec<apfs_core::catalog::DirEntry>> {
-        // readdir already has inode and type in the directory record. Avoid
-        // statting every child again for every kernel directory page.
-        Ok(self.view()?.read_dir(path)?)
+        if self.pending_removed(path) {
+            return Err(fail_errno(libc::ENOENT));
+        }
+        // readdir already has inode and type in the directory record. Hide
+        // grouped-mode deletes that are durable in the queue but not applied.
+        let mut rows = self.view()?.read_dir(path)?;
+        if !self.record.queue.is_empty() {
+            let prefix = if path == "/" { "/".to_string() }
+                else { format!("{}/", path.trim_end_matches('/')) };
+            rows.retain(|row| !self.pending_removed(&format!("{}{}", prefix, row.name)));
+        }
+        Ok(rows)
     }
     pub fn readlink(&mut self, path: &str) -> Result<Vec<u8>> {
+        if self.pending_removed(path) { return Err(fail_errno(libc::ENOENT)); }
         self.view()?
             .read_symlink(path)?
             .ok_or_else(|| fail_errno(libc::EINVAL))
@@ -345,6 +364,7 @@ impl Session {
         ensure!(size <= 8 * 1024 * 1024, "Read request exceeds bound");
         self.ready()?;
         crate::reader::validate_path(path)?;
+        if self.pending_removed(path) { return Err(fail_errno(libc::ENOENT)); }
         let a = if let Some(c) = self.read_cache.as_ref().filter(|c| c.path == path) { c.attr } else { self.attr(path)? };
         if offset >= a.size || size == 0 { return Ok(vec![]); }
         let n = (a.size - offset).min(size as u64) as usize;
@@ -387,6 +407,7 @@ impl Session {
     }
     pub fn writable(&mut self, path: &str) -> Result<()> {
         self.ready()?;
+        if self.pending_removed(path) { return Err(fail_errno(libc::ENOENT)); }
         if self.write_cache.as_ref().is_some_and(|(p, _)| p == path) { return Ok(()); }
         let a = self.attr(path)?;
         if a.mode & 0xf000 != 0x8000 || !self.view()?.range_writable_file(path)? {
@@ -751,10 +772,10 @@ impl Session {
     }
     pub fn mkdir(&mut self, path: &str) -> Result<()> {
         self.parent(path)?;
+        self.flush()?;
         if self.view()?.getattr(path)?.is_some() {
             return Err(fail_errno(libc::EEXIST));
         }
-        self.flush()?;
         self.enqueue(Action::Mkdir { path: path.into() }, None)?;
         self.flush()
     }
@@ -796,19 +817,32 @@ impl Session {
         } else {
             self.writable(path)?;
         }
-        self.flush()?;
+        // Grouped policy acknowledges queued metadata only after session.json
+        // is durable. A crash replays the queue; lookups hide pending removals.
+        // Keep a small bound because each unlink COWs catalog/omap metadata.
+        if self.record.write_policy == WritePolicy::Durable
+            || self.record.queue.iter().any(|q| !matches!(&q.action,
+                Action::Remove { .. } | Action::Rmdir { .. }))
+        {
+            self.flush()?;
+        }
+        self.read_cache = None;
+        self.write_cache = None;
         self.enqueue(Action::Remove { path: path.into() }, None)?;
-        self.flush()
+        if self.record.write_policy == WritePolicy::Durable || self.record.queue.len() >= 8 {
+            self.flush()?;
+        }
+        Ok(())
     }
     pub fn symlink(&mut self, path: &str, target: &[u8]) -> Result<()> {
         self.parent(path)?;
+        self.flush()?;
         if self.view()?.getattr(path)?.is_some() {
             return Err(fail_errno(libc::EEXIST));
         }
         if target.is_empty() || target.len() > 4096 || target.contains(&0) {
             return Err(fail_errno(libc::EINVAL));
         }
-        self.flush()?;
         self.enqueue(
             Action::Symlink {
                 path: path.into(),
@@ -974,6 +1008,16 @@ impl Session {
                 actions.push(q.action.clone());
                 i += 1;
             }
+        }
+        // One APFS catalog CoW for a bounded group of unlinks. The queue
+        // retains individual operations for recovery and visibility until this
+        // transaction commits; only the prepared action is batched.
+        if actions.len() > 1 && actions.iter().all(|a| matches!(a, Action::Remove { .. })) {
+            let paths = actions.iter().filter_map(|a| match a {
+                Action::Remove { path } => Some(path.clone()),
+                _ => None,
+            }).collect();
+            return Ok((vec![Action::RemoveBatch { paths }], i, None));
         }
         Ok((actions, i, None))
     }
