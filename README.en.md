@@ -12,7 +12,7 @@
   <a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/license-GPL--3.0--only-829bff"></a>
 </p>
 
-LAPFS exposes an APFS device as a FUSE filesystem on Linux ARM64. The public beta was built on a DGX Spark/GB10 and passed a bounded read/write mount and move/delete canaries on a Corsair external volume.
+LAPFS exposes an APFS device as a FUSE filesystem on Linux ARM64. The public beta was built on a DGX Spark/GB10 and passed a bounded read/write mount and move/delete tests with disposable files on a Corsair external volume.
 
 > **Data safety:** This is beta software. Keep a separate backup and do not use it as the only copy of important data. Sudden unplug and power-loss durability have not been qualified. Review the supported subset before use.
 
@@ -25,7 +25,7 @@ LAPFS exposes an APFS device as a FUSE filesystem on Linux ARM64. The public bet
 | Version | `0.3.0-beta.16` · GitHub prerelease |
 | Runtime | Linux ARM64 · FUSE3 · built on DGX Spark/GB10 |
 | APFS write scope | One unencrypted volume in a supported format, without snapshots |
-| Verified | File read/write, move canary, grouped-delete canary, SHA checks |
+| Verified | File read/write, move and grouped-delete tests, SHA checks |
 | License | GPL-3.0-only |
 | Still unqualified | Mac roundtrip, power loss, long-duration and large-volume load |
 
@@ -36,7 +36,7 @@ LAPFS exposes an APFS device as a FUSE filesystem on Linux ARM64. The public bet
 | Read | Files, directory listings, symlinks, range reads beyond 4 GiB | Up to 8 MiB read-ahead cache |
 | File writes | Create, copy, range overwrite, append, unlink of closed files | Ordinary files; no whole-file staging required for large files |
 | Directories | Create and remove empty directories | Direct removal of non-empty directories is unsupported |
-| Move and rename | Same-volume file/directory move, rename, and replacement of a closed target | Disposable-image tests and a Corsair move canary passed |
+| Move and rename | Same-volume file/directory move, rename, and replacement of a closed target | Disposable-image tests and a Corsair move test passed |
 | Metadata | chmod, atime/mtime, symlink creation/removal | Not full POSIX metadata compatibility |
 | Transfer tools | `rsync -a` for ordinary files, directories and symlinks | Qualified for the mounted user's ownership |
 | Recovery and logs | Persistent work queue, undo/redo journal, JSONL error log, recovery and safe-eject tools | Error logs are not recovery data |
@@ -77,10 +77,10 @@ This sequence preserves the previous checkpoint while LAPFS prepares a recoverab
 ## Why small writes and deletes take longer
 
 - An APFS update changes more than file data. LAPFS must update catalog records, extent references, allocation information and checkpoints. CoW avoids overwriting the previous blocks, but it must prepare and flush new blocks and references.
-- Frequent 10 KiB writes create many transactions, metadata updates and synchronization points relative to the amount of input. On Corsair beta.14, a 16 MiB/10 KiB-write test reached 27.28 MiB/s and wrote 2.94 device bytes per input byte.
+- Frequent 10 KiB writes create many transactions, metadata updates and synchronization points relative to the amount of input. On Corsair beta.14, a 16 MiB/10 KiB-write test reached 27.28 MiB/s and the OS-observed write volume was 2.94 times the input size.
 - Grouped mode combines requests to reduce synchronization overhead. At `fsync`, close and safe eject, APFS changes still have to be committed. `--durable-writes` persists every input to a DGX local log, adding synchronization work to workloads with many small writes.
 - Delete is also a metadata transaction. LAPFS updates the catalog entry, extent references, allocation state and checkpoint. beta.16 groups up to eight consecutive deletes. On Corsair, a batch commit took about 0.31–0.36 seconds; 100 delete calls took 4.265 seconds. The last four files were committed when the test directory was removed.
-- Read-ahead reduces round trips for sequential and repeated reads. The measured 818–912 MiB/s was a 1 MiB read from an APFS image on the DGX internal disk. Raw Corsair O_DIRECT reads were 803 and 1,109 MiB/s, but used different paths and device locations; these are not directly comparable APFS file-read measurements. A same-condition beta.16 Corsair file-read result is not available.
+- Read-ahead reduces round trips for sequential and repeated reads. The measured 818–912 MiB/s was a 1 MiB read from an APFS image on the DGX internal disk. Raw Corsair O_DIRECT reads were 803 and 1,109 MiB/s, but used different paths and device locations; these are not directly comparable APFS file-read measurements. A historical 83 MiB MOV read on Corsair at beta.9 measured 50.05 and 54.93 MiB/s, before read-ahead. A same-condition beta.16 Corsair file-read result is not available.
 - The 20 Gbps USB label is a theoretical link bit rate. Application file I/O also passes through APFS operations, synchronization boundaries, FUSE and device flush latency.
 
 Large sequential files are more efficient than workloads with frequent small random updates. For ordinary backups, use the qualified subset of `rsync -a --progress`, close the files, and eject normally when the transfer finishes. A progress indicator shows transfer progress; it does not mean safe eject has completed.
@@ -91,14 +91,15 @@ Read each result together with its workload and storage path. Local APFS-image n
 
 | Workload | Result | Conditions and interpretation |
 |---|---|---|
-| Large sequential writes | 112–118 MiB/s; 1.293–1.297 bytes written per input byte | Physical Corsair, beta.14, three 256 MiB files, 1 MiB writes, `fsync`, close and SHA checks |
-| Small sequential writes | 27.28 MiB/s; 2.94x write amplification | Physical Corsair, beta.14, 16 MiB file, 10 KiB writes; small writes remain slow |
+| Large sequential writes | 112–118 MiB/s; 1.293–1.297 OS-observed write bytes per input byte | Physical Corsair, beta.14, three 256 MiB files, 1 MiB writes, `fsync`, close and SHA checks |
+| Small sequential writes | 27.28 MiB/s; 2.94x OS-observed write volume per input byte | Physical Corsair, beta.14, 16 MiB file, 10 KiB writes; small writes remain slow |
 | Small-write history | beta.8 11.54–18.43 → beta.9 54.06–54.16 MiB/s | DGX internal 1 GiB APFS image, 10 KiB writes, `fsync` and close; not USB results |
-| Read-ahead cache | beta.9 464–530 → beta.10 818–912 MiB/s | DGX internal APFS image, 1 MiB reads; not USB performance |
+| Historical APFS file read | 50.05 / 54.93 MiB/s | An 83 MiB MOV on Corsair, beta.9, before read-ahead; no same-condition beta.16 result |
+| Read-ahead cache, image | beta.9 464–530 → beta.10 818–912 MiB/s | DGX internal APFS image, 1 MiB reads; not USB performance |
 | USB link and raw reads | SuperSpeed Plus Gen 2x2/UAS; O_DIRECT reads of 803 and 1,109 MiB/s | Two 256 MiB reads at different device locations; not directly comparable to APFS file reads |
 | Deletes, image test | 100 empty files: 1.646–2.008 s (beta.15) → 0.331–0.420 s (beta.16), 3.92–6.07x | Same image, DGX and optimized build; two paired runs. beta.16 commits up to eight deletes per transaction |
 | Deletes, Corsair | 4.265 s for 100 delete calls on 4 KiB files | One beta.16 hardware run. The last four were flushed when the test directory was removed; no beta.14/15 hardware baseline |
-| Move, Corsair | 0.428 s read-only probe; 0.432 s for an actual 64 KiB canary | Probe made zero source writes; actual move preserved SHA and inode |
+| Move, Corsair | 0.428 s read-only probe; 0.432 s for an actual move of a 64 KiB test file | Probe made zero source writes; actual move preserved SHA and inode |
 
 The 20 Gbps USB link rate is a theoretical bit rate, not APFS write speed or sustained file throughput. See [read measurements](docs/READ_AHEAD.md), [write amplification](docs/WRITE_AMPLIFICATION.md), [beta.14 hardware results](docs/CHECKSUM_PERFORMANCE.md), and [beta.16 move/delete results](docs/BETA16_MOVE_DELETE.md) for test conditions.
 
@@ -154,11 +155,11 @@ Exact enrollment, mount, eject and error-recovery commands are in the [operation
 
 ## Compatibility and limits
 
-Writes currently support a limited APFS subset centered on ordinary files. Encrypted volumes, snapshots, containers with multiple APFS volumes, and mutations of shared, cloned, hard-linked, compressed, sparse or special files are unsupported. Open-file unlink, direct removal of non-empty directories, writable mmap, arbitrary xattrs/ACLs, `chown` to another owner, and full `cp -a` semantics are also unsupported.
+Writes currently support a limited APFS subset centered on ordinary files. Truncating to a new size is limited to 8 MiB; large copy, append, and range-write operations are chunked without staging the whole file at once. Encrypted volumes, snapshots, containers with multiple APFS volumes, and mutations of shared, cloned, hard-linked, compressed, sparse or special files are unsupported. Open-file unlink, direct removal of non-empty directories, writable mmap, arbitrary xattrs/ACLs, `chown` to another owner, and full `cp -a` semantics are also unsupported.
 
 - Never delete a session queue or recovery journal for an incomplete operation.
 - When moving a device between macOS and Linux, unmount it normally and verify ownership before connecting it to the other system.
-- The beta.16 Corsair check was a read-only preflight and bounded canary. A Mac roundtrip, power-loss behavior and long-duration qualification for different USB bridges remain untested.
+- The beta.16 Corsair check was a read-only preflight and small isolated-file tests. A Mac roundtrip, power-loss behavior and long-duration qualification for different USB bridges remain untested.
 - Databases and arbitrary application save formats are not qualified.
 
 See [all supported limits](docs/LIMITATIONS.md) and the [recovery manual](docs/RECOVERY.md).

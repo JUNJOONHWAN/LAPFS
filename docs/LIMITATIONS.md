@@ -4,7 +4,7 @@
 
 Single unencrypted APFS volume; no snapshots; supported allocator geometry; ordinary unshared files. Basic reads, directory enumeration, symlink reads and creation/removal, range reads above 4 GiB; writes through a durable queue; create/copy/range overwrite/append, mkdir, rmdir of empty directories, unlink of closed files, same-volume file and directory move/rename/replace, chmod and atime/mtime, fsync, close and normal unmount.
 
-New truncate size is limited to 8 MiB. Large file copy/append/range-write does not have an 8 MiB total-file limit. Input queue payload cap is 4 MiB, active undo+redo cap is 32 MiB, reserve is 1 GiB with 96 MiB working headroom. These are separate limits, not a total RAM guarantee. There may be more than one retained failed session; do not automatically delete it to free space.
+New truncate size is limited to 8 MiB. Large file copy/append/range-write is chunked and has no 8 MiB total-file limit. A single range-write transaction is limited to 32 MiB; grouped FUSE input is bounded at 32 MiB pending plus one in-flight batch. The APFS undo+redo journal cap is 128 MiB. Session storage reserves 1 GiB and checks for 96 MiB of additional working headroom. These are separate bounds, not a total RAM guarantee. There may be more than one retained failed session; do not automatically delete it to free space.
 
 ## Explicitly unsupported
 
